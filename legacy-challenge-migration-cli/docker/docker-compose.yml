@@ -1,0 +1,43 @@
+version: '3'
+services:
+  tc-informix:
+    image: "appiriodevops/tc-database-scripts:latest"
+    hostname: informix.cloud.topcoder.com
+    container_name: iif_innovator_c
+    environment: 
+      LICENSE: accept
+    ports:
+      - "2021:2021"
+      - "2022:2022"
+      - "27017:27017"
+      - "27018:27018"
+      - "27883:27883"
+    tty: true
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:6.3.1
+    ports:
+      - 9200:9200
+      - 9300:9300 
+  dynamodb:
+    image: amazon/dynamodb-local:latest
+    ports:
+      - "8000:8000"
+  legacy-challenge-migration-cli:
+    build: 
+      context: ../
+      dockerfile: docker/Dockerfile
+    image: legacy-challenge-migration-cli:latest
+    container_name: legacy-challenge-migration-cli
+    volumes: 
+      - "..:/app"
+    environment: 
+      - INFORMIX_HOST=tc-informix
+      - DYNAMODB_URL=http://dynamodb:8000
+      - ES_HOST=elasticsearch:9200
+    stdin_open: true
+    tty: true
+    links: 
+      - "tc-informix"
+      - "elasticsearch"
+      - "dynamodb"
+    command: bash

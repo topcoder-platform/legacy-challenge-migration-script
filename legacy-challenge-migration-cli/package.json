@@ -1,0 +1,45 @@
+{
+  "name": "legacy-challenge-migration-cli",
+  "version": "0.0.1",
+  "description": "Legacy Challenge Migration Tool",
+  "dependencies": {
+    "dynamoose": "^1.11.1",
+    "lodash": "^4.17.15",
+    "ora": "^3.4.0",
+    "winston": "^3.2.1",
+    "bluebird": "^3.5.5",
+    "config": "^3.1.0",
+    "ifxnjs": "^8.0.1",
+    "aws-sdk": "^2.466.0",
+    "elasticsearch": "^16.1.1",
+    "uuid": "^3.3.2"
+  },
+  "devDependencies": {
+    "standard": "^14.1.0"
+  },
+  "scripts": {
+    "migrate": "node src/index.js migrate",
+    "migrate:challenge": "node src/index.js migrate Challenge",
+    "migrate:resource": "node src/index.js migrate Resource",
+    "retry": "node src/index.js retry",
+    "retry:challenge": "node src/index.js retry Challenge",
+    "retry:resource": "node src/index.js retry Resource",
+    "lint": "standard",
+    "lint:fix": "standard --fix",
+    "init-es": "node src/scripts/init-es.js",
+    "drop-tables": "node src/scripts/drop-tables.js",
+    "drop-table:challenge": "node src/scripts/drop-tables.js Challenge",
+    "drop-table:resource": "node src/scripts/drop-tables.js Resource",
+    "drop-table:resourcerole": "node src/scripts/drop-tables.js ResourceRole",
+    "create-tables": "node src/scripts/create-tables.js",
+    "create-table:challenge": "node src/scripts/create-tables.js Challenge",
+    "create-table:resource": "node src/scripts/create-tables.js Resource",
+    "create-table:resourcerole": "node src/scripts/create-tables.js ResourceRole",
+    "view-data": "node src/scripts/view-data.js Challenge",
+    "view-data:resource": "node src/scripts/view-data.js Resource",
+    "view-data:resourcerole": "node src/scripts/view-data.js ResourceRole",
+    "view-es-data": "node src/scripts/view-es-data.js"
+  },
+  "author": "TCSCODER",
+  "license": ""
+}
