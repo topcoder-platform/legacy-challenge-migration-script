@@ -13,16 +13,16 @@ const esClient = helper.getESClient()
  * showESData get es data
  * @return {[Object]} data
  */
-async function showESData () {
+async function showESData (name) {
   const result = await esClient.search({
-    index: config.get('ES.ES_INDEX'),
-    type: config.get('ES.ES_TYPE')
+    index: config.get(`ES.${name}_ES_INDEX`),
+    type: config.get(`ES.${name}_ES_TYPE`)
   })
   return result
 }
 
 // print to console
-showESData()
+showESData(process.argv[2].toUpperCase())
   .then(result => {
     logger.info('All data in ES is shown belows.')
     console.log(

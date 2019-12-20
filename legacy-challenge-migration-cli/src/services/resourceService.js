@@ -1,8 +1,9 @@
 const uuid = require('uuid/v4')
 const _ = require('lodash')
+const config = require('config')
 const { Resource, ResourceRole } = require('../models')
 const logger = require('../util/logger')
-const { getInformixConnection } = require('../util/helper')
+const { getInformixConnection, getESClient } = require('../util/helper')
 const util = require('util')
 const getErrorService = require('./errorService')
 const errorService = getErrorService()
@@ -151,6 +152,17 @@ function saveResourceRole (resourceRole, spinner, retrying) {
         if (retrying) {
           errorService.remove({ resourceRole: resourceRole.name })
         }
+        try {
+          await getESClient().create({
+            index: config.get('ES.RESOURCE_ROLE_ES_INDEX'),
+            type: config.get('ES.RESOURCE_ROLE_ES_TYPE'),
+            refresh: config.get('ES.ES_REFRESH'),
+            id: resourceRole.id,
+            body: resourceRole
+          })
+        } catch (err) {
+          errorService.put({ resourceRole: resourceRole.name, type: 'es', message: err.message })
+        }
       }
       spinner.text = `Processed ${processedItem} of ${totalItems} resource roles, with ${errorItems} resource roles failed`
       resolve(resourceRole)
@@ -278,6 +290,17 @@ function saveResource (resource, spinner, retrying) {
         logger.debug('success ' + resource.id)
         if (retrying) {
           errorService.remove({ resourceId: resource.legacyId })
+        }
+        try {
+          await getESClient().create({
+            index: config.get('ES.RESOURCE_ES_INDEX'),
+            type: config.get('ES.RESOURCE_ES_TYPE'),
+            refresh: config.get('ES.ES_REFRESH'),
+            id: resource.id,
+            body: resource
+          })
+        } catch (err) {
+          errorService.put({ resourceId: resource.legacyId, type: 'es', message: err.message })
         }
       }
       spinner.text = `Processed ${processedItem} of ${totalItems} resources, with ${errorItems} resources failed`

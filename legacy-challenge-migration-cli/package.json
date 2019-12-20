@@ -38,7 +38,9 @@
     "view-data": "node src/scripts/view-data.js Challenge",
     "view-data:resource": "node src/scripts/view-data.js Resource",
     "view-data:resourcerole": "node src/scripts/view-data.js ResourceRole",
-    "view-es-data": "node src/scripts/view-es-data.js"
+    "view-es-data": "node src/scripts/view-es-data.js challenge",
+    "view-es-data:resource": "node src/scripts/view-es-data.js resource",
+    "view-es-data:resourcerole": "node src/scripts/view-es-data.js resource_role"
   },
   "author": "TCSCODER",
   "license": ""

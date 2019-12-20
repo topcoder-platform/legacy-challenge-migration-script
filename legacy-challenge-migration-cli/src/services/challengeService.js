@@ -216,8 +216,8 @@ function saveItem (challenge, spinner, retrying) {
         }
         try {
           await getESClient().create({
-            index: config.get('ES.ES_INDEX'),
-            type: config.get('ES.ES_TYPE'),
+            index: config.get('ES.CHALLENGE_ES_INDEX'),
+            type: config.get('ES.CHALLENGE_ES_TYPE'),
             refresh: config.get('ES.ES_REFRESH'),
             id: challenge.id,
             body: challenge
