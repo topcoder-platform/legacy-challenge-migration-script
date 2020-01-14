@@ -1,9 +1,11 @@
 // challenge service
 const uuid = require('uuid/v4')
 const config = require('config')
+const request = require('superagent')
 const _ = require('lodash')
-const { Challenge } = require('../models')
+const { Challenge, ChallengeType } = require('../models')
 const logger = require('../util/logger')
+const helper = require('../util/helper')
 const { getESClient } = require('../util/helper')
 const { getInformixConnection } = require('../util/helper')
 const util = require('util')
@@ -22,10 +24,15 @@ let connection
  * @param {Number} skip number of row to skip
  * @param {Number} offset number of row to fetch
  */
-function getChallengesFromIfx (ids, skip, offset) {
+function getChallengesFromIfx (ids, skip, offset, filter) {
   let limitOffset = ''
+  let filterCreatedDate = ''
   limitOffset += !_.isUndefined(skip) && skip > 0 ? 'skip ' + skip : ''
   limitOffset += !_.isUndefined(offset) && offset > 0 ? ' first ' + offset : ''
+
+  if (!process.env.IS_RETRYING) {
+    filterCreatedDate = `and p.create_date > '${helper.generateInformxDate(filter.CREATED_DATE_BEGIN)}'`
+  }
 
   const sql = `
     SELECT  ${limitOffset}
@@ -60,7 +67,7 @@ function getChallengesFromIfx (ids, skip, offset) {
             AND pspec.version = (select MAX(project_spec.version) from project_spec where project_spec.project_id = p.project_id)
       LEFT JOIN project_studio_specification pss ON pss.project_studio_spec_id = p.project_studio_spec_id
       LEFT JOIN project_mm_specification pmm_spec ON pmm_spec.project_mm_spec_id = p.project_mm_spec_id
-      WHERE 1=1
+      WHERE 1=1 ${filterCreatedDate}
 `
   return execQuery(sql, ids, 'order by p.project_id')
 }
@@ -222,6 +229,7 @@ function saveItem (challenge, spinner, retrying) {
             id: challenge.id,
             body: challenge
           })
+          spinner._context.challengesAdded++
         } catch (err) {
           errorService.put({ challengeId: challenge.legacyId, type: 'es', message: err.message })
         }
@@ -305,6 +313,107 @@ async function execQuery (sql, ids, order) {
 }
 
 /**
+ * Put challenge type data to new system
+ *
+ * @param {Object} challengeType new challenge type data
+ * @param {Object} spinner bar
+ * @param {Boolean} retrying if user is retrying
+ */
+function saveChallengeType (challengeType, spinner, retrying) {
+  return new Promise((resolve, reject) => {
+    const newChallengeType = new ChallengeType(challengeType)
+    newChallengeType.save(async (err) => {
+      processedItem++
+      if (err) {
+        logger.debug('fail ' + util.inspect(err))
+        errorService.put({ challengeType: challengeType.name, type: 'dynamodb', message: err.message })
+        errorItems++
+      } else {
+        logger.debug('success ' + challengeType.name)
+        if (retrying) {
+          errorService.remove({ challengeType: challengeType.name })
+        }
+        try {
+          await getESClient().create({
+            index: config.get('ES.CHALLENGE_TYPE_ES_INDEX'),
+            type: config.get('ES.CHALLENGE_TYPE_ES_TYPE'),
+            refresh: config.get('ES.ES_REFRESH'),
+            id: challengeType.id,
+            body: challengeType
+          })
+        } catch (err) {
+          errorService.put({ challengeType: challengeType.name, type: 'es', message: err.message })
+        }
+      }
+      spinner.text = `Processed ${processedItem} of ${totalItems} challenge types, with ${errorItems} challenge types failed`
+      resolve(challengeType)
+    })
+  })
+}
+
+/**
+ * Save challenge types to dynamodb.
+ *
+ * @param {Array} challengeTypes the data
+ * @param {Object} spinner spinner bar
+ * @returns {undefined}
+ */
+async function saveChallengeTypes (challengeTypes, spinner) {
+  totalItems = challengeTypes.length
+  processedItem = 0
+  errorItems = 0
+  await Promise.all(challengeTypes.map(ct => saveChallengeType(ct, spinner, process.env.IS_RETRYING)))
+}
+
+/**
+ * Create challenge type mapping from challenge types.
+ *
+ * @param {Array} challengeTypes a list of challenge types
+ * @returns {Object} the mapping
+ */
+function createChallengeTypeMapping (challengeTypes) {
+  const challengeTypeMapping = _.reduce(challengeTypes, (mapping, challengeType) => {
+    if (!_.isUndefined(challengeType.legacyId)) {
+      mapping[challengeType.legacyId] = challengeType.id
+    }
+    return mapping
+  }, {})
+  return challengeTypeMapping
+}
+
+/**
+ * Get challenge types from challenge v4 API.
+ *
+ * @returns {Array} the challenge types
+ */
+async function getChallengeTypes () {
+  const res = await request.get(config.CHALLENGE_TYPE_API_URL)
+  const challengeTypes = _.get(res.body, 'result.content')
+  const existingChallengeTypes = await getChallengeTypesFromDynamo()
+  const challengeTypeMapping = createChallengeTypeMapping(existingChallengeTypes)
+  return _.map(
+    _.filter(challengeTypes, (challengeType) => !challengeTypeMapping[challengeType.id]),
+    (challengeType) => {
+      return {
+        id: uuid(),
+        legacyId: challengeType.id,
+        ..._.omit(challengeType, ['id'])
+      }
+    }
+  )
+}
+
+/**
+ * Get challenge types from dynamo DB.
+ *
+ * @returns {Array} the challenge types
+ */
+async function getChallengeTypesFromDynamo () {
+  const result = await ChallengeType.scan().exec()
+  return result
+}
+
+/**
  * Get challenge from informix
  *
  * @param {Object} conn informix connection instance
@@ -312,8 +421,8 @@ async function execQuery (sql, ids, order) {
  * @param {Number} skip Number ro row to be skipped
  * @param {Number} offset Number of row to fetch
  */
-async function getChallenges (ids, skip, offset) {
-  const challenges = await getChallengesFromIfx(ids, skip, offset)
+async function getChallenges (ids, skip, offset, filter) {
+  const challenges = await getChallengesFromIfx(ids, skip, offset, filter)
   if (!_.isArray(challenges) || challenges.length < 1) {
     return { finish: true, challenges: [] }
   }
@@ -335,6 +444,10 @@ async function getChallenges (ids, skip, offset) {
   const allPhases = queryResults[6]
   const results = []
 
+  // get challenge types from dynamodb
+  const challengeTypes = await getChallengeTypesFromDynamo()
+  const challengeTypeMapping = createChallengeTypeMapping(challengeTypes)
+
   _.forEach(_.filter(challenges, c => !(existingChallenges.includes(c.id))), c => {
     let detailRequirement
     if (c.type_id === 37) {
@@ -348,7 +461,7 @@ async function getChallenges (ids, skip, offset) {
     const newChallenge = {
       id: uuid(),
       legacyId: c.id,
-      typeId: config.get('CHALLENGE_TYPE_MAPPING')[c.type_id],
+      typeId: challengeTypeMapping[c.type_id],
       track: c.track,
       name: c.name,
       description: detailRequirement,
@@ -427,5 +540,7 @@ async function getChallenges (ids, skip, offset) {
 module.exports = {
   getChallenges,
   save,
-  getChallengesFromDynamoDB
+  getChallengesFromDynamoDB,
+  getChallengeTypes,
+  saveChallengeTypes
 }

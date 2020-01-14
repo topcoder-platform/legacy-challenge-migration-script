@@ -3,16 +3,17 @@
   "version": "0.0.1",
   "description": "Legacy Challenge Migration Tool",
   "dependencies": {
-    "dynamoose": "^1.11.1",
-    "lodash": "^4.17.15",
-    "ora": "^3.4.0",
-    "winston": "^3.2.1",
+    "aws-sdk": "^2.466.0",
     "bluebird": "^3.5.5",
     "config": "^3.1.0",
-    "ifxnjs": "^8.0.1",
-    "aws-sdk": "^2.466.0",
+    "dynamoose": "^1.11.1",
     "elasticsearch": "^16.1.1",
-    "uuid": "^3.3.2"
+    "ifxnjs": "^8.0.1",
+    "lodash": "^4.17.15",
+    "ora": "^3.4.0",
+    "superagent": "^5.2.1",
+    "uuid": "^3.3.2",
+    "winston": "^3.2.1"
   },
   "devDependencies": {
     "standard": "^14.1.0"
@@ -31,16 +32,23 @@
     "drop-table:challenge": "node src/scripts/drop-tables.js Challenge",
     "drop-table:resource": "node src/scripts/drop-tables.js Resource",
     "drop-table:resourcerole": "node src/scripts/drop-tables.js ResourceRole",
+    "drop-table:challengetype": "node src/scripts/drop-tables.js ChallengeType",
+    "drop-table:challengehistory": "node src/scripts/drop-tables.js ChallengeHistory",
     "create-tables": "node src/scripts/create-tables.js",
     "create-table:challenge": "node src/scripts/create-tables.js Challenge",
     "create-table:resource": "node src/scripts/create-tables.js Resource",
     "create-table:resourcerole": "node src/scripts/create-tables.js ResourceRole",
+    "create-table:challengetype": "node src/scripts/create-tables.js ChallengeType",
+    "create-table:challengehistory": "node src/scripts/create-tables.js ChallengeHistory",
     "view-data": "node src/scripts/view-data.js Challenge",
+    "view-data:challengehistory": "node src/scripts/view-data.js ChallengeHistory",
     "view-data:resource": "node src/scripts/view-data.js Resource",
     "view-data:resourcerole": "node src/scripts/view-data.js ResourceRole",
+    "view-data:challengetype": "node src/scripts/view-data.js ChallengeType",
     "view-es-data": "node src/scripts/view-es-data.js challenge",
     "view-es-data:resource": "node src/scripts/view-es-data.js resource",
-    "view-es-data:resourcerole": "node src/scripts/view-es-data.js resource_role"
+    "view-es-data:resourcerole": "node src/scripts/view-es-data.js resource_role",
+    "view-es-data:challengetype": "node src/scripts/view-es-data.js resource_role"
   },
   "author": "TCSCODER",
   "license": ""

@@ -5,6 +5,7 @@ const { Resource, ResourceRole } = require('../models')
 const logger = require('../util/logger')
 const { getInformixConnection, getESClient } = require('../util/helper')
 const util = require('util')
+const helper = require('../util/helper')
 const getErrorService = require('./errorService')
 const errorService = getErrorService()
 const challengeService = require('./challengeService')
@@ -191,8 +192,8 @@ async function saveResourceRoles (resourceRoles, spinner, errFilename) {
  * @param {Number} skip Number of row to be skipped
  * @param {Number} offset Number of row to fetch
  */
-async function getResources (ids, skip, offset) {
-  const resources = await getResourcesFromIfx(ids, skip, offset)
+async function getResources (ids, skip, offset, filter) {
+  const resources = await getResourcesFromIfx(ids, skip, offset, filter)
   if (!_.isArray(resources) || resources.length < 1) {
     return { finish: true, resources: [] }
   }
@@ -239,10 +240,15 @@ async function getResources (ids, skip, offset) {
  * @param {Number} skip number of row to skip
  * @param {Number} offset number of row to fetch
  */
-function getResourcesFromIfx (ids, skip, offset) {
+function getResourcesFromIfx (ids, skip, offset, filter) {
   let limitOffset = ''
+  let filterCreatedDate = ''
   limitOffset += !_.isUndefined(skip) && skip > 0 ? 'skip ' + skip : ''
   limitOffset += !_.isUndefined(offset) && offset > 0 ? ' first ' + offset : ''
+
+  if (!process.env.IS_RETRYING) {
+    filterCreatedDate = `and r.create_date > '${helper.generateInformxDate(filter.CREATED_DATE_BEGIN)}'`
+  }
 
   const sql = `
       SELECT  ${limitOffset}
@@ -265,7 +271,7 @@ function getResourcesFromIfx (ids, skip, offset) {
             r.create_user = u2.user_id
         INNER JOIN user u3 on
             r.modify_user = u3.user_id
-        WHERE 1=1
+        WHERE 1=1 ${filterCreatedDate}
     `
   return execQuery(sql, ids, 'order by r.project_id')
 }
@@ -299,6 +305,7 @@ function saveResource (resource, spinner, retrying) {
             id: resource.id,
             body: resource
           })
+          spinner._context.resourcesAdded++
         } catch (err) {
           errorService.put({ resourceId: resource.legacyId, type: 'es', message: err.message })
         }

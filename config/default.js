@@ -1,5 +1,8 @@
 module.exports = {
   LOG_LEVEL: process.env.LOG_LEVEL || 'info',
+  CHALLENGE_TYPE_API_URL: process.env.CHALLENGE_TYPE_API_URL || 'https://api.topcoder.com/v4/challenge-types',
+  CREATED_DATE_BEGIN: process.env.CREATED_DATE_BEGIN,
+
   INFORMIX: {
     SERVER: process.env.IFX_SERVER || 'informixoltp_tcp', // informix server
     DATABASE: process.env.IFX_DATABASE || 'tcs_catalog', // informix database
@@ -28,55 +31,14 @@ module.exports = {
     CHALLENGE_ES_INDEX: process.env.CHALLENGE_ES_INDEX || 'challenge', // challenge es index
     RESOURCE_ES_INDEX: process.env.RESOURCE_ES_INDEX || 'resource', // resource es index
     RESOURCE_ROLE_ES_INDEX: process.env.RESOURCE_ROLE_ES_INDEX || 'resource_role', // resource role es index
+    CHALLENGE_TYPE_ES_INDEX: process.env.CHALLENGE_TYPE_ES_INDEX || 'challenge_type', // challenge type es index
     CHALLENGE_ES_TYPE: process.env.CHALLENGE_ES_TYPE || '_doc', // challenge es type
     RESOURCE_ES_TYPE: process.env.RESOURCE_ES_TYPE || '_doc', // resource es type
     RESOURCE_ROLE_ES_TYPE: process.env.RESOURCE_ROLE_ES_TYPE || '_doc', // resource role es type
+    CHALLENGE_TYPE_ES_TYPE: process.env.CHALLENGE_TYPE_ES_TYPE || '_doc', // challenge type es type
     ES_REFRESH: process.env.ES_REFRESH || 'true'
   },
 
-  // Map legacy challenge category id to new type id
-  CHALLENGE_TYPE_MAPPING: {
-    1: '1',
-    2: '2',
-    3: '3',
-    4: '4',
-    5: '5',
-    6: '6',
-    7: '7',
-    8: '8',
-    9: '9',
-    10: '10',
-    11: '12',
-    12: '13',
-    13: '14',
-    14: '15',
-    15: '16',
-    16: '17',
-    17: '18',
-    18: '19',
-    19: '20',
-    20: '21',
-    21: '22',
-    22: '23',
-    23: '24',
-    24: '25',
-    25: '26',
-    26: '27',
-    27: '28',
-    28: '29',
-    29: '30',
-    30: '31',
-    31: '32',
-    32: '33',
-    33: '34',
-    34: '35',
-    35: '36',
-    36: '37',
-    37: '38',
-    38: '39',
-    39: '40',
-    40: '41'
-  },
   // map phase_type_id to name
   PHASE_NAME_MAPPINGS: {
     1: 'Registration',

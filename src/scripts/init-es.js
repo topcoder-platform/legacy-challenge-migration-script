@@ -15,7 +15,8 @@ const initES = async () => {
   for (const [index, type] of [
     [config.ES.CHALLENGE_ES_INDEX, config.ES.CHALLENGE_ES_TYPE],
     [config.ES.RESOURCE_ES_INDEX, config.ES.RESOURCE_ES_TYPE],
-    [config.ES.RESOURCE_ROLE_ES_INDEX, config.ES.RESOURCE_ROLE_ES_TYPE]
+    [config.ES.RESOURCE_ROLE_ES_INDEX, config.ES.RESOURCE_ROLE_ES_TYPE],
+    [config.ES.CHALLENGE_TYPE_ES_INDEX, config.ES.CHALLENGE_TYPE_ES_TYPE]
   ]) {
     if (process.argv.length === 3 && process.argv[2] === 'force') {
       logger.info(`Delete index ${index} if any.`)

@@ -24,5 +24,7 @@ dynamoose.setDefaults({
 module.exports = {
   Challenge: dynamoose.model('Challenge', require('./challenge')),
   Resource: dynamoose.model('Resource', require('./resource')),
-  ResourceRole: dynamoose.model('ResourceRole', require('./resource-role'))
+  ResourceRole: dynamoose.model('ResourceRole', require('./resource-role')),
+  ChallengeHistory: dynamoose.model('ChallengeHistory', require('./challenge-history')),
+  ChallengeType: dynamoose.model('ChallengeType', require('./challenge-type'))
 }

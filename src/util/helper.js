@@ -67,7 +67,18 @@ async function getInformixConnection () {
   return Promise.promisifyAll(conn)
 }
 
+/**
+ * Generate informx-flavor date from date string.
+ *
+ * @param {String} date the date to be converted
+ * @returns {String} informx-flavor date
+ */
+function generateInformxDate (date) {
+  return (new Date(date)).toISOString().replace('T', ' ').replace('Z', '')
+}
+
 module.exports = {
   getESClient,
-  getInformixConnection
+  getInformixConnection,
+  generateInformxDate
 }
