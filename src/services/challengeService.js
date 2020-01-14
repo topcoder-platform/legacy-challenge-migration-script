@@ -397,7 +397,8 @@ async function getChallengeTypes () {
       return {
         id: uuid(),
         legacyId: challengeType.id,
-        ..._.omit(challengeType, ['id'])
+        abbreviation: challengeType.subTrack,
+        ..._.omit(challengeType, ['id', 'type', 'subTrack'])
       }
     }
   )

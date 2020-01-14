@@ -1,3 +1,12 @@
+// Try to read scheduler settings from ENV
+const getSchedulerSettings = () => {
+  try {
+    return JSON.parse(process.env.RUN_AT)
+  } catch (e) {
+    return null
+  }
+}
+
 module.exports = {
   LOG_LEVEL: process.env.LOG_LEVEL || 'info',
   CHALLENGE_TYPE_API_URL: process.env.CHALLENGE_TYPE_API_URL || 'https://api.topcoder.com/v4/challenge-types',
@@ -52,5 +61,6 @@ module.exports = {
   RESOURCE_ROLE: ['Submitter', 'Reviewer', 'Copilot', 'Manager', 'Observer', 'Iterative Reviewer', 'Post-Mortem Reviewer'],
   BATCH_SIZE: 10, // max challenges will be load from informix on 1 query
   ERROR_LOG_FILENAME: './error.json', // filename of error log for challenge that fail to migrate
-  LOG_FILENAME: './app.log' // log file
+  LOG_FILENAME: './app.log', // log file
+  RUN_AT: getSchedulerSettings() || { hour: 1 } // means "at 1 AM every day" , https://github.com/node-schedule/node-schedule#readme
 }

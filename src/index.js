@@ -1,5 +1,7 @@
 // Entry point
 global.Promise = require('bluebird')
+const schedule = require('node-schedule')
+const config = require('config')
 const _ = require('lodash')
 const actions = require('./actions')
 const ora = require('ora')
@@ -36,6 +38,15 @@ async function main () {
   }
 }
 
-main().catch(err => {
-  console.error('Error:', err.message)
-})
+(async () => {
+  await main().catch(err => {
+    console.error('Error:', err.message)
+  }) // run once with full data in the first time
+
+  // run every day
+  schedule.scheduleJob(config.RUN_AT, async function () {
+    await main().catch(err => {
+      console.error('Error:', err.message)
+    })
+  })
+})()

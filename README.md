@@ -11,6 +11,7 @@ See `config/default.js`. Most of them is self explain there.
 - `BATCH_SIZE` Maximum legacy will be load at 1 query
 - `ERROR_LOG_FILENAME` Filename for data that error to migrate.
 - `RESOURCE_ROLE` List of resource role to be included in migration
+- `RUN_AT` The time when the scheduler will run the script. Refer: https://github.com/node-schedule/node-schedule#readme
 
 Other configuration is for `informix`, `dynamodb` and `elastic-search` which use same format as `challenge-api`
 
