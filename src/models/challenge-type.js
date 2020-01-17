@@ -15,7 +15,7 @@ const schema = new Schema({
   legacyId: {
     type: Number
   },
-  type: {
+  abbreviation: {
     type: String,
     required: true
   },
@@ -24,10 +24,6 @@ const schema = new Schema({
     required: true
   },
   description: {
-    type: String,
-    required: true
-  },
-  subTrack: {
     type: String,
     required: true
   }
