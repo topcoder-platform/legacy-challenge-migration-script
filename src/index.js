@@ -6,6 +6,8 @@ const _ = require('lodash')
 const actions = require('./actions')
 const ora = require('ora')
 
+const { init } = require('topcoder-healthcheck-dropin')
+
 const helpText =
 `
 Legacy Challenge Migration Tool
@@ -14,6 +16,8 @@ Help:
   Migrate per model/table (e.g. Challenge, Resource):  migrate [model]
   Retry failure:  retry
 `
+
+let scheduleJob = null
 
 async function main () {
   if (process.argv.length < 3) {
@@ -44,9 +48,19 @@ async function main () {
   }) // run once with full data in the first time
 
   // run every day
-  schedule.scheduleJob(config.RUN_AT, async function () {
+  scheduleJob = schedule.scheduleJob(config.RUN_AT, async function () {
     await main().catch(err => {
       console.error('Error:', err.message)
     })
   })
+
+  const check = () => {
+    if (scheduleJob) {
+      const date = scheduleJob.nextInvocation()
+      return date !== null
+    }
+    return false
+  };
+
+  init([check]);
 })()
