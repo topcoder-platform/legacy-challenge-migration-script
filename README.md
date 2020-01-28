@@ -6,7 +6,8 @@
 
 ## Configuration
 See `config/default.js`. Most of them is self explain there.
-- `CHALLENGE_TYPE_API_URL` Challenge v4 api url from witch challange types data are fetched.
+- `CHALLENGE_TYPE_API_URL` Challenge v4 api url from which challenge types data are fetched.
+- `CHALLENGE_TIMELINE_API_URL` Challenge v5 api url from which challenge timelines are fetched.
 - `CREATED_DATE_BEGIN` A filter; if set, only records in informix created after the date are migrated.
 - `BATCH_SIZE` Maximum legacy will be load at 1 query
 - `ERROR_LOG_FILENAME` Filename for data that error to migrate.
@@ -112,8 +113,8 @@ npm run init-es
 ```
 # Still inside legacy-challenge-migration-cli container shell above, continue
 export CREATED_DATE_BEGIN=1970-01-01
-npm run migrate 
-or 
+npm run migrate
+or
 use specific migrate command to migrate each table separately (e.g. npm run migrate:challenge or npm run migrate:resource)
 ```
 
@@ -121,7 +122,7 @@ use specific migrate command to migrate each table separately (e.g. npm run migr
 ```
 # Still inside legacy-challenge-migration-cli container shell above, continue
 npm run retry
-or 
+or
 use specific retry command to retry migration of each table separately (e.g. npm run retry:challenge or npm run retry:resource)
 ```
 

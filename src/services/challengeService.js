@@ -17,6 +17,8 @@ let totalItems
 let errorItems
 let connection
 
+let challengeTimelineMapping
+
 /**
  * Get challenge from informix
  *
@@ -119,10 +121,12 @@ function getPhaseFromIfx (ids) {
       phase.actual_start_time as actual_start_time,
       phase.scheduled_start_time as scheduled_start_time,
       phase.duration as duration,
-      phase.project_id as challenge_id
+      phase.project_id as challenge_id,
+      s.description as phase_status
     FROM
       project_phase AS phase
     INNER JOIN project AS p  ON phase.project_id = p.project_id
+    INNER JOIN phase_status_lu AS s  ON phase.phase_status_id = s.phase_status_id
     WHERE phase.phase_type_id = 1 or phase.phase_type_id = 2 or phase.phase_type_id = 4 or phase.phase_type_id = 5 or phase.phase_type_id = 6 or phase.phase_type_id = 15
   `
   return execQuery(sql, ids)
@@ -405,6 +409,34 @@ async function getChallengeTypes () {
 }
 
 /**
+ * Get challenge timeline from challenge v5 API.
+ *
+ * @param {String} typeId challenge type id
+ * @returns {Object} the challenge timeline
+ */
+async function getChallengeTimeline (typeId) {
+  const url = `${config.CHALLENGE_TIMELINE_API_URL}/${typeId}`
+  const res = await request.get(url)
+  const timelineTemplate = _.get(res, 'body')
+
+  return timelineTemplate
+}
+
+/**
+ * Create challenge timeline mapping from challenge types.
+ * @param {Array} typeIds challenge types id
+ */
+async function createChallengeTimelineMapping (typeIds) {
+  const mapping = {}
+
+  for (const typeId of typeIds) {
+    mapping[typeId] = await getChallengeTimeline(typeId)
+  }
+
+  challengeTimelineMapping = mapping
+}
+
+/**
  * Get challenge types from dynamo DB.
  *
  * @returns {Array} the challenge types
@@ -474,8 +506,7 @@ async function getChallenges (ids, skip, offset, filter) {
       createdBy: c.created_by,
       updated: new Date(Date.parse(c.updated)),
       updateBy: c.updated_by,
-      // TODO: no corresponding data for data below
-      timelineTemplateId: 'FIX ME',
+      timelineTemplateId: challengeTimelineMapping[challengeTypeMapping[c.type_id]].id,
       phases: [],
       startDate: new Date()
     }
@@ -515,20 +546,13 @@ async function getChallenges (ids, skip, offset, filter) {
       phase.name = config.get('PHASE_NAME_MAPPINGS')[phase.type_id]
       phase.duration = Number(phase.duration)
 
-      const s = phase.actual_start_time
-      const e = phase.actual_end_time
-      if (s === null && e === null) {
-        // not start
-        phase.isActive = false
-      } else if (s !== null && e === null) {
-        // has started
-        phase.isActive = true
-      } else if (s !== null && e !== null) {
-        // has ended
-        phase.isActive = false
+      if (phase.phase_status === 'Open') {
+        phase.isOpen = true
+      } else {
+        phase.isOpen = false
       }
 
-      const keys = ['challenge_id', 'type_id', 'actual_end_time', 'actual_start_time', 'scheduled_start_time']
+      const keys = ['challenge_id', 'type_id', 'actual_end_time', 'actual_start_time', 'scheduled_start_time', 'phase_status']
       for (const key of keys) {
         delete phase[key]
       }
@@ -543,5 +567,7 @@ module.exports = {
   save,
   getChallengesFromDynamoDB,
   getChallengeTypes,
-  saveChallengeTypes
+  saveChallengeTypes,
+  createChallengeTimelineMapping,
+  getChallengeTypesFromDynamo
 }

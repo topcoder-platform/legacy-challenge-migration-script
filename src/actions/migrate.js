@@ -173,6 +173,23 @@ async function migrateChallenge (spinner, filter, writeError = true) {
   spinner.text = ' Finished loading challenge types'
   spinner.succeed()
 
+  // processing challenge timelines
+  try {
+    spinner.text = 'Loading challenge timelines'
+    spinner.start()
+    const challengeTypesFromDynamo = await challengeService.getChallengeTypesFromDynamo()
+    const typeIds = _.map(challengeTypesFromDynamo, 'id')
+    await challengeService.createChallengeTimelineMapping(typeIds)
+  } catch (e) {
+    logger.debug(util.inspect(e))
+    spinner.fail('Fail to load challenge timelines')
+    process.exit(1)
+  }
+
+  spinner.prefixText = ''
+  spinner.text = ' Finished loading challenge timelines'
+  spinner.succeed()
+
   const offset = config.get('BATCH_SIZE')
 
   let finish = false

@@ -1,6 +1,7 @@
 module.exports = {
   LOG_LEVEL: process.env.LOG_LEVEL || 'info',
   CHALLENGE_TYPE_API_URL: process.env.CHALLENGE_TYPE_API_URL || 'https://api.topcoder.com/v4/challenge-types',
+  CHALLENGE_TIMELINE_API_URL: process.env.CHALLENGE_TIMELINE_API_URL || 'https://api.topcoder.com/v5/challengeTimelines',
   CREATED_DATE_BEGIN: process.env.CREATED_DATE_BEGIN,
 
   INFORMIX: {

@@ -32,7 +32,7 @@ function viewModel (modelName) {
 const viewData = async (modelName) => {
   const fieldNames = _.keys(models[modelName].$__.table.schema.attributes)
   const records = await viewModel(modelName)
-  console.log(_.map(records, e => _.pick(e, fieldNames)))
+  console.dir(_.map(records, e => _.pick(e, fieldNames)), { depth: null })
 }
 
 if (process.argv.length === 2) {
