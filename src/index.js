@@ -34,6 +34,8 @@ async function main () {
       console.log(helpText)
     }
   }
+  console.log('Done! Terminating process...')
+  process.exit()
 }
 
 main().catch(err => {
