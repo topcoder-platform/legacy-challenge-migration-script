@@ -30,6 +30,8 @@ services:
       dockerfile: docker/Dockerfile
     image: legacy-challenge-migration-cli:latest
     container_name: legacy-challenge-migration-cli
+    ports:
+      - 3001:3001
     volumes: 
       - "..:/app"
     environment: 
