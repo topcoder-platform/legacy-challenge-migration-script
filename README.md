@@ -6,6 +6,9 @@
 
 ## Configuration
 See `config/default.js`. Most of them is self explain there.
+- `PORT`: API server port; default to `3001`
+- `API_VERSION`: API version; default to `v5`
+- `SCHEDULE_INTERVAL`: the interval of schedule; default to `5`(minutes)
 - `CHALLENGE_TYPE_API_URL` Challenge v4 api url from which challenge types data are fetched.
 - `CHALLENGE_TIMELINE_API_URL` Challenge v5 api url from which challenge timelines are fetched.
 - `CREATED_DATE_BEGIN` A filter; if set, only records in informix created after the date are migrated.
@@ -73,6 +76,11 @@ To run this command you need to run the container first and install dependencies
 - Fix linting error:
 `npm run lint:fix`
 
+### Command for API
+- Inside the docker container, start the express server: `npm start`
+
+This command also run a schedule to execute the migration periodically at an interval which is defined by `SCHEDULE_INTERVAL`.
+
 ## Verification
 - Run containers
 ```
@@ -116,6 +124,19 @@ export CREATED_DATE_BEGIN=1970-01-01
 npm run migrate
 or
 use specific migrate command to migrate each table separately (e.g. npm run migrate:challenge or npm run migrate:resource)
+```
+
+- Run migration API
+```
+# Still inside legacy-challenge-migration-cli container shell above, continue
+export CREATED_DATE_BEGIN=1970-01-01
+npm start
+
+# After that you can run migration by requesting the api using the `curl` command:
+curl -X POST localhost:3001/v5/challenges/migrations -i
+
+# And check the migration status:
+curl localhost:3001/v5/challenges/migrations -i
 ```
 
 - Run retry command

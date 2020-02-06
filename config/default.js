@@ -1,7 +1,11 @@
 module.exports = {
+  PORT: process.env.PORT || 3001,
+  API_VERSION: process.env.API_VERSION || 'v5',
+  SCHEDULE_INTERVAL: process.env.SCHEDULE_INTERVAL ? Number(process.env.SCHEDULE_INTERVAL) : 5, // minutes
+
   LOG_LEVEL: process.env.LOG_LEVEL || 'info',
-  CHALLENGE_TYPE_API_URL: process.env.CHALLENGE_TYPE_API_URL || 'https://api.topcoder.com/v4/challenge-types',
-  CHALLENGE_TIMELINE_API_URL: process.env.CHALLENGE_TIMELINE_API_URL || 'https://api.topcoder.com/v5/challengeTimelines',
+  CHALLENGE_TYPE_API_URL: process.env.CHALLENGE_TYPE_API_URL || 'https://api.topcoder-dev.com/v4/challenge-types',
+  CHALLENGE_TIMELINE_API_URL: process.env.CHALLENGE_TIMELINE_API_URL || 'https://api.topcoder-dev.com/v5/challengetimelines',
   CREATED_DATE_BEGIN: process.env.CREATED_DATE_BEGIN,
 
   INFORMIX: {

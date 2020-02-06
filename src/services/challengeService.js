@@ -415,9 +415,9 @@ async function getChallengeTypes () {
  * @returns {Object} the challenge timeline
  */
 async function getChallengeTimeline (typeId) {
-  const url = `${config.CHALLENGE_TIMELINE_API_URL}/${typeId}`
+  const url = `${config.CHALLENGE_TIMELINE_API_URL}?typeId=${typeId}`
   const res = await request.get(url)
-  const timelineTemplate = _.get(res, 'body')
+  const timelineTemplate = _.get(res, 'body[0]', 'N/A')
 
   return timelineTemplate
 }
@@ -482,7 +482,7 @@ async function getChallenges (ids, skip, offset, filter) {
   const challengeTypeMapping = createChallengeTypeMapping(challengeTypes)
 
   _.forEach(_.filter(challenges, c => !(existingChallenges.includes(c.id))), c => {
-    let detailRequirement
+    let detailRequirement = ''
     if (c.type_id === 37) {
       detailRequirement = c.marathonmatch_detail_requirements
     } else if (c.track === 'DESIGN') {
@@ -497,7 +497,7 @@ async function getChallenges (ids, skip, offset, filter) {
       typeId: challengeTypeMapping[c.type_id],
       track: c.track,
       name: c.name,
-      description: detailRequirement,
+      description: detailRequirement && detailRequirement !== '' ? detailRequirement : 'N/A',
       reviewType: c.review_type,
       projectId: c.project_id,
       forumId: c.forum_id,

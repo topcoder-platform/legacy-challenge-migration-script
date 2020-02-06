@@ -77,7 +77,19 @@ function generateInformxDate (date) {
   return (new Date(date)).toISOString().replace('T', ' ').replace('Z', '')
 }
 
+/**
+ * Wrap async function to standard express function
+ * @param {Function} fn the async function
+ * @returns {Function} the wrapped function
+ */
+function wrapRouter (fn) {
+  return function (req, res, next) {
+    fn(req, res, next).catch(next)
+  }
+}
+
 module.exports = {
+  wrapRouter,
   getESClient,
   getInformixConnection,
   generateInformxDate

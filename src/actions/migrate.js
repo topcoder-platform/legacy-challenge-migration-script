@@ -100,7 +100,7 @@ async function migrateResource (spinner, filter, writeError = true) {
   } catch (e) {
     logger.debug(util.inspect(e))
     spinner.fail('Fail to load resource roles')
-    process.exit(1)
+    throw e
   }
   if (result.resourceRoles.length < 1) {
     spinner.text = 'Done'
@@ -129,7 +129,7 @@ async function migrateResource (spinner, filter, writeError = true) {
       logger.debug(util.inspect(e))
       spinner.fail(`Fail to load resource on batch ${batch}`)
       finish = true
-      process.exit(1)
+      throw e
     }
     if (result.resources.length < 1) {
       spinner.text = 'Done'
@@ -161,7 +161,7 @@ async function migrateChallenge (spinner, filter, writeError = true) {
   } catch (e) {
     logger.debug(util.inspect(e))
     spinner.fail('Fail to load challenge types')
-    process.exit(1)
+    throw e
   }
   if (challengeTypes < 1) {
     spinner.text = 'Done'
@@ -183,7 +183,7 @@ async function migrateChallenge (spinner, filter, writeError = true) {
   } catch (e) {
     logger.debug(util.inspect(e))
     spinner.fail('Fail to load challenge timelines')
-    process.exit(1)
+    throw e
   }
 
   spinner.prefixText = ''
@@ -208,7 +208,7 @@ async function migrateChallenge (spinner, filter, writeError = true) {
       logger.debug(util.inspect(e))
       spinner.fail(`Fail to load challenge on batch ${batch}`)
       finish = true
-      process.exit(1)
+      throw e
     }
     if (result.challenges.length < 1) {
       spinner.text = 'Done'
