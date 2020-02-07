@@ -23,7 +23,7 @@ logger.info(`The migration is scheduled to be executed every ${config.SCHEDULE_I
 const app = express()
 app.set('port', config.PORT)
 
-app.route(`/${config.API_VERSION}/challenges/migrations`)
+app.route(`/${config.API_VERSION}/challenge-migrations`)
   .post(routers.runMigration)
   .get(routers.checkStatus)
 
