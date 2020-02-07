@@ -51,6 +51,16 @@ migration.getStatus = () => {
   return currentStatus
 }
 
+/**
+ * Health check
+ *
+ * @returns {Boolean}
+ */
+migration.isHealthy = () => {
+  // TODO: do actual checks here
+  return true
+}
+
 module.exports = {
   migration
 }
