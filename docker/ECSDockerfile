@@ -41,4 +41,4 @@ RUN echo "sqlexec 2021/tcp" >> /etc/services
 COPY . /app
 WORKDIR /app
 RUN npm --unsafe-perm install
-CMD npm run migrate
+CMD npm run start

@@ -7,7 +7,7 @@ const schedule = require('node-schedule')
 const express = require('express')
 const logger = require('../util/logger')
 const routers = require('./routers')
-const { migration } = require('./services')
+// const { migration } = require('./services')
 
 // setup schedule
 const rule = new schedule.RecurrenceRule()
