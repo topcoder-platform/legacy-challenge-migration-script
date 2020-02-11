@@ -23,20 +23,18 @@ logger.info(`The migration is scheduled to be executed every ${config.SCHEDULE_I
 const app = express()
 app.set('port', config.PORT)
 
-app.route(`/${config.API_VERSION}/challenge-migration`)
-  .post(routers.runMigration)
-  .get(routers.checkStatus)
+app.post(`/${config.API_VERSION}/challenge-migration`, routers.runMigration)
+app.get(`/${config.API_VERSION}/challenge-migration`, routers.checkStatus)
 
 // the topcoder-healthcheck-dropin library returns checksRun count,
 // here it follows that to return such count
 let checksRun = 0
 
-app.route(`/${config.API_VERSION}/challenge-migration/health`)
-  .get((req, res) => {
-    checksRun += 1
-    if (!migration.isHealthy()) return res.sendStatus(503)
-    res.json({ checksRun })
-  })
+app.get(`/${config.API_VERSION}/challenge-migration/health`, (req, res) => {
+  checksRun += 1
+  if (!migration.isHealthy()) return res.sendStatus(503)
+  res.json({ checksRun })
+})
 
 // The error handler
 // eslint-disable-next-line no-unused-vars

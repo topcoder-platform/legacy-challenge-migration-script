@@ -213,8 +213,8 @@ async function getResources (ids, skip, offset, filter) {
   const results = []
 
   _.forEach(_.filter(resources, r => !(existingResources.includes(r.id))), r => {
-    const challengeId = _.map(_.filter(existingChallenges, p => p.legacyId === r.challenge_id), 'challengeId')
-    const roleId = _.map(_.filter(existingResourceRoles, rr => rr.name === r.resource_role_name), 'resourceRoleId')
+    const challengeId = _.get(_.map(_.filter(existingChallenges, p => p.legacyId === r.challenge_id), 'challengeId'), '[0]')
+    const roleId = _.get(_.map(_.filter(existingResourceRoles, rr => rr.name === r.resource_role_name), 'resourceRoleId'), '[0]')
 
     const newResource = {
       id: uuid(),

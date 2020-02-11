@@ -401,7 +401,7 @@ async function getChallengeTypes () {
       return {
         id: uuid(),
         legacyId: challengeType.id,
-        abbreviation: challengeType.subTrack,
+        abbreviation: challengeType.subTrack || 'Other', // TODO: Fix this
         ..._.omit(challengeType, ['id', 'type', 'subTrack'])
       }
     }
@@ -498,7 +498,7 @@ async function getChallenges (ids, skip, offset, filter) {
       track: c.track,
       name: c.name,
       description: detailRequirement && detailRequirement !== '' ? detailRequirement : 'N/A',
-      reviewType: c.review_type,
+      reviewType: c.review_type || 'COMMUNITY', // TODO: fix this
       projectId: c.project_id,
       forumId: c.forum_id,
       status: c.status,
@@ -506,7 +506,7 @@ async function getChallenges (ids, skip, offset, filter) {
       createdBy: c.created_by,
       updated: new Date(Date.parse(c.updated)),
       updateBy: c.updated_by,
-      timelineTemplateId: challengeTimelineMapping[challengeTypeMapping[c.type_id]].id,
+      timelineTemplateId: _.get(challengeTimelineMapping, `[${challengeTypeMapping[c.type_id]}].id`, 'N/A'), // TODO: fix this
       phases: [],
       startDate: new Date()
     }
