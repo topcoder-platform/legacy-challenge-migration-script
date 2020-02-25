@@ -1,7 +1,8 @@
 {
-  "name": "legacy-challenge-migration-cli",
-  "version": "0.0.1",
-  "description": "Legacy Challenge Migration Tool",
+  "name": "legacy-challenge-migration-script",
+  "version": "1.0.0",
+  "description": "Moves challenge data from Informix forward to Dynamo and ES",
+  "repository": "https://github.com/topcoder-platform/legacy-challenge-migration-script",
   "dependencies": {
     "aws-sdk": "^2.466.0",
     "bluebird": "^3.5.5",
