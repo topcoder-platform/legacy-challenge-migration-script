@@ -1,11 +1,24 @@
 # Legacy Challenge Migration CLI Tool
 
-## Requirement
+This microservice runs as inside a Docker Container and is used for Migration Challenges. It is used most often with [https://github.com/topcoder-platform/tc-elasticsearch-feeder-service](https://github.com/topcoder-platform/tc-elasticsearch-feeder-service).
+
+## Purpose
+
+Processor
+
+## Related
+
+- [https://github.com/topcoder-platform/tc-elasticsearch-feeder-service](https://github.com/topcoder-platform/tc-elasticsearch-feeder-service)
+
+## Pre-Requisites
+
 - docker CE 17+
 - docker-compose
 
-## Configuration
+## Installation/Setup Steps
+
 See `config/default.js`. Most of them is self explain there.
+
 - `PORT`: API server port; default to `3001`
 - `API_VERSION`: API version; default to `v5`
 - `SCHEDULE_INTERVAL`: the interval of schedule; default to `5`(minutes)
@@ -18,26 +31,14 @@ See `config/default.js`. Most of them is self explain there.
 
 Other configuration is for `informix`, `dynamodb` and `elastic-search` which use same format as `challenge-api`
 
-### Note
-- If `CREATED_DATE_BEGIN` is not set from env variable, the date will be read from
-    the most recent record in the ChallengeHistory table and an error will be thrown if no record exists in the table.
+## Running Locally
 
-## Deployment
-To simplyfies deployment, we're using docker. To build the images
-or run the container:
-```
-cd <legacy-challenge-migration-cli>/docker
-docker-compose up
-```
-This will automatically build the image if have not done this before.
-After container has been run, go to container shell and install dependencies:
+- Inside the docker container, start the express server: `npm start`
 
-```
-docker exec -ti legacy-challenge-migration-cli bash
-npm i
-```
+This command also run a schedule to execute the migration periodically at an interval which is defined by `SCHEDULE_INTERVAL`.
 
-## Command
+### Command
+
 To run this command you need to run the container first and install dependencies( see above):
 
 - Migrate legacy data (currently supporting challenges and resources) one after another:
@@ -76,19 +77,36 @@ To run this command you need to run the container first and install dependencies
 - Fix linting error:
 `npm run lint:fix`
 
-### Command for API
-- Inside the docker container, start the express server: `npm start`
+## Deployment
 
-This command also run a schedule to execute the migration periodically at an interval which is defined by `SCHEDULE_INTERVAL`.
+To simplyfies deployment, we're using docker. To build the images
+or run the container:
 
-## Verification
-- Run containers
+```bash
+cd <legacy-challenge-migration-cli>/docker
+docker-compose up
 ```
+
+This will automatically build the image if have not done this before.
+After container has been run, go to container shell and install dependencies:
+
+```bash
+docker exec -ti legacy-challenge-migration-cli bash
+npm i
+```
+
+## Running Tests
+
+- Run containers
+
+```bash
 cd docker
 docker-compose up
 ```
+
 - Insert test data
-```
+
+```bash
 docker cp ./tests/test_data.sql iif_innovator_c:/
 docker exec -ti iif_innovator_c bash
 # Inside container shell
@@ -96,7 +114,8 @@ dbaccess - test_data.sql
 ```
 
 - Install dependencies dan initialize DB
-```
+
+```bash
 docker exec -ti legacy-challenge-migration-cli bash
 # inside container shell
 npm i (I faced a problem to build ifxnjs if I only follow the guidance from original version of the CLI)
@@ -118,7 +137,8 @@ npm run init-es
 ```
 
 - Run migration command
-```
+
+```bash
 # Still inside legacy-challenge-migration-cli container shell above, continue
 export CREATED_DATE_BEGIN=1970-01-01
 npm run migrate
@@ -127,7 +147,8 @@ use specific migrate command to migrate each table separately (e.g. npm run migr
 ```
 
 - Run migration API
-```
+
+```bash
 # Still inside legacy-challenge-migration-cli container shell above, continue
 export CREATED_DATE_BEGIN=1970-01-01
 npm start
@@ -140,7 +161,8 @@ curl localhost:3001/v5/challenges/migrations -i
 ```
 
 - Run retry command
-```
+
+```bash
 # Still inside legacy-challenge-migration-cli container shell above, continue
 npm run retry
 or
@@ -148,7 +170,8 @@ use specific retry command to retry migration of each table separately (e.g. npm
 ```
 
 - Check data on DynamoDB and ES
-```
+
+```bash
 npm run view-data
 npm run view-data:challengehistory
 npm run view-data:resource
@@ -165,9 +188,9 @@ For fail data to be migrated you can see on `error.json`
 
 Additional information for migration of challenge resource:
 
-1.  It can fail if challenge doesn't exist in DynamoDB because it will need to use challenge UUID (not legacy ID) as attribute for inserting resource to DynamoDB
-2.  It can fail if resource role doesn't exits in DynamoDB because it will need to use resource role UUID as attribute for inserting resource to DynamoDB
-3.  Normally, error.json will contain error message like "One or more parameter values were invalid: An AttributeValue may not contain an empty string" along with resource ID (resource legacy ID) information when the fields required like challengeId or roleId is empty because those data don't exist in DynamoDB tables yet
+1. It can fail if challenge doesn't exist in DynamoDB because it will need to use challenge UUID (not legacy ID) as attribute for inserting resource to DynamoDB
+2. It can fail if resource role doesn't exits in DynamoDB because it will need to use resource role UUID as attribute for inserting resource to DynamoDB
+3. Normally, error.json will contain error message like "One or more parameter values were invalid: An AttributeValue may not contain an empty string" along with resource ID (resource legacy ID) information when the fields required like challengeId or roleId is empty because those data don't exist in DynamoDB tables yet
 4. Network connection is needed for fetching challenge types data from remote API when migrating challenges.
 
 *Screenshot* (the screen-shot is just for reference what output the CLI will produce. Because we can use additional data for testing, don't compare screen-shots blindly)
@@ -183,6 +206,8 @@ Second Run Command
 ![Second Run Command c](screen-shot/npm_run_migrate_2c.png)
 
 
-## Reference
-Most queries are taken from `https://github.com/topcoder-platform/tc-elasticsearch-feeder-service`.
-This app act as data feeder for `https://github.com/appirio-tech/ap-challenge-microservice`
+### Note
+
+- If `CREATED_DATE_BEGIN` is not set from env variable, the date will be read from
+    the most recent record in the ChallengeHistory table and an error will be thrown if no record exists in the table.
+
