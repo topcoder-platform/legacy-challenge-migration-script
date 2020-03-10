@@ -432,6 +432,18 @@ INSERT INTO tcs_catalog:informix.project_info
 (project_id, project_info_type_id, value, create_user, create_date, modify_user, modify_date)
 VALUES(30005001, 61, '731.0', '132456', '2018-05-25 22:53:28.000', '132456', '2018-05-25 22:53:28.000');
 
+INSERT INTO tcs_catalog:informix.project_info
+(project_id, project_info_type_id, value, create_user, create_date, modify_user, modify_date)
+VALUES(30005001, 51, '5', '132456', '2018-05-25 22:53:28.000', '132456', '2018-05-25 22:53:28.000');
+INSERT INTO tcs_catalog:informix.project_info
+(project_id, project_info_type_id, value, create_user, create_date, modify_user, modify_date)
+VALUES(30005001, 52, 'true', '132456', '2018-05-25 22:53:28.000', '132456', '2018-05-25 22:53:28.000');
+INSERT INTO tcs_catalog:informix.project_info
+(project_id, project_info_type_id, value, create_user, create_date, modify_user, modify_date)
+VALUES(30005001, 53, 'false', '132456', '2018-05-25 22:53:28.000', '132456', '2018-05-25 22:53:28.000');
+INSERT INTO tcs_catalog:informix.project_file_type_xref (project_id, file_type_id) VALUES (30005001, 33);
+INSERT INTO tcs_catalog:informix.project_file_type_xref (project_id, file_type_id) VALUES (30005001, 34);
+
 INSERT INTO tcs_catalog:informix.project_platform
 (project_id, project_platform_id, create_user, create_date, modify_user, modify_date)
 VALUES(30005001, 14, '132456', '2018-05-25 22:53:28.000', '132456', '2018-05-25 22:53:28.000');
