@@ -31510,3 +31510,8 @@ INSERT into tcs_catalog:informix.submission
 (submission_id, upload_id, submission_status_id, submission_type_id, create_user, create_date, modify_user, modify_date)
 select seq_submission.nextval, upload_id, 1, 1, user_id, sysdate, user_id, sysdate from upload, resource 
 where resource.project_id >= 30005000 and resource_role_id = 1 and upload.resource_id = resource.resource_id;
+
+INSERT into tcs_catalog:informix.project_role_terms_of_use_xref
+(project_id, resource_role_id, terms_of_use_id)
+select p.project_id, 1, t.terms_of_use_id from project p, terms_of_use t
+where t.terms_of_use_id >= 21113

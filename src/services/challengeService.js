@@ -242,6 +242,24 @@ function getSettingsFromIfx (ids) {
 }
 
 /**
+ * Get challenge terms
+ *
+ * @param {Array} ids array if ids to fetch (if any)
+ */
+function getTermsFromIfx (ids) {
+  const sql = `
+  SELECT distinct
+    p.project_id AS challenge_id,
+    t.terms_of_use_id
+  FROM project p
+  INNER JOIN project_role_terms_of_use_xref t ON t.project_id = p.project_id
+  WHERE 1=1
+  `
+  return execQuery(sql, ids)
+}
+
+
+/**
  * Put challenge data to new system
  *
  * @param {Object} challenge new challenge data
@@ -545,7 +563,7 @@ async function getChallenges (ids, skip, offset, filter) {
   logger.debug('IDs to fetch: ' + challengeIds)
 
   const tasks = [getPrizeFromIfx, getTechnologyFromIfx, getPlatformFromIfx,
-    getGroupFromIfx, getWinnerFromIfx, getExistingLegacyIds, getPhaseFromIfx, getSettingsFromIfx]
+    getGroupFromIfx, getWinnerFromIfx, getExistingLegacyIds, getPhaseFromIfx, getSettingsFromIfx, getTermsFromIfx]
 
   const queryResults = await Promise.all(tasks.map(t => t(challengeIds)))
   // construct challenge
@@ -557,6 +575,7 @@ async function getChallenges (ids, skip, offset, filter) {
   const existingChallenges = queryResults[5]
   const allPhases = queryResults[6]
   const allSettings = queryResults[7]
+  const allTerms = queryResults[8]
   const results = []
 
   // get challenge types from dynamodb
@@ -566,6 +585,7 @@ async function getChallenges (ids, skip, offset, filter) {
   // get challenge settings from backend api
   const name = config.CHALLENGE_SETTINGS_PROPERTIES.join('|')
   const challengeSettingsFromApi = await getChallengeSettings(name)
+  const allV5Terms = _.keyBy((await getAllV5Terms()).map(t => _.omit(t, 'text')), 'legacyId')
 
   _.forEach(_.filter(challenges, c => !(existingChallenges.includes(c.id))), c => {
     let detailRequirement = ''
@@ -594,6 +614,7 @@ async function getChallenges (ids, skip, offset, filter) {
       updateBy: c.updated_by,
       timelineTemplateId: _.get(challengeTimelineMapping, `[${challengeTypeMapping[c.type_id]}].id`, 'N/A'), // TODO: fix this
       phases: [],
+      terms: [],
       startDate: new Date()
     }
 
@@ -616,8 +637,15 @@ async function getChallenges (ids, skip, offset, filter) {
     })
 
     // get phases belong to this challenge
-    const phases = _.filter(allPhases, (p) => {
+    let phases = _.filter(allPhases, (p) => {
       return p.challenge_id === c.id
+    })
+
+    // get terms belong to this challenge
+    const terms = _.filter(allTerms, (t) => {
+      return t.challenge_id === c.id
+    }).map((t) => {
+      return allV5Terms[t.terms_of_use_id] || {legacyId: t.terms_of_use_id};
     })
     // get the registrationPhase of this challenge
     const registrationPhase = _.filter(phases, (p) => {
@@ -628,11 +656,22 @@ async function getChallenges (ids, skip, offset, filter) {
       newChallenge.startDate = new Date(Date.parse(registrationPhase.scheduled_start_time))
     }
 
-    // TODO: Phase ID must be a UUID
-
-    for (const phase of phases) {
+    phases = phases.map((phase) => {
+      phase.id = uuid()
       phase.name = config.get('PHASE_NAME_MAPPINGS')[phase.type_id]
       phase.duration = Number(phase.duration)
+      phase = _.mapKeys(phase, (v, k) => {
+        switch (k) {
+          case 'scheduled_start_time' :
+            return 'scheduledStartTime'
+          case 'actual_start_time' :
+            return 'actualStartTime'
+          case 'actual_end_time':
+            return 'actualEndTime'
+          default:
+            return k
+        }
+      })
 
       if (phase.phase_status === 'Open') {
         phase.isOpen = true
@@ -640,10 +679,17 @@ async function getChallenges (ids, skip, offset, filter) {
         phase.isOpen = false
       }
 
-      const keys = ['challenge_id', 'type_id', 'actual_end_time', 'actual_start_time', 'scheduled_start_time', 'phase_status']
+      const keys = ['challenge_id', 'type_id', 'phase_status']
       for (const key of keys) {
         delete phase[key]
       }
+      return phase
+    })
+    for (let phase of phases) {
+      phase.id = uuid()
+      phase.name = config.get('PHASE_NAME_MAPPINGS')[phase.type_id]
+      phase.duration = Number(phase.duration)
+
     }
 
     const oneSetting = _.omit(_.filter(allSettings, s => s.challenge_id === c.id)[0], ['challenge_id'])
@@ -667,9 +713,17 @@ async function getChallenges (ids, skip, offset, filter) {
       }
     })
 
-    results.push(_.assign(newChallenge, { prizeSets, tags, groups, winners, phases, challengeSettings }))
+
+    results.push(_.assign(newChallenge, { prizeSets, tags, groups, winners, phases, challengeSettings, terms }))
   })
   return { challenges: results, skip: skip, finish: false }
+}
+
+async function getAllV5Terms() {
+  const token = await helper.getM2MToken()
+  const url = `${config.TERMS_API_URL}`
+  let res = await request.get(url).set({ Authorization: `Bearer ${token}` })
+  return res.body.result || []
 }
 
 module.exports = {
