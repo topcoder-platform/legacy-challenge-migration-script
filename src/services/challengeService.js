@@ -286,7 +286,10 @@ function saveItem (challenge, spinner, retrying) {
             type: config.get('ES.CHALLENGE_ES_TYPE'),
             refresh: config.get('ES.ES_REFRESH'),
             id: challenge.id,
-            body: challenge
+            body: {
+              ...challenge,
+              groups: _.filter(challenge.groups, g => _.toString(g).toLowerCase() !== 'null')
+            }
           })
           spinner._context.challengesAdded++
         } catch (err) {
