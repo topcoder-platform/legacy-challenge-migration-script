@@ -9,13 +9,7 @@ const _ = require('lodash')
 logger.info('Requesting to delete tables...')
 
 if (process.argv.length === 2) {
-  const promises = []
-
-  Object.keys(models).forEach(modelName => {
-    promises.push(models[modelName].$__.table.delete())
-  })
-
-  Promise.all(promises)
+  models.ChallengeHistory.$__.table.delete()
     .then(() => {
       logger.info('All tables have been requested to be deleted. Deleting processes is run asynchronously')
       process.exit()
