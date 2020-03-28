@@ -627,7 +627,7 @@ async function getChallenges (ids, skip, offset, filter) {
     const tags = _.concat(_.map(_.filter(allTechnologies, t => t.challenge_id === c.id), 'name'),
       _.map(_.filter(allPlatforms, p => p.challenge_id === c.id), 'name')
     )
-    const groups = _.map(_.filter(_.compact(allGroups), g => g.challenge_id === c.id), g => String(g.group_id))
+    const groups = _.filter(_.map(_.filter(_.compact(allGroups), g => g.challenge_id === c.id), g => String(g.group_id)), g => g !== 'null')
     const winners = _.map(_.filter(allWinners, w => w.challenge_id === c.id), w => {
       return {
         userId: w.userId,
