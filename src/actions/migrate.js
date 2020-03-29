@@ -3,6 +3,7 @@ const config = require('config')
 const util = require('util')
 const _ = require('lodash')
 const uuid = require('uuid/v4')
+const moment = require('moment-timezone')
 const challengeService = require('../services/challengeService')
 const resourceService = require('../services/resourceService')
 const { ChallengeHistory } = require('../models')
@@ -65,7 +66,7 @@ async function commitHistory (challengesAdded, resourcesAdded) {
     id: uuid(),
     challengesAdded,
     resourcesAdded,
-    date: new Date()
+    date: moment().tz('America/New_York') // EST time
   })
   logger.info(`challenges added: ${result.challengesAdded}, resources added: ${result.resourcesAdded}`)
 }
