@@ -588,7 +588,7 @@ async function getChallenges (ids, skip, offset, filter) {
   // get challenge settings from backend api
   const name = config.CHALLENGE_SETTINGS_PROPERTIES.join('|')
   const challengeSettingsFromApi = await getChallengeSettings(name)
-  const allV5Terms = _.keyBy((await getAllV5Terms()).map(t => _.omit(t, 'text')), 'legacyId')
+  const allV5Terms = (await getAllV5Terms()).map(t => _.omit(t, 'text'))
 
   _.forEach(_.filter(challenges, c => !(existingChallenges.includes(c.id))), c => {
     let detailRequirement = ''
@@ -648,7 +648,7 @@ async function getChallenges (ids, skip, offset, filter) {
     const terms = _.filter(allTerms, (t) => {
       return t.challenge_id === c.id
     }).map((t) => {
-      return allV5Terms[t.terms_of_use_id] || {legacyId: t.terms_of_use_id};
+      return _.find(allV5Terms, t => _.toString(t.legacyId) === _.toString(t.terms_of_use_id)) || { legacyId: t.terms_of_use_id }
     })
     // get the registrationPhase of this challenge
     const registrationPhase = _.filter(phases, (p) => {
@@ -716,16 +716,15 @@ async function getChallenges (ids, skip, offset, filter) {
       }
     })
 
-
     results.push(_.assign(newChallenge, { prizeSets, tags, groups, winners, phases, challengeSettings, terms }))
   })
   return { challenges: results, skip: skip, finish: false }
 }
 
-async function getAllV5Terms() {
+async function getAllV5Terms () {
   const token = await helper.getM2MToken()
   const url = `${config.TERMS_API_URL}`
-  let res = await request.get(url).set({ Authorization: `Bearer ${token}` })
+  const res = await request.get(url).set({ Authorization: `Bearer ${token}` })
   return res.body.result || []
 }
 
