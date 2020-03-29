@@ -5,6 +5,7 @@ const _ = require('lodash')
 const ifxnjs = require('ifxnjs')
 const config = require('config')
 const elasticsearch = require('elasticsearch')
+const moment = require('moment-timezone')
 const AWS = require('aws-sdk')
 const m2mAuth = require('tc-core-library-js').auth.m2m
 const m2m = m2mAuth(_.pick(config, ['AUTH0_URL', 'AUTH0_AUDIENCE', 'TOKEN_CACHE_TIME', 'AUTH0_PROXY_SERVER_URL']))
@@ -72,12 +73,13 @@ async function getInformixConnection () {
 
 /**
  * Generate informx-flavor date from date string.
+ * Also, changes the timezone to EST
  *
  * @param {String} date the date to be converted
  * @returns {String} informx-flavor date
  */
 function generateInformxDate (date) {
-  return (new Date(date)).toISOString().replace('T', ' ').replace('Z', '')
+  return moment().tz('America/New_York').format('YYYY-MM-DD HH:mm:ss.SSS')
 }
 
 /**
