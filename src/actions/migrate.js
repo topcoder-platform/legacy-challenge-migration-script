@@ -46,7 +46,7 @@ async function getDateParamter () {
   }
   const histories = await ChallengeHistory.scan().exec()
   const lastRunDate = _.get(_.last(_.orderBy(histories, (item) => new Date(item.date))), 'date')
-  const CREATED_DATE_BEGIN = config.CREATED_DATE_BEGIN || lastRunDate
+  const CREATED_DATE_BEGIN = lastRunDate || config.CREATED_DATE_BEGIN
   if (!CREATED_DATE_BEGIN) {
     throw new Error('No date parameter found in both env variables and datebase. Please configure the CREATED_DATE_BEGIN env variable and try again.')
   }
