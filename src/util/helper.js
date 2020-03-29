@@ -79,7 +79,7 @@ async function getInformixConnection () {
  * @returns {String} informx-flavor date
  */
 function generateInformxDate (date) {
-  return moment().tz('America/New_York').format('YYYY-MM-DD HH:mm:ss.SSS')
+  return moment(date).tz('America/New_York').format('YYYY-MM-DD HH:mm:ss.SSS')
 }
 
 /**
