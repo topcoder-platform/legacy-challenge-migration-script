@@ -258,7 +258,6 @@ function getTermsFromIfx (ids) {
   return execQuery(sql, ids)
 }
 
-
 /**
  * Put challenge data to new system
  *
@@ -588,7 +587,7 @@ async function getChallenges (ids, skip, offset, filter) {
   // get challenge settings from backend api
   const name = config.CHALLENGE_SETTINGS_PROPERTIES.join('|')
   const challengeSettingsFromApi = await getChallengeSettings(name)
-  const allV5Terms = (await getAllV5Terms()).map(t => _.omit(t, 'text'))
+  const allV5Terms = (await getAllV5Terms()).map(t => _.omit(t, ['text']))
 
   _.forEach(_.filter(challenges, c => !(existingChallenges.includes(c.id))), c => {
     let detailRequirement = ''
@@ -688,11 +687,10 @@ async function getChallenges (ids, skip, offset, filter) {
       }
       return phase
     })
-    for (let phase of phases) {
+    for (const phase of phases) {
       phase.id = uuid()
       phase.name = config.get('PHASE_NAME_MAPPINGS')[phase.type_id]
       phase.duration = Number(phase.duration)
-
     }
 
     const oneSetting = _.omit(_.filter(allSettings, s => s.challenge_id === c.id)[0], ['challenge_id'])
@@ -723,9 +721,22 @@ async function getChallenges (ids, skip, offset, filter) {
 
 async function getAllV5Terms () {
   const token = await helper.getM2MToken()
-  const url = `${config.TERMS_API_URL}`
-  const res = await request.get(url).set({ Authorization: `Bearer ${token}` })
-  return res.body.result || []
+  let allTerms = []
+  // get search is paginated, we need to get all pages' data
+  let page = 1
+  while (true) {
+    const result = await request.get(config.TERMS_API_URL).set({ Authorization: `Bearer ${token}` })
+    const terms = result.body.result || []
+    if (terms.length === 0) {
+      break
+    }
+    allTerms = allTerms.concat(terms)
+    page += 1
+    if (result.headers['x-total-pages'] && page > Number(result.headers['x-total-pages'])) {
+      break
+    }
+  }
+  return allTerms
 }
 
 module.exports = {
