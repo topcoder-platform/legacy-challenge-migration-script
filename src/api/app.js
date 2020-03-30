@@ -13,9 +13,7 @@ const { migration } = require('./services')
 const rule = new schedule.RecurrenceRule()
 rule.minute = new schedule.Range(0, 59, config.SCHEDULE_INTERVAL)
 schedule.scheduleJob(rule, () => {
-  logger.info('TODO: Enable migration.run()')
-  // TODO: Uncomment the line below
-  // migration.run()
+  migration.run()
 })
 logger.info(`The migration is scheduled to be executed every ${config.SCHEDULE_INTERVAL} minutes`)
 
