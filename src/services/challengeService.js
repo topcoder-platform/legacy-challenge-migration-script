@@ -51,7 +51,7 @@ function getChallengesFromIfx (ids, skip, offset, filter) {
       review_type_info.value AS review_type,
       forum_id_info.value AS forum_id,
       p.tc_direct_project_id AS project_id,
-      pspec.detailed_requirements AS software_detail_requirements,
+      pspec.detailed_requirements_text AS software_detail_requirements,
       pss.contest_description AS studio_detail_requirements,
       pmm_spec.match_details AS marathonmatch_detail_requirements
     FROM
