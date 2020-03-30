@@ -647,7 +647,7 @@ async function getChallenges (ids, skip, offset, filter) {
     const terms = _.filter(allTerms, (t) => {
       return t.challenge_id === c.id
     }).map((t) => {
-      return _.find(allV5Terms, t => _.toString(t.legacyId) === _.toString(t.terms_of_use_id)) || { legacyId: t.terms_of_use_id }
+      return _.find(allV5Terms, v5Term => _.toString(v5Term.legacyId) === _.toString(t.terms_of_use_id)) || { legacyId: t.terms_of_use_id }
     })
     // get the registrationPhase of this challenge
     const registrationPhase = _.filter(phases, (p) => {
