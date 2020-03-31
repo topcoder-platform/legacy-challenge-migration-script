@@ -36,6 +36,10 @@ const schema = new Schema({
     type: [Object],
     required: false
   },
+  terms: {
+    type: [Object],
+    required: false
+  },
   timelineTemplateId: {
     type: String,
     required: true

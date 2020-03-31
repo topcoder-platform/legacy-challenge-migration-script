@@ -3,21 +3,31 @@ module.exports = {
   API_VERSION: process.env.API_VERSION || 'v5',
   SCHEDULE_INTERVAL: process.env.SCHEDULE_INTERVAL ? Number(process.env.SCHEDULE_INTERVAL) : 5, // minutes
 
+  // used to get M2M token
+  AUTH0_URL: process.env.AUTH0_URL,
+  AUTH0_PROXY_SERVER_URL: process.env.AUTH0_PROXY_SERVER_URL,
+  AUTH0_AUDIENCE: process.env.AUTH0_AUDIENCE || 'https://www.topcoder-dev.com',
+  TOKEN_CACHE_TIME: process.env.TOKEN_CACHE_TIME || 90,
+  AUTH0_CLIENT_ID: process.env.AUTH0_CLIENT_ID,
+  AUTH0_CLIENT_SECRET: process.env.AUTH0_CLIENT_SECRET,
+
   LOG_LEVEL: process.env.LOG_LEVEL || 'info',
   CHALLENGE_TYPE_API_URL: process.env.CHALLENGE_TYPE_API_URL || 'https://api.topcoder-dev.com/v4/challenge-types',
   CHALLENGE_TIMELINE_API_URL: process.env.CHALLENGE_TIMELINE_API_URL || 'https://api.topcoder-dev.com/v5/challengetimelines',
+  CHALLENGE_SETTINGS_API_URL: process.env.CHALLENGE_SETTINGS_API_URL || 'https://api.topcoder-dev.com/v5/challengesettings',
+  TERMS_API_URL: process.env.TERMS_API_URL || 'https://api.topcoder-dev.com/v5/terms',
   CREATED_DATE_BEGIN: process.env.CREATED_DATE_BEGIN,
 
   INFORMIX: {
-    SERVER: process.env.IFX_SERVER || 'informixoltp_tcp', // informix server
-    DATABASE: process.env.IFX_DATABASE || 'tcs_catalog', // informix database
+    SERVER: process.env.INFORMIX_SERVER || 'informixoltp_tcp', // informix server
+    DATABASE: process.env.INFORMIX_DATABASE || 'tcs_catalog', // informix database
     HOST: process.env.INFORMIX_HOST || 'localhost', // host
-    PROTOCOL: process.env.IFX_PROTOCOL || 'onsoctcp',
-    PORT: process.env.IFX_PORT || '2021', // port
-    DB_LOCALE: process.env.IFX_DB_LOCALE || 'en_US.57372',
-    USER: process.env.IFX_USER || 'informix', // user
-    PASSWORD: process.env.IFX_PASSWORD || '1nf0rm1x', // password
-    POOL_MAX_SIZE: parseInt(process.env.IFX_POOL_MAX_SIZE) || 10
+    PROTOCOL: process.env.INFORMIX_PROTOCOL || 'onsoctcp',
+    PORT: process.env.INFORMIX_PORT || '2021', // port
+    DB_LOCALE: process.env.INFORMIX_DB_LOCALE || 'en_US.57372',
+    USER: process.env.INFORMIX_USER || 'informix', // user
+    PASSWORD: process.env.INFORMIX_PASSWORD || '1nf0rm1x', // password
+    POOL_MAX_SIZE: parseInt(process.env.INFORMIX_POOL_MAX_SIZE) || 10
   },
 
   AMAZON: {
@@ -58,5 +68,8 @@ module.exports = {
   RESOURCE_ROLE: ['Submitter', 'Reviewer', 'Copilot', 'Manager', 'Observer', 'Iterative Reviewer', 'Post-Mortem Reviewer'],
   BATCH_SIZE: 10, // max challenges will be load from informix on 1 query
   ERROR_LOG_FILENAME: './error.json', // filename of error log for challenge that fail to migrate
-  LOG_FILENAME: './app.log' // log file
+  LOG_FILENAME: './app.log', // log file
+
+  // Challenge properties to be included in migration as challenge settings
+  CHALLENGE_SETTINGS_PROPERTIES: process.env.CHALLENGE_SETTINGS_PROPERTIES ? JSON.parse(process.env.CHALLENGE_SETTINGS_PROPERTIES) : ['allowStockArt', 'submissionLimit', 'submissionsViewable', 'filetypes']
 }

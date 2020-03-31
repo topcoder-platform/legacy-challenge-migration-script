@@ -46,7 +46,7 @@ async function getDateParamter () {
   }
   const histories = await ChallengeHistory.scan().exec()
   const lastRunDate = _.get(_.last(_.orderBy(histories, (item) => new Date(item.date))), 'date')
-  const CREATED_DATE_BEGIN = config.CREATED_DATE_BEGIN || lastRunDate
+  const CREATED_DATE_BEGIN = lastRunDate || config.CREATED_DATE_BEGIN
   if (!CREATED_DATE_BEGIN) {
     throw new Error('No date parameter found in both env variables and datebase. Please configure the CREATED_DATE_BEGIN env variable and try again.')
   }
@@ -171,6 +171,33 @@ async function migrateChallenge (spinner, filter, writeError = true) {
   }
   spinner.prefixText = ''
   spinner.text = ' Finished loading challenge types'
+  spinner.succeed()
+
+  let challengeSettings
+  // processing challenge settings
+  try {
+    spinner.text = 'Loading challenge settings'
+    spinner.start()
+    const name = config.CHALLENGE_SETTINGS_PROPERTIES.join('|')
+    // search by name
+    challengeSettings = await challengeService.getChallengeSettings(name)
+  } catch (e) {
+    logger.debug(util.inspect(e))
+    spinner.fail('Fail to load challenge settings')
+    throw e
+  }
+  if (challengeSettings < 1) {
+    // all are missings
+    await challengeService.saveChallengeSettings(config.CHALLENGE_SETTINGS_PROPERTIES, spinner)
+    spinner.text = 'Done'
+  }
+  if (challengeSettings.length > 0) {
+    // check if any of CHALLENGE_SETTINGS_PROPERTIES is missing in backend
+    const missingSettings = _.filter(config.CHALLENGE_SETTINGS_PROPERTIES, s => !challengeSettings.find(setting => setting.name === s))
+    await challengeService.saveChallengeSettings(missingSettings, spinner)
+  }
+  spinner.prefixText = ''
+  spinner.text = ' Finished loading challenge settings'
   spinner.succeed()
 
   // processing challenge timelines

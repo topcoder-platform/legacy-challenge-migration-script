@@ -20,6 +20,7 @@ services:
       - 9300:9300 
     environment:
       - "discovery.type=single-node"
+    restart: on-failure
   dynamodb:
     image: amazon/dynamodb-local:latest
     ports:
@@ -38,6 +39,8 @@ services:
       - INFORMIX_HOST=tc-informix
       - DYNAMODB_URL=http://dynamodb:8000
       - ES_HOST=elasticsearch:9200
+      - AWS_ACCESS_KEY_ID=dummy
+      - AWS_SECRET_ACCESS_KEY=dummy
     stdin_open: true
     tty: true
     links: 
