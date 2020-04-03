@@ -727,8 +727,9 @@ async function getAllV5Terms () {
   let allTerms = []
   // get search is paginated, we need to get all pages' data
   let page = 1
+  const perPage = 100 // max number of items per page
   while (true) {
-    const result = await request.get(`${config.TERMS_API_URL}?page=${page}`).set({ Authorization: `Bearer ${token}` })
+    const result = await request.get(`${config.TERMS_API_URL}?page=${page}&perPage=${perPage}`).set({ Authorization: `Bearer ${token}` })
     const terms = result.body.result || []
     if (terms.length === 0) {
       break
