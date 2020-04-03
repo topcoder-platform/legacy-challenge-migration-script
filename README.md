@@ -13,7 +13,6 @@ It runs on a scheduled basis and also on-demand by exposing an API allowing admi
 - Data migration script
 
 ## Related repos
-
 - [Challenge API](https://github.com/topcoder-platform/challenge-api)
 
 ## Prerequisites
