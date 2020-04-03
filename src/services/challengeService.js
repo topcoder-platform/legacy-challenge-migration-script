@@ -16,6 +16,7 @@ let processedItem
 let totalItems
 let errorItems
 let connection
+let allV5Terms
 
 let challengeTimelineMapping
 
@@ -587,7 +588,9 @@ async function getChallenges (ids, skip, offset, filter) {
   // get challenge settings from backend api
   const name = config.CHALLENGE_SETTINGS_PROPERTIES.join('|')
   const challengeSettingsFromApi = await getChallengeSettings(name)
-  const allV5Terms = (await getAllV5Terms()).map(t => _.omit(t, ['text']))
+  if (!allV5Terms) {
+    allV5Terms = (await getAllV5Terms()).map(t => _.omit(t, ['text']))
+  }
 
   _.forEach(_.filter(challenges, c => !(existingChallenges.includes(c.id))), c => {
     let detailRequirement = ''
