@@ -11,7 +11,7 @@ const getErrorService = require('../services/errorService')
 const errorService = getErrorService()
 
 const migration = {
-  Challenge: decorateWithDateParamter(migrateChallenge),
+  // Challenge: decorateWithDateParamter(migrateChallenge),
   Resource: decorateWithDateParamter(migrateResource),
   ALL: decorateWithDateParamter(migrate)
 }

@@ -194,6 +194,7 @@ async function saveResourceRoles (resourceRoles, spinner, errFilename) {
  */
 async function getResources (ids, skip, offset, filter) {
   const resources = await getResourcesFromIfx(ids, skip, offset, filter)
+  logger.debug('IFX response: ' + JSON.stringify(resources, null, 2))
   if (!_.isArray(resources) || resources.length < 1) {
     return { finish: true, resources: [] }
   }
