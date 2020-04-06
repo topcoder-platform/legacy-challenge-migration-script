@@ -217,21 +217,26 @@ async function getResources (ids, skip, offset, filter) {
   _.forEach(_.filter(resources, r => !(existingResources.includes(r.id))), r => {
     const challengeId = _.get(_.map(_.filter(existingChallenges, p => p.legacyId === r.challenge_id), 'challengeId'), '[0]')
     const roleId = _.get(_.map(_.filter(existingResourceRoles, rr => rr.name === r.resource_role_name), 'resourceRoleId'), '[0]')
-    console.log(`Will create resource with role iD ${roleId} for challenge ${challengeId} for member ${r.member_id}`)
 
-    const newResource = {
-      id: uuid(),
-      legacyId: r.id,
-      created: new Date(Date.parse(r.created)),
-      createdBy: r.created_by,
-      updated: new Date(Date.parse(r.updated)),
-      updatedBy: r.updated_by,
-      memberId: r.member_id,
-      memberHandle: r.member_handle,
-      challengeId: challengeId,
-      roleId: roleId
+    if (challengeId && roleId) {
+      logger.debug(`Will create resource with role iD ${roleId} for challenge ${challengeId} for member ${r.member_id}`)
+
+      const newResource = {
+        id: uuid(),
+        legacyId: r.id,
+        created: new Date(Date.parse(r.created)),
+        createdBy: r.created_by,
+        updated: new Date(Date.parse(r.updated)),
+        updatedBy: r.updated_by,
+        memberId: r.member_id,
+        memberHandle: r.member_handle,
+        challengeId: challengeId,
+        roleId: roleId
+      }
+      results.push(newResource)
+    } else {
+      logger.debug(`Will skip resource ${r.id}. Challenge ID: ${challengeId}. Role ID: ${roleId}`)
     }
-    results.push(newResource)
   })
   return { resources: results, skip: skip, finish: false }
 }
