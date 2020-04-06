@@ -713,7 +713,7 @@ async function getChallenges (ids, skip, offset, filter) {
           settingValue = value
         }
 
-        challengeSettings.push({ type: found.id, value: settingValue })
+        challengeSettings.push({ type: found.id, value: JSON.stringify(settingValue) })
       }
     })
 
