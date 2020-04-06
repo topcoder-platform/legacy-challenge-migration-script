@@ -79,6 +79,7 @@ async function execQuery (sql, ids, order) {
   if (_.isUndefined(order)) {
     order = ''
   }
+  logger.debug('Executing: ' + `${sql} ${filter} ${order}`)
   return connection.queryAsync(`${sql} ${filter} ${order}`)
 }
 
