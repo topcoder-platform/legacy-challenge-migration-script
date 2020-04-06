@@ -201,7 +201,7 @@ async function getResources (ids, skip, offset, filter) {
   const resourceIds = _.map(resources, 'id')
   const resourceChallengeIds = _.map(resources, 'challenge_id')
   const resourceRoleNames = _.map(resources, 'resource_role_name')
-  logger.debug('IDs to fetch: ' + resourceIds)
+  logger.debug('Resource IDs to fetch: ' + resourceIds)
 
   const queryResults = await Promise.all([getExistingResources(resourceIds),
     getResourceRolesFromDynamo(resourceRoleNames),
@@ -215,6 +215,7 @@ async function getResources (ids, skip, offset, filter) {
   _.forEach(_.filter(resources, r => !(existingResources.includes(r.id))), r => {
     const challengeId = _.get(_.map(_.filter(existingChallenges, p => p.legacyId === r.challenge_id), 'challengeId'), '[0]')
     const roleId = _.get(_.map(_.filter(existingResourceRoles, rr => rr.name === r.resource_role_name), 'resourceRoleId'), '[0]')
+    console.log(`Will create resource with role iD ${roleId} for challenge ${challengeId} for member ${r.member_id}`)
 
     const newResource = {
       id: uuid(),

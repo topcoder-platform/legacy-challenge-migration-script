@@ -563,7 +563,7 @@ async function getChallenges (ids, skip, offset, filter) {
   }
 
   const challengeIds = _.map(challenges, 'id')
-  logger.debug('IDs to fetch: ' + challengeIds)
+  logger.debug('Challenge IDs to fetch: ' + challengeIds)
 
   const tasks = [getPrizeFromIfx, getTechnologyFromIfx, getPlatformFromIfx,
     getGroupFromIfx, getWinnerFromIfx, getExistingLegacyIds, getPhaseFromIfx, getSettingsFromIfx, getTermsFromIfx]
