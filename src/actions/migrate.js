@@ -11,7 +11,7 @@ const getErrorService = require('../services/errorService')
 const errorService = getErrorService()
 
 const migration = {
-  // Challenge: decorateWithDateParamter(migrateChallenge),
+  Challenge: decorateWithDateParamter(migrateChallenge),
   Resource: decorateWithDateParamter(migrateResource),
   ALL: decorateWithDateParamter(migrate)
 }
@@ -76,11 +76,8 @@ async function commitHistory (challengesAdded, resourcesAdded) {
  * @param  {[type]} spinner Loading animate object
  */
 async function migrate (spinner, filter) {
-  for (const modelName in migration) {
-    if (modelName !== 'ALL') {
-      await migration[modelName](spinner, filter, false)
-    }
-  }
+  await migration.Challenge(spinner, filter, false)
+  await migration.Resource(spinner, filter, false)
   errorService.close()
   logger.info('All requested model / table data have been attempted to be migrated')
 }

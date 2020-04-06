@@ -14,6 +14,7 @@ let processedItem
 let totalItems
 let errorItems
 let connection
+const challengeIdtoUUIDmap = {}
 
 /**
  * Get resource roles from informix
@@ -205,17 +206,21 @@ async function getResources (ids, skip, offset, filter) {
   const resourceRoleNames = _.map(resources, 'resource_role_name')
   logger.debug('Resource IDs to fetch: ' + resourceIds)
 
+  const challengeIdsToFetch = _.map(resourceChallengeIds, id => !challengeIdtoUUIDmap[id])
+
   const queryResults = await Promise.all([getExistingResources(resourceIds),
     getResourceRolesFromDynamo(resourceRoleNames),
-    challengeService.getChallengesFromDynamoDB(resourceChallengeIds)])
+    challengeService.getChallengesFromDynamoDB(challengeIdsToFetch)])
 
   const existingResources = queryResults[0]
   const existingResourceRoles = queryResults[1]
-  const existingChallenges = queryResults[2]
+  _.each(queryResults[2], (c) => {
+    challengeIdtoUUIDmap[c.legacyId] = c.challengeId
+  })
   const results = []
 
   _.forEach(_.filter(resources, r => !(existingResources.includes(r.id))), r => {
-    const challengeId = _.get(_.map(_.filter(existingChallenges, p => p.legacyId === r.challenge_id), 'challengeId'), '[0]')
+    const challengeId = challengeIdtoUUIDmap[r.challenge_id] // _.get(_.map(_.filter(existingChallenges, p => p.legacyId === r.challenge_id), 'challengeId'), '[0]')
     const roleId = _.get(_.map(_.filter(existingResourceRoles, rr => rr.name === r.resource_role_name), 'resourceRoleId'), '[0]')
 
     if (challengeId && roleId) {
