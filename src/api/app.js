@@ -10,7 +10,7 @@ const routers = require('./routers')
 const { migration } = require('./services')
 const SegfaultHandler = require('segfault-handler')
 
-SegfaultHandler.registerHandler('./crash.log', (signal, address, stack) => {
+SegfaultHandler.registerHandler('../../crash.log', (signal, address, stack) => {
   logger.debug('signal', signal)
   logger.debug('address', address)
   logger.debug('stack', stack)

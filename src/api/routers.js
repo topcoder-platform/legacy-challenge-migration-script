@@ -3,10 +3,33 @@
  */
 const helper = require('../util/helper')
 const { migration } = require('./services')
+const fs = require('fs')
 
-const handleConflict = (res, req) => {
+const getPreviousLogs = async () => {
+  return new Promise((resolve) => {
+    let crashLog
+    let errorLog
+    try {
+      crashLog = fs.readFileSync('../../crash.log')
+    } catch (e) {
+      crashLog = 'N/A'
+    }
+    try {
+      errorLog = fs.readFileSync('../../error.json')
+    } catch (e) {
+      errorLog = 'N/A'
+    }
+    resolve({
+      crashLog,
+      errorLog
+    })
+  })
+}
+
+const handleConflict = async (res, req) => {
   res.status(409).send({
-    message: 'The migration is running.'
+    message: 'The migration is running.',
+    ...(await getPreviousLogs())
   })
 }
 
@@ -19,7 +42,7 @@ const handleConflict = (res, req) => {
  */
 async function runMigration (req, res, next) {
   if (migration.isRunning()) {
-    handleConflict(res, req)
+    await handleConflict(res, req)
     return
   }
   migration.run().catch(next)
@@ -35,11 +58,12 @@ async function runMigration (req, res, next) {
  */
 async function checkStatus (req, res) {
   if (migration.isRunning()) {
-    handleConflict(res, req)
+    await handleConflict(res, req)
     return
   }
   return res.send({
-    status: migration.getStatus()
+    status: migration.getStatus(),
+    ...(await getPreviousLogs())
   })
 }
 

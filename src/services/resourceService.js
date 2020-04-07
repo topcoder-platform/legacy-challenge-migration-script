@@ -208,15 +208,22 @@ async function getResources (ids, skip, offset, filter) {
 
   const challengeIdsToFetch = _.filter(resourceChallengeIds, id => !challengeIdtoUUIDmap[id])
 
-  const queryResults = await Promise.all([getExistingResources(resourceIds),
-    getResourceRolesFromDynamo(resourceRoleNames),
-    challengeService.getChallengesFromDynamoDB(challengeIdsToFetch)])
+  const dbQueries = [
+    getExistingResources(resourceIds),
+    getResourceRolesFromDynamo(resourceRoleNames)
+  ]
+  if (challengeIdsToFetch.length > 0) {
+    dbQueries.push(challengeService.getChallengesFromDynamoDB(challengeIdsToFetch))
+  }
+  const queryResults = await Promise.all(dbQueries)
 
   const existingResources = queryResults[0]
   const existingResourceRoles = queryResults[1]
-  _.each(queryResults[2], (c) => {
-    challengeIdtoUUIDmap[c.legacyId] = c.challengeId
-  })
+  if (challengeIdsToFetch.length > 0) {
+    _.each(queryResults[2], (c) => {
+      challengeIdtoUUIDmap[c.legacyId] = c.challengeId
+    })
+  }
   const results = []
 
   _.forEach(_.filter(resources, r => !(existingResources.includes(r.id))), r => {
