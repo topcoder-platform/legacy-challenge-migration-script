@@ -206,7 +206,7 @@ async function getResources (ids, skip, offset, filter) {
   const resourceRoleNames = _.map(resources, 'resource_role_name')
   logger.debug('Resource IDs to fetch: ' + resourceIds)
 
-  const challengeIdsToFetch = _.map(resourceChallengeIds, id => !challengeIdtoUUIDmap[id])
+  const challengeIdsToFetch = _.filter(resourceChallengeIds, id => !challengeIdtoUUIDmap[id])
 
   const queryResults = await Promise.all([getExistingResources(resourceIds),
     getResourceRolesFromDynamo(resourceRoleNames),
