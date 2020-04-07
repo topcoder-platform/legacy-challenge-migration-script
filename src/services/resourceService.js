@@ -14,6 +14,7 @@ let processedItem
 let totalItems
 let errorItems
 let connection
+const challengeIdtoUUIDmap = {}
 
 /**
  * Get resource roles from informix
@@ -79,6 +80,7 @@ async function execQuery (sql, ids, order) {
   if (_.isUndefined(order)) {
     order = ''
   }
+  logger.debug('Executing: ' + `${sql} ${filter} ${order}`)
   return connection.queryAsync(`${sql} ${filter} ${order}`)
 }
 
@@ -194,6 +196,7 @@ async function saveResourceRoles (resourceRoles, spinner, errFilename) {
  */
 async function getResources (ids, skip, offset, filter) {
   const resources = await getResourcesFromIfx(ids, skip, offset, filter)
+  logger.debug('IFX response: ' + JSON.stringify(resources, null, 2))
   if (!_.isArray(resources) || resources.length < 1) {
     return { finish: true, resources: [] }
   }
@@ -201,34 +204,51 @@ async function getResources (ids, skip, offset, filter) {
   const resourceIds = _.map(resources, 'id')
   const resourceChallengeIds = _.map(resources, 'challenge_id')
   const resourceRoleNames = _.map(resources, 'resource_role_name')
-  logger.debug('IDs to fetch: ' + resourceIds)
+  logger.debug('Resource IDs to fetch: ' + resourceIds)
 
-  const queryResults = await Promise.all([getExistingResources(resourceIds),
-    getResourceRolesFromDynamo(resourceRoleNames),
-    challengeService.getChallengesFromDynamoDB(resourceChallengeIds)])
+  const challengeIdsToFetch = _.filter(resourceChallengeIds, id => !challengeIdtoUUIDmap[id])
+
+  const dbQueries = [
+    getExistingResources(resourceIds),
+    getResourceRolesFromDynamo(resourceRoleNames)
+  ]
+  if (challengeIdsToFetch.length > 0) {
+    dbQueries.push(challengeService.getChallengesFromDynamoDB(challengeIdsToFetch))
+  }
+  const queryResults = await Promise.all(dbQueries)
 
   const existingResources = queryResults[0]
   const existingResourceRoles = queryResults[1]
-  const existingChallenges = queryResults[2]
+  if (challengeIdsToFetch.length > 0) {
+    _.each(queryResults[2], (c) => {
+      challengeIdtoUUIDmap[c.legacyId] = c.challengeId
+    })
+  }
   const results = []
 
   _.forEach(_.filter(resources, r => !(existingResources.includes(r.id))), r => {
-    const challengeId = _.get(_.map(_.filter(existingChallenges, p => p.legacyId === r.challenge_id), 'challengeId'), '[0]')
+    const challengeId = challengeIdtoUUIDmap[r.challenge_id] // _.get(_.map(_.filter(existingChallenges, p => p.legacyId === r.challenge_id), 'challengeId'), '[0]')
     const roleId = _.get(_.map(_.filter(existingResourceRoles, rr => rr.name === r.resource_role_name), 'resourceRoleId'), '[0]')
 
-    const newResource = {
-      id: uuid(),
-      legacyId: r.id,
-      created: new Date(Date.parse(r.created)),
-      createdBy: r.created_by,
-      updated: new Date(Date.parse(r.updated)),
-      updatedBy: r.updated_by,
-      memberId: r.member_id,
-      memberHandle: r.member_handle,
-      challengeId: challengeId,
-      roleId: roleId
+    if (challengeId && roleId) {
+      logger.debug(`Will create resource with role iD ${roleId} for challenge ${challengeId} for member ${r.member_id}`)
+
+      const newResource = {
+        id: uuid(),
+        legacyId: r.id,
+        created: new Date(Date.parse(r.created)),
+        createdBy: r.created_by,
+        updated: new Date(Date.parse(r.updated)),
+        updatedBy: r.updated_by,
+        memberId: r.member_id,
+        memberHandle: r.member_handle,
+        challengeId: challengeId,
+        roleId: roleId
+      }
+      results.push(newResource)
+    } else {
+      logger.debug(`Will skip resource ${r.id}. Challenge ID: ${challengeId}. Role ID: ${roleId}`)
     }
-    results.push(newResource)
   })
   return { resources: results, skip: skip, finish: false }
 }

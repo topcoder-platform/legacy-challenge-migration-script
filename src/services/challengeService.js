@@ -16,6 +16,7 @@ let processedItem
 let totalItems
 let errorItems
 let connection
+let allV5Terms
 
 let challengeTimelineMapping
 
@@ -562,7 +563,7 @@ async function getChallenges (ids, skip, offset, filter) {
   }
 
   const challengeIds = _.map(challenges, 'id')
-  logger.debug('IDs to fetch: ' + challengeIds)
+  logger.debug('Challenge IDs to fetch: ' + challengeIds)
 
   const tasks = [getPrizeFromIfx, getTechnologyFromIfx, getPlatformFromIfx,
     getGroupFromIfx, getWinnerFromIfx, getExistingLegacyIds, getPhaseFromIfx, getSettingsFromIfx, getTermsFromIfx]
@@ -587,7 +588,9 @@ async function getChallenges (ids, skip, offset, filter) {
   // get challenge settings from backend api
   const name = config.CHALLENGE_SETTINGS_PROPERTIES.join('|')
   const challengeSettingsFromApi = await getChallengeSettings(name)
-  const allV5Terms = (await getAllV5Terms()).map(t => _.omit(t, ['text']))
+  if (!allV5Terms) {
+    allV5Terms = (await getAllV5Terms()).map(t => _.omit(t, ['text']))
+  }
 
   _.forEach(_.filter(challenges, c => !(existingChallenges.includes(c.id))), c => {
     let detailRequirement = ''
@@ -710,7 +713,7 @@ async function getChallenges (ids, skip, offset, filter) {
           settingValue = value
         }
 
-        challengeSettings.push({ type: found.id, value: settingValue })
+        challengeSettings.push({ type: found.id, value: JSON.stringify(settingValue) })
       }
     })
 
@@ -724,8 +727,10 @@ async function getAllV5Terms () {
   let allTerms = []
   // get search is paginated, we need to get all pages' data
   let page = 1
+  // TODO: move this to configs
+  const perPage = 100 // max number of items per page
   while (true) {
-    const result = await request.get(`${config.TERMS_API_URL}?page=${page}`).set({ Authorization: `Bearer ${token}` })
+    const result = await request.get(`${config.TERMS_API_URL}?page=${page}&perPage=${perPage}`).set({ Authorization: `Bearer ${token}` })
     const terms = result.body.result || []
     if (terms.length === 0) {
       break
