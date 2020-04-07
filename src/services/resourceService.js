@@ -89,7 +89,7 @@ async function execQuery (sql, ids, order) {
  */
 function getExistingResourceRoles (names) {
   return new Promise((resolve, reject) => {
-    ResourceRole.scan('name').in(names).exec((err, result) => {
+    ResourceRole.query('name').in(names).exec((err, result) => {
       if (err) {
         reject(err)
       } else {
@@ -104,7 +104,7 @@ function getExistingResourceRoles (names) {
  */
 function getResourceRolesFromDynamo (names) {
   return new Promise((resolve, reject) => {
-    ResourceRole.scan('name').in(names).exec((err, result) => {
+    ResourceRole.query('name').in(names).exec((err, result) => {
       if (err) {
         reject(err)
       } else {
@@ -124,7 +124,7 @@ function getResourceRolesFromDynamo (names) {
  */
 function getExistingResources (ids) {
   return new Promise((resolve, reject) => {
-    Resource.scan('legacyId').in(ids).exec((err, result) => {
+    Resource.query('legacyId').in(ids).exec((err, result) => {
       if (err) {
         reject(err)
       } else {
