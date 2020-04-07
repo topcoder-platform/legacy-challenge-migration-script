@@ -75,7 +75,7 @@ async function commitHistory (challengesAdded, resourcesAdded) {
  * @param  {[type]} spinner Loading animate object
  */
 async function migrate (spinner, filter) {
-  // await migration.Challenge(spinner, filter, false)
+  await migration.Challenge(spinner, filter, false)
   await migration.Resource(spinner, filter, false)
   await commitHistory(spinner._context.challengesAdded, spinner._context.resourcesAdded)
   errorService.close()
