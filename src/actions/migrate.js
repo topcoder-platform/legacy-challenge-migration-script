@@ -29,7 +29,6 @@ function decorateWithDateParamter (func) {
     const CREATED_DATE_BEGIN = await getDateParamter()
     spinner._context = { challengesAdded: 0, resourcesAdded: 0 } // inject context to collect statistics
     await func(spinner, { CREATED_DATE_BEGIN })
-    await commitHistory(spinner._context.challengesAdded, spinner._context.resourcesAdded)
   }
 }
 
@@ -78,6 +77,7 @@ async function commitHistory (challengesAdded, resourcesAdded) {
 async function migrate (spinner, filter) {
   await migration.Challenge(spinner, filter, false)
   await migration.Resource(spinner, filter, false)
+  await commitHistory(spinner._context.challengesAdded, spinner._context.resourcesAdded)
   errorService.close()
   logger.info('All requested model / table data have been attempted to be migrated')
 }
