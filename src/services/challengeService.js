@@ -321,7 +321,7 @@ async function save (challenges, spinner, errFilename) {
  */
 function getChallengesFromDynamoDB (legacyIds) {
   return new Promise((resolve, reject) => {
-    Challenge.query('legacyId').in(legacyIds).exec((err, result) => {
+    Challenge.scan('legacyId').in(legacyIds).exec((err, result) => {
       if (err) {
         reject(err)
       } else {
