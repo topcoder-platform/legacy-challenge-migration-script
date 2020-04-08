@@ -213,7 +213,7 @@ async function getResources (ids, skip, offset, filter) {
     getResourceRolesFromDynamo(resourceRoleNames)
   ]
   if (challengeIdsToFetch.length > 0) {
-    dbQueries.push(challengeService.getChallengesFromDynamoDB(challengeIdsToFetch))
+    dbQueries.push(challengeService.getChallengesFromES(challengeIdsToFetch))
   }
   const queryResults = await Promise.all(dbQueries)
 
