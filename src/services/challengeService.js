@@ -17,6 +17,8 @@ let totalItems
 let errorItems
 let connection
 let allV5Terms
+let challengeTypeMapping
+let challengeSettingsFromApi
 
 let challengeTimelineMapping
 
@@ -587,12 +589,16 @@ async function getChallenges (ids, skip, offset, filter) {
   const results = []
 
   // get challenge types from dynamodb
-  const challengeTypes = await getChallengeTypesFromDynamo()
-  const challengeTypeMapping = createChallengeTypeMapping(challengeTypes)
+  if (!challengeTypeMapping) {
+    const challengeTypes = await getChallengeTypesFromDynamo()
+    challengeTypeMapping = createChallengeTypeMapping(challengeTypes)
+  }
 
   // get challenge settings from backend api
-  const name = config.CHALLENGE_SETTINGS_PROPERTIES.join('|')
-  const challengeSettingsFromApi = await getChallengeSettings(name)
+  if (!challengeSettingsFromApi) {
+    const name = config.CHALLENGE_SETTINGS_PROPERTIES.join('|')
+    challengeSettingsFromApi = await getChallengeSettings(name)
+  }
   if (!allV5Terms) {
     allV5Terms = (await getAllV5Terms()).map(t => _.omit(t, ['text']))
   }
