@@ -65,7 +65,7 @@ module.exports = {
     15: 'Checkpoint Submission'
   },
   // Resource role to be included in migration
-  RESOURCE_ROLE: ['Submitter', 'Reviewer', 'Copilot', 'Manager', 'Observer', 'Iterative Reviewer', 'Post-Mortem Reviewer'],
+  RESOURCE_ROLE: ['Submitter', 'Reviewer', 'Copilot', 'Manager', 'Observer', 'Iterative Reviewer', 'Post-Mortem Reviewer', 'Approver'],
   BATCH_SIZE: 10, // max challenges will be load from informix on 1 query
   ERROR_LOG_FILENAME: './error.json', // filename of error log for challenge that fail to migrate
   LOG_FILENAME: './app.log', // log file
