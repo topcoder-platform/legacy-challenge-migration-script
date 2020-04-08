@@ -317,21 +317,6 @@ async function save (challenges, spinner, errFilename) {
 }
 
 /**
- * Get existing legacyId from informix
- */
-function getExistingLegacyIds () {
-  return new Promise((resolve, reject) => {
-    Challenge.scan().exec((err, result) => {
-      if (err) {
-        reject(err)
-      } else {
-        resolve(_.compact(_.map(result, 'legacyId')))
-      }
-    })
-  })
-}
-
-/**
  * Get existing challenges from Dynamo using legacyId
  */
 function getChallengesFromDynamoDB (legacyIds) {
@@ -566,7 +551,7 @@ async function getChallenges (ids, skip, offset, filter) {
   logger.debug('Challenge IDs to fetch: ' + challengeIds)
 
   const tasks = [getPrizeFromIfx, getTechnologyFromIfx, getPlatformFromIfx,
-    getGroupFromIfx, getWinnerFromIfx, getExistingLegacyIds, getPhaseFromIfx, getSettingsFromIfx, getTermsFromIfx]
+    getGroupFromIfx, getWinnerFromIfx, getPhaseFromIfx, getSettingsFromIfx, getTermsFromIfx]
 
   const queryResults = await Promise.all(tasks.map(t => t(challengeIds)))
   // construct challenge
@@ -575,10 +560,9 @@ async function getChallenges (ids, skip, offset, filter) {
   const allPlatforms = queryResults[2]
   const allGroups = queryResults[3]
   const allWinners = queryResults[4]
-  const existingChallenges = queryResults[5]
-  const allPhases = queryResults[6]
-  const allSettings = queryResults[7]
-  const allTerms = queryResults[8]
+  const allPhases = queryResults[5]
+  const allSettings = queryResults[6]
+  const allTerms = queryResults[7]
   const results = []
 
   // get challenge types from dynamodb
@@ -592,7 +576,8 @@ async function getChallenges (ids, skip, offset, filter) {
     allV5Terms = (await getAllV5Terms()).map(t => _.omit(t, ['text']))
   }
 
-  _.forEach(_.filter(challenges, c => !(existingChallenges.includes(c.id))), c => {
+  // TODO: Skip already migrated challenges
+  _.forEach(challenges, c => {
     let detailRequirement = ''
     if (c.type_id === 37) {
       detailRequirement = c.marathonmatch_detail_requirements
