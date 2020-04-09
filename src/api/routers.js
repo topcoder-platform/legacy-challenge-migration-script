@@ -4,6 +4,7 @@
 const helper = require('../util/helper')
 const { migration } = require('./services')
 const fs = require('fs')
+const logger = require('../util/logger')
 
 const getPreviousLogs = async () => {
   return new Promise((resolve) => {
@@ -58,6 +59,7 @@ async function runMigration (req, res, next) {
  */
 async function checkStatus (req, res) {
   if (migration.isRunning()) {
+    logger.info('GET check - IS RUNNING')
     await handleConflict(res, req)
     return
   }
