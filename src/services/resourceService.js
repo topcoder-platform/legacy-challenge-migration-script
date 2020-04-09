@@ -14,6 +14,7 @@ let processedItem
 let totalItems
 let errorItems
 let connection
+let resourceRolesFromDynamo = []
 const challengeIdtoUUIDmap = {}
 
 /**
@@ -103,19 +104,25 @@ function getExistingResourceRoles (names) {
  * Get resource roles that have been imported to Dynamo
  */
 function getResourceRolesFromDynamo (names) {
+  const uniqueNames = _.filter(names, name => !_.find(resourceRolesFromDynamo, rr => rr.name === name))
   return new Promise((resolve, reject) => {
-    ResourceRole.scan('name').in(names).exec((err, result) => {
-      if (err) {
-        reject(err)
-      } else {
-        resolve(result.map(rr => {
-          return {
-            name: rr.name,
-            resourceRoleId: rr.id
-          }
-        }))
-      }
-    })
+    if (uniqueNames.length > 0) {
+      ResourceRole.scan('name').in(uniqueNames).exec((err, result) => {
+        if (err) {
+          reject(err)
+        } else {
+          result.map(rr => {
+            resourceRolesFromDynamo.push({
+              name: rr.name,
+              resourceRoleId: rr.id
+            })
+          })
+          resolve(resourceRolesFromDynamo)
+        }
+      })
+    } else {
+      resolve(resourceRolesFromDynamo)
+    }
   })
 }
 
@@ -210,10 +217,10 @@ async function getResources (ids, skip, offset, filter) {
 
   const dbQueries = [
     getExistingResources(resourceIds),
-    getResourceRolesFromDynamo(resourceRoleNames)
+    getResourceRolesFromDynamo(resourceRoleNames) // TODO: Performance issue
   ]
   if (challengeIdsToFetch.length > 0) {
-    dbQueries.push(challengeService.getChallengesFromDynamoDB(challengeIdsToFetch))
+    dbQueries.push(challengeService.getChallengesFromES(challengeIdsToFetch))
   }
   const queryResults = await Promise.all(dbQueries)
 

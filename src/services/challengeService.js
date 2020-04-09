@@ -17,6 +17,8 @@ let totalItems
 let errorItems
 let connection
 let allV5Terms
+let challengeTypeMapping
+let challengeSettingsFromApi
 
 let challengeTimelineMapping
 
@@ -317,23 +319,44 @@ async function save (challenges, spinner, errFilename) {
 }
 
 /**
- * Get existing challenges from Dynamo using legacyId
+ * Get existing challenges from ES using legacyId
  */
-function getChallengesFromDynamoDB (legacyIds) {
-  return new Promise((resolve, reject) => {
-    Challenge.scan('legacyId').in(legacyIds).exec((err, result) => {
-      if (err) {
-        reject(err)
-      } else {
-        resolve(result.map(c => {
-          return {
-            legacyId: c.legacyId,
-            challengeId: c.id
-          }
-        }))
+async function getChallengesFromES (legacyIds) {
+  const esQuery = {
+    index: config.get('ES.CHALLENGE_ES_INDEX'),
+    type: config.get('ES.CHALLENGE_ES_TYPE'),
+    size: _.get(legacyIds, 'length', 1),
+    from: 0, // Es Index starts from 0
+    body: {
+      query: {
+        bool: {
+          should: _.map(legacyIds, legacyId => ({
+            match: {
+              legacyId: legacyId
+            }
+          }))
+        }
       }
-    })
-  })
+    }
+  }
+  // Search with constructed query
+  let docs
+  try {
+    docs = await getESClient().search(esQuery)
+  } catch (e) {
+    // Catch error when the ES is fresh and has no data
+    docs = {
+      hits: {
+        total: 0,
+        hits: []
+      }
+    }
+  }
+  // Extract data from hits
+  return _.map(docs.hits.hits, item => ({
+    legacyId: item._source.legacyId,
+    challengeId: item._source.id
+  }))
 }
 
 /**
@@ -566,12 +589,16 @@ async function getChallenges (ids, skip, offset, filter) {
   const results = []
 
   // get challenge types from dynamodb
-  const challengeTypes = await getChallengeTypesFromDynamo()
-  const challengeTypeMapping = createChallengeTypeMapping(challengeTypes)
+  if (!challengeTypeMapping) {
+    const challengeTypes = await getChallengeTypesFromDynamo()
+    challengeTypeMapping = createChallengeTypeMapping(challengeTypes)
+  }
 
   // get challenge settings from backend api
-  const name = config.CHALLENGE_SETTINGS_PROPERTIES.join('|')
-  const challengeSettingsFromApi = await getChallengeSettings(name)
+  if (!challengeSettingsFromApi) {
+    const name = config.CHALLENGE_SETTINGS_PROPERTIES.join('|')
+    challengeSettingsFromApi = await getChallengeSettings(name)
+  }
   if (!allV5Terms) {
     allV5Terms = (await getAllV5Terms()).map(t => _.omit(t, ['text']))
   }
@@ -732,7 +759,7 @@ async function getAllV5Terms () {
 module.exports = {
   getChallenges,
   save,
-  getChallengesFromDynamoDB,
+  getChallengesFromES,
   getChallengeTypes,
   saveChallengeTypes,
   createChallengeTimelineMapping,
