@@ -58,6 +58,7 @@ async function runMigration (req, res, next) {
  * @returns {undefined}
  */
 async function checkStatus (req, res) {
+  logger.info('GET check')
   if (migration.isRunning()) {
     logger.info('GET check - IS RUNNING')
     await handleConflict(res, req)
