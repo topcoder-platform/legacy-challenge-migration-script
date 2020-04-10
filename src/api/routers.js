@@ -2,7 +2,7 @@
  * Express routers.
  */
 const helper = require('../util/helper')
-const { migration } = require('./services')
+const { migration, retry } = require('./services')
 const fs = require('fs')
 
 const getPreviousLogs = async () => {
@@ -50,6 +50,22 @@ async function runMigration (req, res, next) {
 }
 
 /**
+ * Retry migration.
+ *
+ * @param {Object} req the express request object
+ * @param {Object} res the express response object
+ * @returns {undefined}
+ */
+async function retryMigration (req, res, next) {
+  if (migration.isRunning()) {
+    await handleConflict(res, req)
+    return
+  }
+  retry.run(req.params.challengeId).catch(next)
+  res.sendStatus(200)
+}
+
+/**
  * Check the current status of the migration.
  *
  * @param {Object} req the express request object
@@ -69,5 +85,6 @@ async function checkStatus (req, res) {
 
 module.exports = {
   runMigration: helper.wrapRouter(runMigration),
-  checkStatus: helper.wrapRouter(checkStatus)
+  checkStatus: helper.wrapRouter(checkStatus),
+  retryMigration: helper.wrapRouter(retryMigration)
 }

@@ -14,7 +14,7 @@ let processedItem
 let totalItems
 let errorItems
 let connection
-let resourceRolesFromDynamo = []
+const resourceRolesFromDynamo = []
 const challengeIdtoUUIDmap = {}
 
 /**

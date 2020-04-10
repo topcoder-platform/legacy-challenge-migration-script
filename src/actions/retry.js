@@ -19,11 +19,12 @@ module.exports = retries
  * Retry to migrate challenges logged in error file
  *
  * @param  {[type]} spinner Loading animate object
+ * @param {Number} challengeId the challenge ID
  */
-async function retryChallenge (spinner, writeError = true) {
+async function retryChallenge (spinner, writeError = true, challengeId) {
   process.env.IS_RETRYING = true
   const offset = config.get('BATCH_SIZE')
-  const errorIds = errorService.getErrorIds('challengeId')
+  const errorIds = challengeId ? [challengeId] : errorService.getErrorIds('challengeId')
 
   let finish = false
   let skip = 0
@@ -71,11 +72,12 @@ async function retryChallenge (spinner, writeError = true) {
  * Retry to migrate resources logged in error file
  *
  * @param  {[type]} spinner Loading animate object
+ * @param {Number} challengeId the challenge ID
  */
-async function retryResource (spinner, writeError = true) {
+async function retryResource (spinner, writeError = true, challengeId) {
   process.env.IS_RETRYING = true
   const offset = config.get('BATCH_SIZE')
-  const errorIds = errorService.getErrorIds('resourceId')
+  const errorIds = challengeId ? [challengeId] : errorService.getErrorIds('resourceId')
 
   let finish = false
   let skip = 0
@@ -123,13 +125,13 @@ async function retryResource (spinner, writeError = true) {
  * Retry to migrate records logged in error file
  *
  * @param  {[type]} spinner Loading animate object
+ * @param {Number} challengeId the challenge ID
  */
-async function retry (spinner) {
-  for (const modelName in retries) {
-    if (modelName !== 'ALL') {
-      await retries[modelName](spinner, false)
-    }
-  }
+async function retry (spinner, challengeId) {
+  await retries.Challenge(spinner, false, challengeId)
+  logger.info('Waiting 15 seconds before move on to the resource migration...')
+  await new Promise(resolve => setTimeout(() => resolve(), 15 * 1000))
+  await retries.Resource(spinner, false, challengeId)
   errorService.close()
   logger.info('All error data have been attempted to be migrated')
 }
