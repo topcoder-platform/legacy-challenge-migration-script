@@ -67,6 +67,7 @@ function getChallengesFromIfx (ids, skip, offset, filter) {
       AND review_type_info.project_info_type_id = 79 
       WHERE 1=1 ${filterCreatedDate}
 `
+
   return execQuery(sql, ids, 'order by p.project_id')
 }
 
@@ -372,8 +373,10 @@ async function execQuery (sql, ids, order) {
   if (_.isUndefined(order)) {
     order = ''
   }
-  console.log(`Executing: ${sql} ${filter} ${order}`)
-  return connection.queryAsync(`${sql} ${filter} ${order}`)
+  console.log(`Query - Executing: ${sql} ${filter} ${order}`)
+  const result = connection.query(`${sql} ${filter} ${order}`)
+  console.log(`Query - Result: ${result}`)
+  return result
 }
 
 /**
