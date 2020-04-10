@@ -93,7 +93,7 @@ async function retryResource (spinner, writeError = true, challengeId) {
       const ids = errorIds.slice(skip, skip + offset)
       if (ids.length > 0) {
         const challengeResources = await resourceService.getChallengeResourcesFromIfx(ids)
-        result = await resourceService.getResources(_.map(challengeResources, r => r.challenge_id))
+        result = await resourceService.getResources(_.map(challengeResources, r => r.id))
         finish = result.finish
       } else {
         finish = true
