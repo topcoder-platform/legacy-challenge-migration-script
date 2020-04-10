@@ -74,6 +74,7 @@ function getChallengesFromIfx (ids, skip, offset, filter) {
       LEFT JOIN project_mm_specification pmm_spec ON pmm_spec.project_mm_spec_id = p.project_mm_spec_id
       WHERE 1=1 ${filterCreatedDate}
 `
+
   return execQuery(sql, ids, 'order by p.project_id')
 }
 
@@ -379,8 +380,10 @@ async function execQuery (sql, ids, order) {
   if (_.isUndefined(order)) {
     order = ''
   }
-  console.log(`Executing: ${sql} ${filter} ${order}`)
-  return connection.queryAsync(`${sql} ${filter} ${order}`)
+  console.log(`Query - Executing: ${sql} ${filter} ${order}`)
+  const result = connection.query(`${sql} ${filter} ${order}`)
+  console.log(`Query - Result: ${result}`)
+  return result
 }
 
 /**
