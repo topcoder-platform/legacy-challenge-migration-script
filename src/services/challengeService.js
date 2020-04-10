@@ -130,7 +130,7 @@ function getPhaseFromIfx (ids) {
       project_phase AS phase
     INNER JOIN project AS p  ON phase.project_id = p.project_id
     INNER JOIN phase_status_lu AS s  ON phase.phase_status_id = s.phase_status_id
-    WHERE phase.phase_type_id = 1 or phase.phase_type_id = 2 or phase.phase_type_id = 4 or phase.phase_type_id = 5 or phase.phase_type_id = 6 or phase.phase_type_id = 15
+    WHERE (phase.phase_type_id = 1 or phase.phase_type_id = 2 or phase.phase_type_id = 4 or phase.phase_type_id = 5 or phase.phase_type_id = 6 or phase.phase_type_id = 15)
   `
   return execQuery(sql, ids)
 }
