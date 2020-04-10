@@ -131,8 +131,8 @@ async function retryResource (spinner, writeError = true, challengeId) {
  */
 async function retry (spinner, challengeId) {
   await retries.Challenge(spinner, false, challengeId)
-  logger.info('Waiting 15 seconds before move on to the resource migration...')
-  await new Promise(resolve => setTimeout(() => resolve(), 15 * 1000))
+  // logger.info('Waiting 15 seconds before move on to the resource migration...')
+  // await new Promise(resolve => setTimeout(() => resolve(), 15 * 1000))
   await retries.Resource(spinner, false, challengeId)
   errorService.close()
   logger.info('All error data have been attempted to be migrated')
