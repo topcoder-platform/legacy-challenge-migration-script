@@ -130,6 +130,7 @@ async function retryResource (spinner, writeError = true, challengeId) {
  * @param {Number} challengeId the challenge ID
  */
 async function retry (spinner, challengeId) {
+  spinner._context = { challengesAdded: 0, resourcesAdded: 0 } // inject context to collect statistics
   await retries.Challenge(spinner, false, challengeId)
   // logger.info('Waiting 15 seconds before move on to the resource migration...')
   // await new Promise(resolve => setTimeout(() => resolve(), 15 * 1000))
