@@ -53,10 +53,7 @@ function getChallengesFromIfx (ids, skip, offset, filter) {
       pstatus.name AS status,
       review_type_info.value AS review_type,
       forum_id_info.value AS forum_id,
-      p.tc_direct_project_id AS project_id,
-      pspec.detailed_requirements_text AS software_detail_requirements,
-      pss.contest_description AS studio_detail_requirements,
-      pmm_spec.match_details AS marathonmatch_detail_requirements
+      p.tc_direct_project_id AS project_id
     FROM
       project p
       INNER JOIN project_status_lu pstatus ON pstatus.project_status_id = p.project_status_id
@@ -67,11 +64,7 @@ function getChallengesFromIfx (ids, skip, offset, filter) {
       LEFT JOIN project_info AS forum_id_info ON forum_id_info.project_id = p.project_id
       AND forum_id_info.project_info_type_id = 4
       LEFT JOIN project_info AS review_type_info ON review_type_info.project_id = p.project_id
-      AND review_type_info.project_info_type_id = 79
-      LEFT JOIN project_spec pspec ON pspec.project_id = p.project_id
-            AND pspec.version = (select MAX(project_spec.version) from project_spec where project_spec.project_id = p.project_id)
-      LEFT JOIN project_studio_specification pss ON pss.project_studio_spec_id = p.project_studio_spec_id
-      LEFT JOIN project_mm_specification pmm_spec ON pmm_spec.project_mm_spec_id = p.project_mm_spec_id
+      AND review_type_info.project_info_type_id = 79 
       WHERE 1=1 ${filterCreatedDate}
 `
   return execQuery(sql, ids, 'order by p.project_id')
@@ -608,11 +601,11 @@ async function getChallenges (ids, skip, offset, filter) {
   _.forEach(challenges, c => {
     let detailRequirement = ''
     if (c.type_id === 37) {
-      detailRequirement = c.marathonmatch_detail_requirements
+      detailRequirement = c.marathonmatch_detail_requirements || ''
     } else if (c.track === 'DESIGN') {
-      detailRequirement = c.studio_detail_requirements
+      detailRequirement = c.studio_detail_requirements || ''
     } else {
-      detailRequirement = c.software_detail_requirements
+      detailRequirement = c.software_detail_requirements || ''
     }
 
     const newChallenge = {
