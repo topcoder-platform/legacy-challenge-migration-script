@@ -10,7 +10,6 @@ It runs on a scheduled basis and also on-demand by exposing an API allowing admi
 [![CircleCI](https://circleci.com/gh/topcoder-platform/legacy-challenge-migration-script/tree/master.svg?style=svg)](https://circleci.com/gh/topcoder-platform/legacy-challenge-migration-script/tree/master)
 
 ## Intended use
-
 - Data migration script
 
 ## Related repos
