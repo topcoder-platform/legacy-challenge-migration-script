@@ -1,5 +1,6 @@
 // Retry to migrate the challenges
 const config = require('config')
+const _ = require('lodash')
 const challengeService = require('../services/challengeService')
 const resourceService = require('../services/resourceService')
 const util = require('util')
@@ -91,7 +92,8 @@ async function retryResource (spinner, writeError = true, challengeId) {
       spinner.start()
       const ids = errorIds.slice(skip, skip + offset)
       if (ids.length > 0) {
-        result = await resourceService.getResources(ids)
+        const challengeResources = await resourceService.getChallengeResourcesFromIfx(ids)
+        result = await resourceService.getResources(_.map(challengeResources, r => r.challenge_id))
         finish = result.finish
       } else {
         finish = true

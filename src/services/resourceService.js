@@ -304,6 +304,38 @@ function getResourcesFromIfx (ids, skip, offset, filter) {
 }
 
 /**
+ * Get challenge resource from informix
+ *
+ * @param {Array} ids array if legacy ids (if any)
+ */
+function getChallengeResourcesFromIfx (ids) {
+  const sql = `
+      SELECT
+            r.resource_id as id,
+            r.project_id as challenge_id,
+            rr.name as resource_role_name,
+            r.user_id as member_id,
+            u.handle as member_handle,
+            u2.handle as created_by,
+            r.create_date as created,
+            u3.handle as updated_by,
+            r.modify_date as updated
+        FROM
+            resource r
+        INNER JOIN resource_role_lu rr on
+            r.resource_role_id = rr.resource_role_id
+        INNER JOIN user u on
+            r.user_id = u.user_id
+        INNER JOIN user u2 on
+            r.create_user = u2.user_id
+        INNER JOIN user u3 on
+            r.modify_user = u3.user_id
+        WHERE 1=1 and r.project_id in (${ids.join()})
+    `
+  return execQuery(sql, null, 'order by r.project_id')
+}
+
+/**
  * Put resource data to new system
  *
  * @param {Object} resource new resource data
@@ -361,5 +393,6 @@ module.exports = {
   getResourceRoles,
   saveResourceRoles,
   getResources,
-  saveResources
+  saveResources,
+  getChallengeResourcesFromIfx
 }
