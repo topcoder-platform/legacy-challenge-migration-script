@@ -34,8 +34,8 @@ function getChallengesFromIfx (ids, skip, offset, filter) {
   let filterCreatedDate = ''
   limitOffset += !_.isUndefined(skip) && skip > 0 ? 'skip ' + skip : ''
   limitOffset += !_.isUndefined(offset) && offset > 0 ? ' first ' + offset : ''
-  logger.info(`Fetching challenges since: ${helper.generateInformxDate(filter.CREATED_DATE_BEGIN)}`)
   if (!process.env.IS_RETRYING) {
+    logger.info(`Fetching challenges since: ${helper.generateInformxDate(filter.CREATED_DATE_BEGIN)}`)
     filterCreatedDate = `and p.create_date > '${helper.generateInformxDate(filter.CREATED_DATE_BEGIN)}'`
   }
 
