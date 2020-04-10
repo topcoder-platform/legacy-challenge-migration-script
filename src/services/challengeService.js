@@ -379,6 +379,7 @@ async function execQuery (sql, ids, order) {
   if (_.isUndefined(order)) {
     order = ''
   }
+  console.log(`Executing: ${sql} ${filter} ${order}`)
   return connection.queryAsync(`${sql} ${filter} ${order}`)
 }
 
