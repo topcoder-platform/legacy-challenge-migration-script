@@ -30,6 +30,7 @@ const app = express()
 app.set('port', config.PORT)
 
 app.post(`/${config.API_VERSION}/challenge-migration`, routers.runMigration)
+app.post(`/${config.API_VERSION}/challenge-migration/:challengeId`, routers.retryMigration)
 app.get(`/${config.API_VERSION}/challenge-migration`, routers.checkStatus)
 
 // the topcoder-healthcheck-dropin library returns checksRun count,

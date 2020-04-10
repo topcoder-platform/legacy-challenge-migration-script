@@ -13,6 +13,7 @@ const status = {
 let currentStatus = status.IDLE
 const spinner = ora('Legacy Challenge Migration API')
 const migration = {}
+const retry = {}
 
 /**
  * Run the migration.
@@ -25,6 +26,26 @@ migration.run = () => {
   }
   currentStatus = status.RUNNING
   return actions.migrate.ALL(spinner)
+    .catch((err) => {
+      logger.logFullError(err)
+    })
+    .then(() => {
+      currentStatus = status.IDLE
+    })
+}
+
+/**
+ * Retry the migration for a single challenge.
+ *
+ * @param {Number} challengeId the challenge ID
+ * @returns {Promise} migration become idle when resolved
+ */
+retry.run = (challengeId) => {
+  if (migration.isRunning()) {
+    return Promise.resolve()
+  }
+  currentStatus = status.RUNNING
+  return actions.retry.ALL(spinner, challengeId)
     .catch((err) => {
       logger.logFullError(err)
     })
@@ -62,5 +83,6 @@ migration.isHealthy = () => {
 }
 
 module.exports = {
-  migration
+  migration,
+  retry
 }

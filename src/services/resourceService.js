@@ -14,7 +14,7 @@ let processedItem
 let totalItems
 let errorItems
 let connection
-let resourceRolesFromDynamo = []
+const resourceRolesFromDynamo = []
 const challengeIdtoUUIDmap = {}
 
 /**
@@ -304,6 +304,22 @@ function getResourcesFromIfx (ids, skip, offset, filter) {
 }
 
 /**
+ * Get challenge resource from informix
+ *
+ * @param {Array} ids array if legacy ids (if any)
+ */
+function getChallengeResourcesFromIfx (ids) {
+  const sql = `
+      SELECT
+            r.resource_id as id
+        FROM
+            resource r
+        WHERE 1=1 and r.project_id in (${ids.join()})
+    `
+  return execQuery(sql, null, 'order by r.project_id')
+}
+
+/**
  * Put resource data to new system
  *
  * @param {Object} resource new resource data
@@ -361,5 +377,6 @@ module.exports = {
   getResourceRoles,
   saveResourceRoles,
   getResources,
-  saveResources
+  saveResources,
+  getChallengeResourcesFromIfx
 }
