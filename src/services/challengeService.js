@@ -384,10 +384,10 @@ async function execQuery (sql, ids, order) {
   if (_.isUndefined(order)) {
     order = ''
   }
-  console.log(`Query - Executing: ${sql} ${filter} ${order}`)
+  // console.log(`Query - Executing: ${sql} ${filter} ${order}`)
   // const result = connection.query(`${sql} ${filter} ${order}`)
   const result = await executeQueryAsync('tcs_catalog', `${sql} ${filter} ${order}`)
-  console.log(`Query - Result: ${result}`)
+  // console.log(`Query - Result: ${result}`)
   return result
 }
 
@@ -758,7 +758,7 @@ async function getChallenges (ids, skip, offset, filter) {
   })
 
   // Clear working IDs from dynamo
-  //await ChallengeMigrationProgress.batchDelete(ids.map(legacyId => ({ legacyId })))
+  // await ChallengeMigrationProgress.batchDelete(ids.map(legacyId => ({ legacyId })))
 
   return { challenges: results, skip: skip, finish: false }
 }
