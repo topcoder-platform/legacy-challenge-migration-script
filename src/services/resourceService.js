@@ -3,7 +3,11 @@ const _ = require('lodash')
 const config = require('config')
 const { Resource, ResourceRole } = require('../models')
 const logger = require('../util/logger')
-const { getInformixConnection, getESClient } = require('../util/helper')
+const { getESClient } = require('../util/helper')
+const {
+  // extractInformixTablesInfoAsync,
+  executeQueryAsync,
+} = require('../util/informixWrapper')
 const util = require('util')
 const helper = require('../util/helper')
 const getErrorService = require('./errorService')
@@ -70,9 +74,9 @@ function getResourceRolesFromIfx (names) {
  * @param {String} order addition sql for ordering
  */
 async function execQuery (sql, ids, order) {
-  if (!connection) {
-    connection = await getInformixConnection()
-  }
+  // if (!connection) {
+  //   connection = await getInformixConnection()
+  // }
   let filter = ''
 
   if (!_.isUndefined(ids) && _.isArray(ids)) {
@@ -81,8 +85,11 @@ async function execQuery (sql, ids, order) {
   if (_.isUndefined(order)) {
     order = ''
   }
-  logger.debug('Executing: ' + `${sql} ${filter} ${order}`)
-  return connection.queryAsync(`${sql} ${filter} ${order}`)
+  console.log(`Query - Executing: ${sql} ${filter} ${order}`)
+  // const result = connection.query(`${sql} ${filter} ${order}`)
+  const result = await executeQueryAsync('tcs_catalog', `${sql} ${filter} ${order}`)
+  console.log(`Query - Result: ${result}`)
+  return result
 }
 
 /**

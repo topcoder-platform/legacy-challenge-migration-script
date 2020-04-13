@@ -7,12 +7,12 @@ const { Challenge, ChallengeType, ChallengeMigrationProgress } = require('../mod
 const logger = require('../util/logger')
 const helper = require('../util/helper')
 const { getESClient } = require('../util/helper')
-const { getInformixConnection } = require('../util/helper')
+// const { getInformixConnection } = require('../util/helper')
 const util = require('util')
 const getErrorService = require('./errorService')
 const errorService = getErrorService()
 const {
-  extractInformixTablesInfoAsync,
+  // extractInformixTablesInfoAsync,
   executeQueryAsync,
 } = require('../util/informixWrapper')
 
@@ -591,7 +591,7 @@ async function getChallenges (ids, skip, offset, filter) {
   const challenges = await getChallengesFromIfx(ids, skip, offset, filter)
   if (!_.isArray(challenges) || challenges.length < 1) {
     // Clear working IDs from dynamo
-    await ChallengeMigrationProgress.batchDelete(ids.map(legacyId => ({ legacyId })))
+    // await ChallengeMigrationProgress.batchDelete(ids.map(legacyId => ({ legacyId })))
     return { finish: true, challenges: [] }
   }
 
@@ -758,7 +758,7 @@ async function getChallenges (ids, skip, offset, filter) {
   })
 
   // Clear working IDs from dynamo
-  await ChallengeMigrationProgress.batchDelete(ids.map(legacyId => ({ legacyId })))
+  //await ChallengeMigrationProgress.batchDelete(ids.map(legacyId => ({ legacyId })))
 
   return { challenges: results, skip: skip, finish: false }
 }
