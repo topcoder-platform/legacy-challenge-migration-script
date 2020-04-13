@@ -30,5 +30,6 @@ module.exports = {
   Resource: dynamoose.model('Resource', require('./resource')),
   ResourceRole: dynamoose.model('ResourceRole', require('./resource-role')),
   ChallengeHistory: dynamoose.model('ChallengeHistory', require('./challenge-history')),
-  ChallengeType: dynamoose.model('ChallengeType', require('./challenge-type'))
+  ChallengeType: dynamoose.model('ChallengeType', require('./challenge-type')),
+  ChallengeMigrationProgress: dynamoose.model('ChallengeMigrationProgress', require('./challenge-migration-progress'))
 }

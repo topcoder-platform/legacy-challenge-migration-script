@@ -3,7 +3,7 @@ const uuid = require('uuid/v4')
 const config = require('config')
 const request = require('superagent')
 const _ = require('lodash')
-const { Challenge, ChallengeType } = require('../models')
+const { Challenge, ChallengeType, ChallengeMigrationProgress } = require('../models')
 const logger = require('../util/logger')
 const helper = require('../util/helper')
 const { getESClient } = require('../util/helper')
@@ -74,7 +74,6 @@ function getChallengesFromIfx (ids, skip, offset, filter) {
       LEFT JOIN project_mm_specification pmm_spec ON pmm_spec.project_mm_spec_id = p.project_mm_spec_id
       WHERE 1=1 ${filterCreatedDate}
 `
-
 
   return execQuery(sql, ids, 'order by p.project_id')
 }
@@ -570,8 +569,24 @@ async function saveChallengeSettings (challengeSettings, spinner) {
  * @param {Number} offset Number of row to fetch
  */
 async function getChallenges (ids, skip, offset, filter) {
+  // get existing IDs that failed
+  const previouslyFailedChallenges = await ChallengeMigrationProgress.scan('legacyId').in(ids).exec()
+  // Update ids to remove existing failed
+  ids = _.filter(ids, id => !_.find(previouslyFailedChallenges, c => c.legacyId === id))
+  // If all failed, continue with next set of IDs
+  if (!_.isArray(ids) || ids.length < 1) {
+    return { challenges: [], skip: skip, finish: false }
+  }
+  // Save current working IDs in dynamo
+  await ChallengeMigrationProgress.batchPut(ids.map(legacyId => ({
+    id: uuid(),
+    legacyId
+  })))
+
   const challenges = await getChallengesFromIfx(ids, skip, offset, filter)
   if (!_.isArray(challenges) || challenges.length < 1) {
+    // Clear working IDs from dynamo
+    await ChallengeMigrationProgress.batchDelete(ids.map(legacyId => ({ legacyId })))
     return { finish: true, challenges: [] }
   }
 
@@ -736,6 +751,10 @@ async function getChallenges (ids, skip, offset, filter) {
 
     results.push(_.assign(newChallenge, { prizeSets, tags, groups, winners, phases, challengeSettings, terms }))
   })
+
+  // Clear working IDs from dynamo
+  await ChallengeMigrationProgress.batchDelete(ids.map(legacyId => ({ legacyId })))
+
   return { challenges: results, skip: skip, finish: false }
 }
 

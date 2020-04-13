@@ -9,7 +9,13 @@ const _ = require('lodash')
 logger.info('Requesting to create tables...')
 
 if (process.argv.length === 2) {
-  models.ChallengeHistory.$__.table.create()
+  const promises = []
+
+  _.each([models.ChallengeHistory, models.ChallengeMigrationProgress], model => {
+    promises.push(model.$__.table.create())
+  })
+
+  Promise.all(promises)
     .then(() => {
       logger.info('All tables have been requested to be created. Creating processes is run asynchronously')
       process.exit()
