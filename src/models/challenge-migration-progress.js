@@ -12,7 +12,7 @@ const schema = new Schema({
     hashKey: true,
     required: true
   },
-  legacyChallengeId: {
+  legacyId: {
     type: Number,
     required: true,
     rangeKey: true,
