@@ -19,8 +19,6 @@ const schema = new Schema({
     index: true
   }
 },
-{
-  throughput: { read: 4, write: 2 }
-})
+{ throughput: 'ON_DEMAND' })
 
 module.exports = schema
