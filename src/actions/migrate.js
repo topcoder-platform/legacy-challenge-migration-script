@@ -76,8 +76,8 @@ async function commitHistory (challengesAdded, resourcesAdded) {
  */
 async function migrate (spinner, filter) {
   await migration.Challenge(spinner, filter, false)
-  logger.info('Waiting 2 minutes before move on to the resource migration...')
-  await new Promise(resolve => setTimeout(() => resolve(), 2 * 60 * 1000))
+  logger.info('Waiting 5 SECONDS before move on to the resource migration...')
+  await new Promise(resolve => setTimeout(() => resolve(), 5 * 1000))
   await migration.Resource(spinner, filter, false)
   await commitHistory(spinner._context.challengesAdded, spinner._context.resourcesAdded)
   errorService.close()
