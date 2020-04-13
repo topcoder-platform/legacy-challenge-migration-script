@@ -11,6 +11,10 @@ const { getInformixConnection } = require('../util/helper')
 const util = require('util')
 const getErrorService = require('./errorService')
 const errorService = getErrorService()
+const {
+  extractInformixTablesInfoAsync,
+  executeQueryAsync,
+} = require('../util/informixWrapper')
 
 let processedItem
 let totalItems
@@ -369,9 +373,9 @@ async function getChallengesFromES (legacyIds) {
  * @param {String} order addition sql for ordering
  */
 async function execQuery (sql, ids, order) {
-  if (!connection) {
-    connection = await getInformixConnection()
-  }
+  // if (!connection) {
+  //   connection = await getInformixConnection()
+  // }
   let filter = ''
 
   if (!_.isUndefined(ids) && _.isArray(ids)) {
@@ -381,7 +385,8 @@ async function execQuery (sql, ids, order) {
     order = ''
   }
   console.log(`Query - Executing: ${sql} ${filter} ${order}`)
-  const result = connection.query(`${sql} ${filter} ${order}`)
+  // const result = connection.query(`${sql} ${filter} ${order}`)
+  const result = await executeQueryAsync('tcs_catalog', `${sql} ${filter} ${order}`)
   console.log(`Query - Result: ${result}`)
   return result
 }
