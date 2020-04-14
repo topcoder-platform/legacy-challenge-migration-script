@@ -545,7 +545,6 @@ async function saveChallengeSettings (challengeSettings) {
  * @param {Number} offset Number of row to fetch
  */
 async function getChallenges (ids, skip, offset, filter) {
-
   const challenges = await getChallengesFromIfx(ids, skip, offset, filter)
   if (!_.isArray(challenges) || challenges.length < 1) {
     return { finish: true, challenges: [] }

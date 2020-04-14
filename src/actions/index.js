@@ -112,11 +112,12 @@ async function commitHistory (challengesAdded, resourcesAdded) {
  * @param {Number} challengeId the challenge ID
  */
 async function saveWorkingChallenge (challengeId) {
-  await ChallengeMigrationProgress.create({
+  const workingChallenge = await ChallengeMigrationProgress.create({
     id: uuid(),
     legacyId: challengeId,
     date: new Date()
   })
+  return workingChallenge
 }
 
 /**
@@ -126,7 +127,7 @@ async function saveWorkingChallenge (challengeId) {
  */
 async function removeWorkingChallenge (challengeId) {
   await ChallengeMigrationProgress.delete({
-    legacyId: challengeId
+    id: challengeId
   })
 }
 
@@ -279,12 +280,12 @@ async function processChallenge (writeError = true, challengeId) {
   if (!exists) {
     try {
       logger.info(`Loading challenge ${challengeId}`)
-      await saveWorkingChallenge(challengeId)
+      const workingItem = await saveWorkingChallenge(challengeId)
       result = await challengeService.getChallenges([challengeId])
       if (_.get(result, 'challenges.length', 0) > 0) {
         await challengeService.save(result.challenges)
       }
-      await removeWorkingChallenge(challengeId)
+      await removeWorkingChallenge(workingItem.id)
     } catch (e) {
       console.log('error', e)
       logger.debug(util.inspect(e))
