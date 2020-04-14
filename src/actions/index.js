@@ -137,11 +137,8 @@ async function removeWorkingChallenge (challengeId) {
  * @param {Number} challengeId the challenge ID
  */
 async function workingChallengeExists (challengeId) {
-  // const exists = await ChallengeMigrationProgress.scan({
-  //   legacyId: challengeId
-  // })
-  return await ChallengeMigrationProgress.scan('legacyId').eq(challengeId).exec()
-  // return exists
+  const exists = await ChallengeMigrationProgress.scan('legacyId').eq(challengeId).exec()
+  return exists.lastKey !== undefined
 }
 
 /**
