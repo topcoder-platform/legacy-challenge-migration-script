@@ -17,6 +17,10 @@ const schema = new Schema({
     required: true,
     rangeKey: true,
     index: true
+  },
+  date: {
+    type: Date,
+    required: true
   }
 },
 { throughput: 'ON_DEMAND' })

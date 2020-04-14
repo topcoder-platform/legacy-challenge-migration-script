@@ -11,15 +11,11 @@ const { getESClient } = require('../util/helper')
 const util = require('util')
 const getErrorService = require('./errorService')
 const errorService = getErrorService()
-const {
-  // extractInformixTablesInfoAsync,
-  executeQueryAsync,
-} = require('../util/informixWrapper')
+const { executeQueryAsync } = require('../util/informixWrapper')
 
 let processedItem
 let totalItems
 let errorItems
-let connection
 let allV5Terms
 let challengeTypeMapping
 let challengeSettingsFromApi
@@ -32,8 +28,10 @@ let challengeTimelineMapping
  * @param {Array} ids array if legacy ids (if any)
  * @param {Number} skip number of row to skip
  * @param {Number} offset number of row to fetch
+ * @param {Object} filter the filter object
+ * @param {Boolean} onlyIds should return only the challenge Ids
  */
-function getChallengesFromIfx (ids, skip, offset, filter) {
+function getChallengesFromIfx (ids, skip, offset, filter, onlyIds) {
   let limitOffset = ''
   let filterCreatedDate = ''
   limitOffset += !_.isUndefined(skip) && skip > 0 ? 'skip ' + skip : ''
@@ -43,7 +41,7 @@ function getChallengesFromIfx (ids, skip, offset, filter) {
     filterCreatedDate = `and p.create_date > '${helper.generateInformxDate(filter.CREATED_DATE_BEGIN)}'`
   }
 
-  const sql = `
+  const sql = onlyIds ? `SELECT ${limitOffset} p.project_id AS id FROM project p WHERE 1=1 ${filterCreatedDate}` : `
     SELECT  ${limitOffset}
       p.create_user AS created_by, p.create_date AS created, p.modify_user AS updated_by,
       p.modify_date AS updated, p.project_id AS id, pn.value AS name,
@@ -575,7 +573,9 @@ async function saveChallengeSettings (challengeSettings, spinner) {
  */
 async function getChallenges (ids, skip, offset, filter) {
   // get existing IDs that failed
-  
+  // if (!ids) {
+  //   ids = _.map((await getChallengesFromIfx(ids, skip, offset, filter, true)), 'id')
+  // }
   // const previouslyFailedChallenges = await ChallengeMigrationProgress.scan('legacyId').in(ids).exec()
   // // Update ids to remove existing failed
   // ids = _.filter(ids, id => !_.find(previouslyFailedChallenges, c => c.legacyId === id))
@@ -795,5 +795,6 @@ module.exports = {
   createChallengeTimelineMapping,
   getChallengeTypesFromDynamo,
   getChallengeSettings,
-  saveChallengeSettings
+  saveChallengeSettings,
+  getChallengesFromIfx
 }

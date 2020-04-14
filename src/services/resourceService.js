@@ -4,10 +4,7 @@ const config = require('config')
 const { Resource, ResourceRole } = require('../models')
 const logger = require('../util/logger')
 const { getESClient } = require('../util/helper')
-const {
-  // extractInformixTablesInfoAsync,
-  executeQueryAsync,
-} = require('../util/informixWrapper')
+const { executeQueryAsync } = require('../util/informixWrapper')
 const util = require('util')
 const helper = require('../util/helper')
 const getErrorService = require('./errorService')
@@ -17,7 +14,6 @@ const challengeService = require('./challengeService')
 let processedItem
 let totalItems
 let errorItems
-let connection
 const resourceRolesFromDynamo = []
 const challengeIdtoUUIDmap = {}
 

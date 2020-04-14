@@ -25,7 +25,7 @@ migration.run = () => {
     return Promise.resolve()
   }
   currentStatus = status.RUNNING
-  return actions.migrate.ALL(spinner)
+  return actions.migrateAll(spinner)
     .catch((err) => {
       logger.logFullError(err)
     })
@@ -45,7 +45,7 @@ retry.run = (challengeId) => {
     return Promise.resolve()
   }
   currentStatus = status.RUNNING
-  return actions.retry.ALL(spinner, challengeId)
+  return actions.migrateOne(spinner, challengeId)
     .catch((err) => {
       logger.logFullError(err)
     })

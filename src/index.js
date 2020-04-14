@@ -12,7 +12,7 @@ Help:
   Migrate per model/table (e.g. Challenge, Resource):  migrate [model]
   Retry failure:  retry
 `
-
+// FIXME: This needs to be fixed based on the latest update
 async function main () {
   if (process.argv.length < 3) {
     console.log(helpText)
