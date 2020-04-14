@@ -276,7 +276,7 @@ function getResourcesFromIfx (ids, skip, offset, filter) {
   limitOffset += !_.isUndefined(skip) && skip > 0 ? 'skip ' + skip : ''
   limitOffset += !_.isUndefined(offset) && offset > 0 ? ' first ' + offset : ''
 
-  if (!process.env.IS_RETRYING) {
+  if (_.get(filter, 'CREATED_DATE_BEGIN')) {
     filterCreatedDate = `and r.create_date > '${helper.generateInformxDate(filter.CREATED_DATE_BEGIN)}'`
   }
 
