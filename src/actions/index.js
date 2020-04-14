@@ -38,16 +38,17 @@ async function retryFailed (spinner) {
 async function migrateAll (spinner) {
   spinner._context = { challengesAdded: 0, resourcesAdded: 0 } // inject context to collect statistics
   const CREATED_DATE_BEGIN = await getDateParamter()
-  await processChallengeTypes()
-  await processChallengeSettings()
-  await processChallengeTimelineTemplates()
-  await processResourceRoles()
-
+  console.log(`Migrating All Challenges from ${CREATED_DATE_BEGIN}`)
+  await processChallengeTypes(spinner)
+  await processChallengeSettings(spinner)
+  await processChallengeTimelineTemplates(spinner)
+  await processResourceRoles(spinner)
+  
   const offset = config.get('BATCH_SIZE')
   let finish = false
   let skip = 0
   let batch = 1
-
+  
   while (!finish) {
     try {
       spinner.prefixText = `Batch-${batch}`

@@ -382,7 +382,7 @@ async function execQuery (sql, ids, order) {
   if (_.isUndefined(order)) {
     order = ''
   }
-  // console.log(`Query - Executing: ${sql} ${filter} ${order}`)
+  console.log(`Query - Executing: ${sql} ${filter} ${order}`)
   // const result = connection.query(`${sql} ${filter} ${order}`)
   const result = await executeQueryAsync('tcs_catalog', `${sql} ${filter} ${order}`)
   // console.log(`Query - Result: ${result}`)
