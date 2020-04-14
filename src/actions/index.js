@@ -54,7 +54,7 @@ async function migrateAll (spinner) {
       spinner.prefixText = `Batch-${batch}`
       spinner.text = 'Loading challenges'
       spinner.start()
-      const nextSetOfChallenges = _.map((challengeService.getChallengesFromIfx(undefined, skip, offset, { CREATED_DATE_BEGIN }, true)), 'id')
+      const nextSetOfChallenges = _.map((await challengeService.getChallengesFromIfx(undefined, skip, offset, { CREATED_DATE_BEGIN }, true)), 'id')
       logger.info(`Processing challenge IDs: ${nextSetOfChallenges}`)
       if (nextSetOfChallenges.length > 0) {
         for (const id of nextSetOfChallenges) {
