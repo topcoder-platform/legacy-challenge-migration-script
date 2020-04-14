@@ -1,44 +1,50 @@
-// Entry point
+/**
+ * The API entry point
+ */
 global.Promise = require('bluebird')
-const _ = require('lodash')
-const actions = require('./actions')
-const ora = require('ora')
+const config = require('config')
+const schedule = require('node-schedule')
+const express = require('express')
+const logger = require('./util/logger')
+const controller = require('./controller')
+const { migration } = require('./migrationInstance')
 
-const helpText =
-`
-Legacy Challenge Migration Tool
-Help:
-  Migrate all:  migrate [ALL]
-  Migrate per model/table (e.g. Challenge, Resource):  migrate [model]
-  Retry failure:  retry
-`
-// FIXME: This needs to be fixed based on the latest update
-async function main () {
-  if (process.argv.length < 3) {
-    console.log(helpText)
-  } else {
-    if (_.has(actions, process.argv[2])) {
-      const spinner = ora('Legacy Challenge Migration Tool')
-      if (process.argv[3]) {
-        const modelName = process.argv[3]
-        if (_.keys(actions[process.argv[2]]).includes(modelName)) {
-          await actions[process.argv[2]][modelName](spinner)
-        } else {
-          console.log(`Please provide one of the following to migrate: [${_.keys(actions[process.argv[2]])}]`)
-          process.exit(1)
-        }
-      } else {
-        await actions[process.argv[2]].ALL(spinner)
-      }
-    } else {
-      console.log(helpText)
-    }
-  }
-  console.log('Done! Terminating process...')
-  process.exit()
-}
-
-main().catch(err => {
-  console.error('Error:', err)
-  process.exit(1)
+// setup schedule
+const rule = new schedule.RecurrenceRule()
+rule.minute = new schedule.Range(0, 59, config.SCHEDULE_INTERVAL)
+schedule.scheduleJob(rule, () => {
+  logger.info('Enable: migration.run()')
+  // migration.run()
 })
+logger.info(`The migration is scheduled to be executed every ${config.SCHEDULE_INTERVAL} minutes`)
+
+// setup express app
+const app = express()
+app.set('port', config.PORT)
+
+app.post(`/${config.API_VERSION}/challenge-migration`, controller.runMigration)
+app.post(`/${config.API_VERSION}/challenge-migration/:challengeId`, controller.retryMigration)
+app.get(`/${config.API_VERSION}/challenge-migration`, controller.checkStatus)
+
+// the topcoder-healthcheck-dropin library returns checksRun count,
+// here it follows that to return such count
+let checksRun = 0
+
+app.get(`/${config.API_VERSION}/challenge-migration/health`, (req, res) => {
+  checksRun += 1
+  if (!migration.isHealthy()) return res.sendStatus(503)
+  res.json({ checksRun })
+})
+
+// The error handler
+// eslint-disable-next-line no-unused-vars
+app.use((err, req, res, next) => {
+  logger.logFullError(err)
+  res.sendStatus(500)
+})
+
+app.listen(app.get('port'), () => {
+  logger.info(`Express server listening on port ${app.get('port')}`)
+})
+
+module.exports = app

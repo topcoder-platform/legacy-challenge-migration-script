@@ -13,9 +13,6 @@ const getErrorService = require('./errorService')
 const errorService = getErrorService()
 const { executeQueryAsync } = require('../util/informixWrapper')
 
-let processedItem
-let totalItems
-let errorItems
 let allV5Terms
 let challengeTypeMapping
 let challengeSettingsFromApi
@@ -36,7 +33,7 @@ function getChallengesFromIfx (ids, skip, offset, filter, onlyIds) {
   let filterCreatedDate = ''
   limitOffset += !_.isUndefined(skip) && skip > 0 ? 'skip ' + skip : ''
   limitOffset += !_.isUndefined(offset) && offset > 0 ? ' first ' + offset : ''
-  if (!process.env.IS_RETRYING) {
+  if (_.get(filter, 'CREATED_DATE_BEGIN')) {
     logger.info(`Fetching challenges since: ${helper.generateInformxDate(filter.CREATED_DATE_BEGIN)}`)
     filterCreatedDate = `and p.create_date > '${helper.generateInformxDate(filter.CREATED_DATE_BEGIN)}'`
   }
@@ -268,18 +265,15 @@ function getTermsFromIfx (ids) {
  * Put challenge data to new system
  *
  * @param {Object} challenge new challenge data
- * @param {Object} spinner bar
  * @param {Boolean} retrying if user is retrying
  */
-function saveItem (challenge, spinner, retrying) {
-  return new Promise((resolve, reject) => {
+function saveItem (challenge, retrying) {
+  return new Promise((resolve) => {
     const newChallenge = new Challenge(challenge)
     newChallenge.save(async (err) => {
-      processedItem++
       if (err) {
         logger.debug('fail ' + util.inspect(err))
         errorService.put({ challengeId: challenge.legacyId, type: 'dynamodb', message: err.message })
-        errorItems++
       } else {
         logger.debug('success ' + challenge.id)
         if (retrying) {
@@ -296,12 +290,10 @@ function saveItem (challenge, spinner, retrying) {
               groups: _.filter(challenge.groups, g => _.toString(g).toLowerCase() !== 'null')
             }
           })
-          spinner._context.challengesAdded++
         } catch (err) {
           errorService.put({ challengeId: challenge.legacyId, type: 'es', message: err.message })
         }
       }
-      spinner.text = `Processed ${processedItem} of ${totalItems} challenges, with ${errorItems} challenges failed`
       resolve(challenge)
     })
   })
@@ -311,14 +303,10 @@ function saveItem (challenge, spinner, retrying) {
  * Put all challenge data to new system
  *
  * @param {Object} challenges data
- * @param {Object} spinner bar
  * @param {String} errFilename error filename
  */
-async function save (challenges, spinner, errFilename) {
-  totalItems = challenges.length
-  processedItem = 0
-  errorItems = 0
-  await Promise.all(challenges.map(c => saveItem(c, spinner, process.env.IS_RETRYING)))
+async function save (challenges) {
+  await Promise.all(challenges.map(c => saveItem(c, process.env.IS_RETRYING)))
 }
 
 /**
@@ -384,25 +372,22 @@ async function execQuery (sql, ids, order) {
   }
   // console.log(`Query - Executing: ${sql} ${filter} ${order}`)
   // const result = connection.query(`${sql} ${filter} ${order}`)
-  return await executeQueryAsync('tcs_catalog', `${sql} ${filter} ${order}`)
+  return executeQueryAsync('tcs_catalog', `${sql} ${filter} ${order}`)
 }
 
 /**
  * Put challenge type data to new system
  *
  * @param {Object} challengeType new challenge type data
- * @param {Object} spinner bar
  * @param {Boolean} retrying if user is retrying
  */
-function saveChallengeType (challengeType, spinner, retrying) {
-  return new Promise((resolve, reject) => {
+function saveChallengeType (challengeType, retrying) {
+  return new Promise((resolve) => {
     const newChallengeType = new ChallengeType(challengeType)
     newChallengeType.save(async (err) => {
-      processedItem++
       if (err) {
         logger.debug('fail ' + util.inspect(err))
         errorService.put({ challengeType: challengeType.name, type: 'dynamodb', message: err.message })
-        errorItems++
       } else {
         logger.debug('success ' + challengeType.name)
         if (retrying) {
@@ -420,7 +405,6 @@ function saveChallengeType (challengeType, spinner, retrying) {
           errorService.put({ challengeType: challengeType.name, type: 'es', message: err.message })
         }
       }
-      spinner.text = `Processed ${processedItem} of ${totalItems} challenge types, with ${errorItems} challenge types failed`
       resolve(challengeType)
     })
   })
@@ -430,14 +414,10 @@ function saveChallengeType (challengeType, spinner, retrying) {
  * Save challenge types to dynamodb.
  *
  * @param {Array} challengeTypes the data
- * @param {Object} spinner spinner bar
  * @returns {undefined}
  */
-async function saveChallengeTypes (challengeTypes, spinner) {
-  totalItems = challengeTypes.length
-  processedItem = 0
-  errorItems = 0
-  await Promise.all(challengeTypes.map(ct => saveChallengeType(ct, spinner, process.env.IS_RETRYING)))
+async function saveChallengeTypes (challengeTypes) {
+  await Promise.all(challengeTypes.map(ct => saveChallengeType(ct, process.env.IS_RETRYING)))
 }
 
 /**
@@ -551,14 +531,10 @@ async function createChallengeSetting (name) {
  * Save challenge settings to backend.
  *
  * @param {Array} challengeSettings the data
- * @param {Object} spinner spinner bar
  * @returns {undefined}
  */
-async function saveChallengeSettings (challengeSettings, spinner) {
-  totalItems = challengeSettings.length
-  processedItem = 0
-  errorItems = 0
-  await Promise.all(challengeSettings.map(cs => createChallengeSetting(cs, spinner, process.env.IS_RETRYING)))
+async function saveChallengeSettings (challengeSettings) {
+  await Promise.all(challengeSettings.map(cs => createChallengeSetting(cs, process.env.IS_RETRYING)))
 }
 
 /**

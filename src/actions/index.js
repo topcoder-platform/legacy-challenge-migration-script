@@ -9,22 +9,20 @@ const resourceService = require('../services/resourceService')
 const util = require('util')
 const logger = require('../util/logger')
 const getErrorService = require('../services/errorService')
-const { ChallengeHistory } = require('../models')
+const { ChallengeHistory, ChallengeMigrationProgress } = require('../models')
 const errorService = getErrorService()
 
 /**
  * Retry to migrate records logged in error file
  *
- * @param  {[type]} spinner Loading animate object
  */
-async function retryFailed (spinner) {
+async function retryFailed () {
   process.env.IS_RETRYING = true
-  spinner._context = { challengesAdded: 0, resourcesAdded: 0 } // inject context to collect statistics
   const ids = errorService.getErrorIds('challengeId')
   for (const id of ids) {
     logger.info(`Processing challenge with legacyId: ${id}`)
-    await processChallenge(spinner, false, id)
-    await processChallengeResources(spinner, false, id)
+    await processChallenge(false, id)
+    await processChallengeResources(false, id)
   }
   errorService.close()
   logger.info('Completed!')
@@ -33,50 +31,47 @@ async function retryFailed (spinner) {
 /**
  * Migrate all challenge records and their resources
  *
- * @param  {[type]} spinner Loading animate object
  */
-async function migrateAll (spinner) {
-  spinner._context = { challengesAdded: 0, resourcesAdded: 0 } // inject context to collect statistics
+async function migrateAll () {
+  process.env.IS_RETRYING = false
   const CREATED_DATE_BEGIN = await getDateParamter()
   console.log(`Migrating All Challenges from ${CREATED_DATE_BEGIN}`)
-  await processChallengeTypes(spinner)
-  await processChallengeSettings(spinner)
-  await processChallengeTimelineTemplates(spinner)
-  await processResourceRoles(spinner)
-  
+  await processChallengeTypes()
+  await processChallengeSettings()
+  await processChallengeTimelineTemplates()
+  await processResourceRoles()
+
   const offset = config.get('BATCH_SIZE')
   let finish = false
   let skip = 0
   let batch = 1
-  
+  let challengesAdded = 0
+  let resourcesAdded = 0
+
   while (!finish) {
     try {
-      spinner.prefixText = `Batch-${batch}`
-      spinner.text = 'Loading challenges'
-      spinner.start()
+      logger.info(`Batch-${batch} - Loading challenges`)
       const nextSetOfChallenges = _.map((await challengeService.getChallengesFromIfx(undefined, skip, offset, { CREATED_DATE_BEGIN }, true)), 'id')
       logger.info(`Processing challenge IDs: ${nextSetOfChallenges}`)
       if (nextSetOfChallenges.length > 0) {
         for (const id of nextSetOfChallenges) {
-          await processChallenge(spinner, false, id)
-          await processChallengeResources(spinner, false, id)
+          await processChallenge(false, id)
+          challengesAdded += 1
+          resourcesAdded += await processChallengeResources(false, id)
         }
-        spinner.text = 'Done'
       } else {
         finish = true
       }
     } catch (e) {
       logger.debug(util.inspect(e))
-      spinner.fail(`Fail to load challenge on batch ${batch}`)
       finish = true
       throw e
     }
-    spinner.succeed()
     skip += offset
     batch++
   }
 
-  await commitHistory(spinner._context.challengesAdded, spinner._context.resourcesAdded)
+  await commitHistory(challengesAdded, resourcesAdded)
   errorService.close()
   logger.info('Completed!')
 }
@@ -84,14 +79,12 @@ async function migrateAll (spinner) {
 /**
  * Migrate a single challenge record and its resources
  *
- * @param  {[type]} spinner Loading animate object
  * @param {Number} challengeId the challenge ID
  */
-async function migrateOne (spinner, challengeId) {
+async function migrateOne (challengeId) {
   process.env.IS_RETRYING = true
-  spinner._context = { challengesAdded: 0, resourcesAdded: 0 } // inject context to collect statistics
-  await processChallenge(spinner, false, challengeId)
-  await processChallengeResources(spinner, false, challengeId)
+  await processChallenge(false, challengeId)
+  await processChallengeResources(false, challengeId)
   errorService.close()
   logger.info('Completed!')
 }
@@ -111,6 +104,43 @@ async function commitHistory (challengesAdded, resourcesAdded) {
     date: new Date()
   })
   logger.info(`challenges added: ${result.challengesAdded}, resources added: ${result.resourcesAdded}`)
+}
+
+/**
+ * Save current working challenge
+ *
+ * @param {Number} challengeId the challenge ID
+ */
+async function saveWorkingChallenge (challengeId) {
+  await ChallengeMigrationProgress.create({
+    id: uuid(),
+    legacyId: challengeId,
+    date: new Date()
+  })
+}
+
+/**
+ * Remove current working challenge
+ *
+ * @param {Number} challengeId the challenge ID
+ */
+async function removeWorkingChallenge (challengeId) {
+  await ChallengeMigrationProgress.delete({
+    legacyId: challengeId
+  })
+}
+
+/**
+ * Check if current working challenge already exists
+ * If it already exists, it probably failed the last time
+ *
+ * @param {Number} challengeId the challenge ID
+ */
+async function workingChallengeExists (challengeId) {
+  const exists = await ChallengeMigrationProgress.get({
+    legacyId: challengeId
+  })
+  return exists
 }
 
 /**
@@ -135,135 +165,94 @@ async function getDateParamter () {
 
 /**
  * Migrate challenge types
- *
- * @param  {[type]} spinner Loading animate object
  */
-async function processChallengeTypes (spinner) {
+async function processChallengeTypes () {
   let challengeTypes
   try {
-    spinner.text = 'Loading challenge types'
-    spinner.start()
+    logger.info('Loading challenge types')
     challengeTypes = await challengeService.getChallengeTypes()
   } catch (e) {
     logger.debug(util.inspect(e))
-    spinner.fail('Fail to load challenge types')
     throw e
   }
-  if (challengeTypes < 1) {
-    spinner.text = 'Done'
-  }
   if (challengeTypes.length > 0) {
-    await challengeService.saveChallengeTypes(challengeTypes, spinner)
+    await challengeService.saveChallengeTypes(challengeTypes)
   }
-  spinner.prefixText = ''
-  spinner.text = ' Finished loading challenge types'
-  spinner.succeed()
 }
 
 /**
  * Migrate challenge settings
- *
- * @param  {[type]} spinner Loading animate object
  */
-async function processChallengeSettings (spinner) {
+async function processChallengeSettings () {
   let challengeSettings
   try {
-    spinner.text = 'Loading challenge settings'
-    spinner.start()
+    logger.info('Loading challenge settings')
     const name = config.CHALLENGE_SETTINGS_PROPERTIES.join('|')
     // search by name
     challengeSettings = await challengeService.getChallengeSettings(name)
   } catch (e) {
     logger.debug(util.inspect(e))
-    spinner.fail('Fail to load challenge settings')
     throw e
   }
   if (challengeSettings < 1) {
     // all are missings
-    await challengeService.saveChallengeSettings(config.CHALLENGE_SETTINGS_PROPERTIES, spinner)
-    spinner.text = 'Done'
+    await challengeService.saveChallengeSettings(config.CHALLENGE_SETTINGS_PROPERTIES)
   }
   if (challengeSettings.length > 0) {
     // check if any of CHALLENGE_SETTINGS_PROPERTIES is missing in backend
     const missingSettings = _.filter(config.CHALLENGE_SETTINGS_PROPERTIES, s => !challengeSettings.find(setting => setting.name === s))
-    await challengeService.saveChallengeSettings(missingSettings, spinner)
+    await challengeService.saveChallengeSettings(missingSettings)
   }
-  spinner.prefixText = ''
-  spinner.text = ' Finished loading challenge settings'
-  spinner.succeed()
 }
 
 /**
  * Migrate challenge timeline templates
- *
- * @param  {[type]} spinner Loading animate object
  */
-async function processChallengeTimelineTemplates (spinner) {
+async function processChallengeTimelineTemplates () {
   try {
-    spinner.text = 'Loading challenge timelines'
-    spinner.start()
+    logger.info('Loading challenge timelines')
     const challengeTypesFromDynamo = await challengeService.getChallengeTypesFromDynamo()
     const typeIds = _.map(challengeTypesFromDynamo, 'id')
     await challengeService.createChallengeTimelineMapping(typeIds)
   } catch (e) {
     logger.debug(util.inspect(e))
-    spinner.fail('Fail to load challenge timelines')
     throw e
   }
-
-  spinner.prefixText = ''
-  spinner.text = ' Finished loading challenge timelines'
-  spinner.succeed()
 }
 
 /**
  * Migrate resource roles
- *
- * @param  {[type]} spinner Loading animate object
  */
-async function processResourceRoles (spinner) {
+async function processResourceRoles () {
   let result
   // processing resource roles
   try {
-    spinner.text = 'Loading resource roles'
-    spinner.start()
+    logger.info('Loading resource roles')
     result = await resourceService.getResourceRoles(config.get('RESOURCE_ROLE'))
   } catch (e) {
     logger.debug(util.inspect(e))
-    spinner.fail('Fail to load resource roles')
     throw e
   }
-  if (result.resourceRoles.length < 1) {
-    spinner.text = 'Done'
-  }
   if (result.resourceRoles.length > 0) {
-    await resourceService.saveResourceRoles(result.resourceRoles, spinner)
+    await resourceService.saveResourceRoles(result.resourceRoles)
   }
-  spinner.prefixText = ''
-  spinner.text = ' Finished loading resource roles'
-  spinner.succeed()
 }
 
 /**
  * Migrate challenge resources
  *
- * @param  {[type]} spinner Loading animate object
  * @param {Boolean} writeError should write the errors into a file
  * @param {Number} challengeId the challenge ID
  */
-async function processChallengeResources (spinner, writeError = true, challengeId) {
+async function processChallengeResources (writeError = true, challengeId) {
   let result
   try {
-    spinner.prefixText = `Challenge-${challengeId}`
-    spinner.text = 'Loading resources'
-    spinner.start()
+    logger.info(`Loading resources for challenge ID ${challengeId}`)
     const challengeResources = await resourceService.getChallengeResourcesFromIfx([challengeId])
     if (challengeResources && challengeResources.length > 0) {
       result = await resourceService.getResources(_.map(challengeResources, r => r.id))
       if (_.get(result, 'resources.length', 0) > 0) {
-        await resourceService.saveResources(result.resources, spinner)
-        spinner.text = 'Done'
-        spinner.succeed()
+        await resourceService.saveResources(result.resources)
       }
     } else {
       logger.warn(`No Resources for Challenge ID ${challengeId}`)
@@ -271,38 +260,40 @@ async function processChallengeResources (spinner, writeError = true, challengeI
   } catch (e) {
     console.log('error', e)
     logger.debug(util.inspect(e))
-    spinner.fail(`Fail to load resources for Challenge ID ${challengeId}`)
     process.exit(1)
   }
 
   if (writeError) {
     errorService.close()
   }
+  return _.get(result, 'resources.length', 0)
 }
 
 /**
  * Migrate challenge
  *
- * @param  {[type]} spinner Loading animate object
  * @param {Boolean} writeError should write the errors into a file
  * @param {Number} challengeId the challenge ID
  */
-async function processChallenge (spinner, writeError = true, challengeId) {
+async function processChallenge (writeError = true, challengeId) {
   let result
-  try {
-    spinner.prefixText = `Challenge-${challengeId}`
-    spinner.text = 'Loading challenge information'
-    spinner.start()
-    result = await challengeService.getChallenges([challengeId])
-    if (_.get(result, 'challenges.length', 0) > 0) {
-      await challengeService.save(result.challenges, spinner)
+  const exists = await workingChallengeExists(challengeId)
+  if (!exists) {
+    try {
+      logger.info(`Loading challenge ${challengeId}`)
+      await saveWorkingChallenge(challengeId)
+      result = await challengeService.getChallenges([challengeId])
+      if (_.get(result, 'challenges.length', 0) > 0) {
+        await challengeService.save(result.challenges)
+      }
+      await removeWorkingChallenge(challengeId)
+    } catch (e) {
+      console.log('error', e)
+      logger.debug(util.inspect(e))
+      process.exit(1)
     }
-    spinner.succeed()
-  } catch (e) {
-    console.log('error', e)
-    logger.debug(util.inspect(e))
-    spinner.fail(`Fail to load challenge ${challengeId}`)
-    process.exit(1)
+  } else {
+    logger.info(`Challenge ${challengeId} already failed! Will skip...`)
   }
   if (writeError) {
     errorService.close()
