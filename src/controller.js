@@ -1,7 +1,7 @@
 /*
  * Express routers.
  */
-const helper = require('../util/helper')
+const helper = require('./util/helper')
 const { migration, retry } = require('./migrationInstance')
 const fs = require('fs')
 

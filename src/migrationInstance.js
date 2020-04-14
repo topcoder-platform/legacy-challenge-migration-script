@@ -1,8 +1,8 @@
 /*
  * Services for API.
  */
-const actions = require('../actions')
-const logger = require('../util/logger')
+const actions = require('./actions')
+const logger = require('./util/logger')
 
 const status = {
   RUNNING: 'Running',
