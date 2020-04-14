@@ -11,7 +11,7 @@
     "elasticsearch": "^16.1.1",
     "express": "^4.17.1",
     "http-aws-es": "^6.0.0",
-    "ifxnjs": "^8.0.1",
+    "informix-wrapper": "git+https://github.com/appirio-tech/informix-wrapper.git",
     "lodash": "^4.17.15",
     "moment": "^2.24.0",
     "moment-timezone": "^0.5.28",

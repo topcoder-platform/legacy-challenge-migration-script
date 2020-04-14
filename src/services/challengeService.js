@@ -7,15 +7,15 @@ const { Challenge, ChallengeType, ChallengeMigrationProgress } = require('../mod
 const logger = require('../util/logger')
 const helper = require('../util/helper')
 const { getESClient } = require('../util/helper')
-const { getInformixConnection } = require('../util/helper')
+// const { getInformixConnection } = require('../util/helper')
 const util = require('util')
 const getErrorService = require('./errorService')
 const errorService = getErrorService()
+const { executeQueryAsync } = require('../util/informixWrapper')
 
 let processedItem
 let totalItems
 let errorItems
-let connection
 let allV5Terms
 let challengeTypeMapping
 let challengeSettingsFromApi
@@ -28,8 +28,10 @@ let challengeTimelineMapping
  * @param {Array} ids array if legacy ids (if any)
  * @param {Number} skip number of row to skip
  * @param {Number} offset number of row to fetch
+ * @param {Object} filter the filter object
+ * @param {Boolean} onlyIds should return only the challenge Ids
  */
-function getChallengesFromIfx (ids, skip, offset, filter) {
+function getChallengesFromIfx (ids, skip, offset, filter, onlyIds) {
   let limitOffset = ''
   let filterCreatedDate = ''
   limitOffset += !_.isUndefined(skip) && skip > 0 ? 'skip ' + skip : ''
@@ -39,7 +41,7 @@ function getChallengesFromIfx (ids, skip, offset, filter) {
     filterCreatedDate = `and p.create_date > '${helper.generateInformxDate(filter.CREATED_DATE_BEGIN)}'`
   }
 
-  const sql = `
+  const sql = onlyIds ? `SELECT ${limitOffset} p.project_id AS id FROM project p WHERE 1=1 ${filterCreatedDate}` : `
     SELECT  ${limitOffset}
       p.create_user AS created_by, p.create_date AS created, p.modify_user AS updated_by,
       p.modify_date AS updated, p.project_id AS id, pn.value AS name,
@@ -369,9 +371,9 @@ async function getChallengesFromES (legacyIds) {
  * @param {String} order addition sql for ordering
  */
 async function execQuery (sql, ids, order) {
-  if (!connection) {
-    connection = await getInformixConnection()
-  }
+  // if (!connection) {
+  //   connection = await getInformixConnection()
+  // }
   let filter = ''
 
   if (!_.isUndefined(ids) && _.isArray(ids)) {
@@ -380,9 +382,10 @@ async function execQuery (sql, ids, order) {
   if (_.isUndefined(order)) {
     order = ''
   }
-  console.log(`Query - Executing: ${sql} ${filter} ${order}`)
-  const result = connection.query(`${sql} ${filter} ${order}`)
-  console.log(`Query - Result: ${result}`)
+  // console.log(`Query - Executing: ${sql} ${filter} ${order}`)
+  // const result = connection.query(`${sql} ${filter} ${order}`)
+  const result = await executeQueryAsync('tcs_catalog', `${sql} ${filter} ${order}`)
+  // console.log(`Query - Result: ${result}`)
   return result
 }
 
@@ -570,23 +573,26 @@ async function saveChallengeSettings (challengeSettings, spinner) {
  */
 async function getChallenges (ids, skip, offset, filter) {
   // get existing IDs that failed
-  const previouslyFailedChallenges = await ChallengeMigrationProgress.scan('legacyId').in(ids).exec()
-  // Update ids to remove existing failed
-  ids = _.filter(ids, id => !_.find(previouslyFailedChallenges, c => c.legacyId === id))
-  // If all failed, continue with next set of IDs
-  if (!_.isArray(ids) || ids.length < 1) {
-    return { challenges: [], skip: skip, finish: false }
-  }
-  // Save current working IDs in dynamo
-  await ChallengeMigrationProgress.batchPut(ids.map(legacyId => ({
-    id: uuid(),
-    legacyId
-  })))
+  // if (!ids) {
+  //   ids = _.map((await getChallengesFromIfx(ids, skip, offset, filter, true)), 'id')
+  // }
+  // const previouslyFailedChallenges = await ChallengeMigrationProgress.scan('legacyId').in(ids).exec()
+  // // Update ids to remove existing failed
+  // ids = _.filter(ids, id => !_.find(previouslyFailedChallenges, c => c.legacyId === id))
+  // // If all failed, continue with next set of IDs
+  // if (!_.isArray(ids) || ids.length < 1) {
+  //   return { challenges: [], skip: skip, finish: false }
+  // }
+  // // Save current working IDs in dynamo
+  // await ChallengeMigrationProgress.batchPut(ids.map(legacyId => ({
+  //   id: uuid(),
+  //   legacyId
+  // })))
 
   const challenges = await getChallengesFromIfx(ids, skip, offset, filter)
   if (!_.isArray(challenges) || challenges.length < 1) {
     // Clear working IDs from dynamo
-    await ChallengeMigrationProgress.batchDelete(ids.map(legacyId => ({ legacyId })))
+    // await ChallengeMigrationProgress.batchDelete(ids.map(legacyId => ({ legacyId })))
     return { finish: true, challenges: [] }
   }
 
@@ -753,7 +759,7 @@ async function getChallenges (ids, skip, offset, filter) {
   })
 
   // Clear working IDs from dynamo
-  await ChallengeMigrationProgress.batchDelete(ids.map(legacyId => ({ legacyId })))
+  // await ChallengeMigrationProgress.batchDelete(ids.map(legacyId => ({ legacyId })))
 
   return { challenges: results, skip: skip, finish: false }
 }
@@ -789,5 +795,6 @@ module.exports = {
   createChallengeTimelineMapping,
   getChallengeTypesFromDynamo,
   getChallengeSettings,
-  saveChallengeSettings
+  saveChallengeSettings,
+  getChallengesFromIfx
 }
