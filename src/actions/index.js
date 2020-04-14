@@ -121,17 +121,6 @@ async function saveWorkingChallenge (challengeId) {
 }
 
 /**
- * Remove current working challenge
- *
- * @param {Number} challengeId the challenge ID
- */
-async function removeWorkingChallenge (challengeId) {
-  await ChallengeMigrationProgress.delete({
-    id: challengeId
-  })
-}
-
-/**
  * Check if current working challenge already exists
  * If it already exists, it probably failed the last time
  *
@@ -285,7 +274,7 @@ async function processChallenge (writeError = true, challengeId) {
       if (_.get(result, 'challenges.length', 0) > 0) {
         await challengeService.save(result.challenges)
       }
-      await removeWorkingChallenge(workingItem.id)
+      await workingItem.delete()
     } catch (e) {
       console.log('error', e)
       logger.debug(util.inspect(e))
