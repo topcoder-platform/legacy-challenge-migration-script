@@ -11,7 +11,7 @@ const logger = require('./logger')
  * @param reject the reject function.
  */
 const createConnection = (database, isWrite, reject) => {
-  const jdbc = new Wrapper(_.extend(settings, { database }), logger.debug)
+  const jdbc = new Wrapper(_.extend(settings, { database }), e => logger.debug)
   jdbc.on('error', (err) => {
     if (isWrite) {
       jdbc.endTransaction(err, (error) => {
