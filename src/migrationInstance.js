@@ -1,9 +1,8 @@
 /*
  * Services for API.
  */
-const actions = require('../actions')
-const ora = require('ora')
-const logger = require('../util/logger')
+const actions = require('./actions')
+const logger = require('./util/logger')
 
 const status = {
   RUNNING: 'Running',
@@ -11,7 +10,6 @@ const status = {
 }
 
 let currentStatus = status.IDLE
-const spinner = ora('Legacy Challenge Migration API')
 const migration = {}
 const retry = {}
 
@@ -25,7 +23,7 @@ migration.run = () => {
     return Promise.resolve()
   }
   currentStatus = status.RUNNING
-  return actions.migrate.ALL(spinner)
+  return actions.migrateAll()
     .catch((err) => {
       logger.logFullError(err)
     })
@@ -45,7 +43,7 @@ retry.run = (challengeId) => {
     return Promise.resolve()
   }
   currentStatus = status.RUNNING
-  return actions.retry.ALL(spinner, challengeId)
+  return actions.migrateOne(challengeId)
     .catch((err) => {
       logger.logFullError(err)
     })

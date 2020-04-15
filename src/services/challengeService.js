@@ -7,15 +7,11 @@ const { Challenge, ChallengeType } = require('../models')
 const logger = require('../util/logger')
 const helper = require('../util/helper')
 const { getESClient } = require('../util/helper')
-const { getInformixConnection } = require('../util/helper')
 const util = require('util')
 const getErrorService = require('./errorService')
 const errorService = getErrorService()
+const { executeQueryAsync } = require('../util/informixWrapper')
 
-let processedItem
-let totalItems
-let errorItems
-let connection
 let allV5Terms
 let challengeTypeMapping
 let challengeSettingsFromApi
@@ -28,18 +24,20 @@ let challengeTimelineMapping
  * @param {Array} ids array if legacy ids (if any)
  * @param {Number} skip number of row to skip
  * @param {Number} offset number of row to fetch
+ * @param {Object} filter the filter object
+ * @param {Boolean} onlyIds should return only the challenge Ids
  */
-function getChallengesFromIfx (ids, skip, offset, filter) {
+function getChallengesFromIfx (ids, skip, offset, filter, onlyIds) {
   let limitOffset = ''
   let filterCreatedDate = ''
   limitOffset += !_.isUndefined(skip) && skip > 0 ? 'skip ' + skip : ''
   limitOffset += !_.isUndefined(offset) && offset > 0 ? ' first ' + offset : ''
-  if (!process.env.IS_RETRYING) {
+  if (_.get(filter, 'CREATED_DATE_BEGIN')) {
     logger.info(`Fetching challenges since: ${helper.generateInformxDate(filter.CREATED_DATE_BEGIN)}`)
     filterCreatedDate = `and p.create_date > '${helper.generateInformxDate(filter.CREATED_DATE_BEGIN)}'`
   }
 
-  const sql = `
+  const sql = onlyIds ? `SELECT ${limitOffset} p.project_id AS id FROM project p WHERE 1=1 ${filterCreatedDate}` : `
     SELECT  ${limitOffset}
       p.create_user AS created_by, p.create_date AS created, p.modify_user AS updated_by,
       p.modify_date AS updated, p.project_id AS id, pn.value AS name,
@@ -74,7 +72,6 @@ function getChallengesFromIfx (ids, skip, offset, filter) {
       LEFT JOIN project_mm_specification pmm_spec ON pmm_spec.project_mm_spec_id = p.project_mm_spec_id
       WHERE 1=1 ${filterCreatedDate}
 `
-
 
   return execQuery(sql, ids, 'order by p.project_id')
 }
@@ -267,18 +264,15 @@ function getTermsFromIfx (ids) {
  * Put challenge data to new system
  *
  * @param {Object} challenge new challenge data
- * @param {Object} spinner bar
  * @param {Boolean} retrying if user is retrying
  */
-function saveItem (challenge, spinner, retrying) {
-  return new Promise((resolve, reject) => {
+function saveItem (challenge, retrying) {
+  return new Promise((resolve) => {
     const newChallenge = new Challenge(challenge)
     newChallenge.save(async (err) => {
-      processedItem++
       if (err) {
         logger.debug('fail ' + util.inspect(err))
         errorService.put({ challengeId: challenge.legacyId, type: 'dynamodb', message: err.message })
-        errorItems++
       } else {
         logger.debug('success ' + challenge.id)
         if (retrying) {
@@ -295,12 +289,10 @@ function saveItem (challenge, spinner, retrying) {
               groups: _.filter(challenge.groups, g => _.toString(g).toLowerCase() !== 'null')
             }
           })
-          spinner._context.challengesAdded++
         } catch (err) {
           errorService.put({ challengeId: challenge.legacyId, type: 'es', message: err.message })
         }
       }
-      spinner.text = `Processed ${processedItem} of ${totalItems} challenges, with ${errorItems} challenges failed`
       resolve(challenge)
     })
   })
@@ -310,14 +302,10 @@ function saveItem (challenge, spinner, retrying) {
  * Put all challenge data to new system
  *
  * @param {Object} challenges data
- * @param {Object} spinner bar
  * @param {String} errFilename error filename
  */
-async function save (challenges, spinner, errFilename) {
-  totalItems = challenges.length
-  processedItem = 0
-  errorItems = 0
-  await Promise.all(challenges.map(c => saveItem(c, spinner, process.env.IS_RETRYING)))
+async function save (challenges) {
+  await Promise.all(challenges.map(c => saveItem(c, process.env.IS_RETRYING)))
 }
 
 /**
@@ -370,9 +358,9 @@ async function getChallengesFromES (legacyIds) {
  * @param {String} order addition sql for ordering
  */
 async function execQuery (sql, ids, order) {
-  if (!connection) {
-    connection = await getInformixConnection()
-  }
+  // if (!connection) {
+  //   connection = await getInformixConnection()
+  // }
   let filter = ''
 
   if (!_.isUndefined(ids) && _.isArray(ids)) {
@@ -381,28 +369,24 @@ async function execQuery (sql, ids, order) {
   if (_.isUndefined(order)) {
     order = ''
   }
-  console.log((`Query - Executing: ${sql} ${filter} ${order}`).replace(/(\r\n|\n|\r)/gm,""))
-  const result = connection.query(`${sql} ${filter} ${order}`)
-  //console.log(`Query - Result: ${result}`)
-  return result
+  // console.log(`Query - Executing: ${sql} ${filter} ${order}`)
+  // const result = connection.query(`${sql} ${filter} ${order}`)
+  return executeQueryAsync('tcs_catalog', `${sql} ${filter} ${order}`)
 }
 
 /**
  * Put challenge type data to new system
  *
  * @param {Object} challengeType new challenge type data
- * @param {Object} spinner bar
  * @param {Boolean} retrying if user is retrying
  */
-function saveChallengeType (challengeType, spinner, retrying) {
-  return new Promise((resolve, reject) => {
+function saveChallengeType (challengeType, retrying) {
+  return new Promise((resolve) => {
     const newChallengeType = new ChallengeType(challengeType)
     newChallengeType.save(async (err) => {
-      processedItem++
       if (err) {
         logger.debug('fail ' + util.inspect(err))
         errorService.put({ challengeType: challengeType.name, type: 'dynamodb', message: err.message })
-        errorItems++
       } else {
         logger.debug('success ' + challengeType.name)
         if (retrying) {
@@ -420,7 +404,6 @@ function saveChallengeType (challengeType, spinner, retrying) {
           errorService.put({ challengeType: challengeType.name, type: 'es', message: err.message })
         }
       }
-      spinner.text = `Processed ${processedItem} of ${totalItems} challenge types, with ${errorItems} challenge types failed`
       resolve(challengeType)
     })
   })
@@ -430,14 +413,10 @@ function saveChallengeType (challengeType, spinner, retrying) {
  * Save challenge types to dynamodb.
  *
  * @param {Array} challengeTypes the data
- * @param {Object} spinner spinner bar
  * @returns {undefined}
  */
-async function saveChallengeTypes (challengeTypes, spinner) {
-  totalItems = challengeTypes.length
-  processedItem = 0
-  errorItems = 0
-  await Promise.all(challengeTypes.map(ct => saveChallengeType(ct, spinner, process.env.IS_RETRYING)))
+async function saveChallengeTypes (challengeTypes) {
+  await Promise.all(challengeTypes.map(ct => saveChallengeType(ct, process.env.IS_RETRYING)))
 }
 
 /**
@@ -551,14 +530,10 @@ async function createChallengeSetting (name) {
  * Save challenge settings to backend.
  *
  * @param {Array} challengeSettings the data
- * @param {Object} spinner spinner bar
  * @returns {undefined}
  */
-async function saveChallengeSettings (challengeSettings, spinner) {
-  totalItems = challengeSettings.length
-  processedItem = 0
-  errorItems = 0
-  await Promise.all(challengeSettings.map(cs => createChallengeSetting(cs, spinner, process.env.IS_RETRYING)))
+async function saveChallengeSettings (challengeSettings) {
+  await Promise.all(challengeSettings.map(cs => createChallengeSetting(cs, process.env.IS_RETRYING)))
 }
 
 /**
@@ -736,6 +711,7 @@ async function getChallenges (ids, skip, offset, filter) {
 
     results.push(_.assign(newChallenge, { prizeSets, tags, groups, winners, phases, challengeSettings, terms }))
   })
+
   return { challenges: results, skip: skip, finish: false }
 }
 
@@ -770,5 +746,6 @@ module.exports = {
   createChallengeTimelineMapping,
   getChallengeTypesFromDynamo,
   getChallengeSettings,
-  saveChallengeSettings
+  saveChallengeSettings,
+  getChallengesFromIfx
 }

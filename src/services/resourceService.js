@@ -3,17 +3,14 @@ const _ = require('lodash')
 const config = require('config')
 const { Resource, ResourceRole } = require('../models')
 const logger = require('../util/logger')
-const { getInformixConnection, getESClient } = require('../util/helper')
+const { getESClient } = require('../util/helper')
+const { executeQueryAsync } = require('../util/informixWrapper')
 const util = require('util')
 const helper = require('../util/helper')
 const getErrorService = require('./errorService')
 const errorService = getErrorService()
 const challengeService = require('./challengeService')
 
-let processedItem
-let totalItems
-let errorItems
-let connection
 const resourceRolesFromDynamo = []
 const challengeIdtoUUIDmap = {}
 
@@ -70,9 +67,9 @@ function getResourceRolesFromIfx (names) {
  * @param {String} order addition sql for ordering
  */
 async function execQuery (sql, ids, order) {
-  if (!connection) {
-    connection = await getInformixConnection()
-  }
+  // if (!connection) {
+  //   connection = await getInformixConnection()
+  // }
   let filter = ''
 
   if (!_.isUndefined(ids) && _.isArray(ids)) {
@@ -81,8 +78,11 @@ async function execQuery (sql, ids, order) {
   if (_.isUndefined(order)) {
     order = ''
   }
-  logger.debug('Executing: ' + `${sql} ${filter} ${order}`)
-  return connection.queryAsync(`${sql} ${filter} ${order}`)
+  // console.log(`Query - Executing: ${sql} ${filter} ${order}`)
+  // const result = connection.query(`${sql} ${filter} ${order}`)
+  const result = await executeQueryAsync('tcs_catalog', `${sql} ${filter} ${order}`)
+  // console.log(`Query - Result: ${result}`)
+  return result
 }
 
 /**
@@ -145,18 +145,15 @@ function getExistingResources (ids) {
  * Put resource role data to new system
  *
  * @param {Object} resourceRole new resource role data
- * @param {Object} spinner bar
  * @param {Boolean} retrying if user is retrying
  */
-function saveResourceRole (resourceRole, spinner, retrying) {
-  return new Promise((resolve, reject) => {
+function saveResourceRole (resourceRole, retrying) {
+  return new Promise((resolve) => {
     const newResourceRole = new ResourceRole(resourceRole)
     newResourceRole.save(async (err) => {
-      processedItem++
       if (err) {
         logger.debug('fail ' + util.inspect(err))
         errorService.put({ resourceRole: resourceRole.name, type: 'dynamodb', message: err.message })
-        errorItems++
       } else {
         logger.debug('success ' + resourceRole.name)
         if (retrying) {
@@ -174,7 +171,6 @@ function saveResourceRole (resourceRole, spinner, retrying) {
           errorService.put({ resourceRole: resourceRole.name, type: 'es', message: err.message })
         }
       }
-      spinner.text = `Processed ${processedItem} of ${totalItems} resource roles, with ${errorItems} resource roles failed`
       resolve(resourceRole)
     })
   })
@@ -184,14 +180,9 @@ function saveResourceRole (resourceRole, spinner, retrying) {
    * Put all resource role data to new system
    *
    * @param {Object} resourceRoles data
-   * @param {Object} spinner bar
-   * @param {String} errFilename error filename
    */
-async function saveResourceRoles (resourceRoles, spinner, errFilename) {
-  totalItems = resourceRoles.length
-  processedItem = 0
-  errorItems = 0
-  await Promise.all(resourceRoles.map(rr => saveResourceRole(rr, spinner, process.env.IS_RETRYING)))
+async function saveResourceRoles (resourceRoles) {
+  await Promise.all(resourceRoles.map(rr => saveResourceRole(rr, process.env.IS_RETRYING)))
 }
 
 /**
@@ -273,7 +264,7 @@ function getResourcesFromIfx (ids, skip, offset, filter) {
   limitOffset += !_.isUndefined(skip) && skip > 0 ? 'skip ' + skip : ''
   limitOffset += !_.isUndefined(offset) && offset > 0 ? ' first ' + offset : ''
 
-  if (!process.env.IS_RETRYING) {
+  if (_.get(filter, 'CREATED_DATE_BEGIN')) {
     filterCreatedDate = `and r.create_date > '${helper.generateInformxDate(filter.CREATED_DATE_BEGIN)}'`
   }
 
@@ -323,18 +314,15 @@ function getChallengeResourcesFromIfx (ids) {
  * Put resource data to new system
  *
  * @param {Object} resource new resource data
- * @param {Object} spinner bar
  * @param {Boolean} retrying if user is retrying
  */
-function saveResource (resource, spinner, retrying) {
-  return new Promise((resolve, reject) => {
+function saveResource (resource, retrying) {
+  return new Promise((resolve) => {
     const newResource = new Resource(resource)
     newResource.save(async (err) => {
-      processedItem++
       if (err) {
         logger.debug('fail ' + util.inspect(err))
         errorService.put({ resourceId: resource.legacyId, type: 'dynamodb', message: err.message })
-        errorItems++
       } else {
         logger.debug('success ' + resource.id)
         if (retrying) {
@@ -348,12 +336,10 @@ function saveResource (resource, spinner, retrying) {
             id: resource.id,
             body: resource
           })
-          spinner._context.resourcesAdded++
         } catch (err) {
           errorService.put({ resourceId: resource.legacyId, type: 'es', message: err.message })
         }
       }
-      spinner.text = `Processed ${processedItem} of ${totalItems} resources, with ${errorItems} resources failed`
       resolve(resource)
     })
   })
@@ -363,14 +349,9 @@ function saveResource (resource, spinner, retrying) {
    * Put all resource data to new system
    *
    * @param {Object} resources data
-   * @param {Object} spinner bar
-   * @param {String} errFilename error filename
    */
-async function saveResources (resources, spinner, errFilename) {
-  totalItems = resources.length
-  processedItem = 0
-  errorItems = 0
-  await Promise.all(resources.map(r => saveResource(r, spinner, process.env.IS_RETRYING)))
+async function saveResources (resources) {
+  await Promise.all(resources.map(r => saveResource(r, process.env.IS_RETRYING)))
 }
 
 module.exports = {

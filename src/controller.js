@@ -1,10 +1,9 @@
 /*
  * Express routers.
  */
-const helper = require('../util/helper')
-const { migration, retry } = require('./services')
+const helper = require('./util/helper')
+const { migration, retry } = require('./migrationInstance')
 const fs = require('fs')
-const logger = require('../util/logger')
 
 const getPreviousLogs = async () => {
   return new Promise((resolve) => {
@@ -74,9 +73,7 @@ async function retryMigration (req, res, next) {
  * @returns {undefined}
  */
 async function checkStatus (req, res) {
-  logger.info('GET check')
   if (migration.isRunning()) {
-    logger.info('GET check - IS RUNNING')
     await handleConflict(res, req)
     return
   }
