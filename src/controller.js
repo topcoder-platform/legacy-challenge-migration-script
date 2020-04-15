@@ -4,6 +4,7 @@
 const helper = require('./util/helper')
 const { migration, retry } = require('./migrationInstance')
 const fs = require('fs')
+const config = require('config')
 
 const getPreviousLogs = async () => {
   return new Promise((resolve) => {
@@ -41,6 +42,9 @@ const handleConflict = async (res, req) => {
  * @returns {undefined}
  */
 async function runMigration (req, res, next) {
+  if (!config.ENABLE_CHALLENGE_CRUD) {
+    return res.sendStatus(403)
+  }
   console.log('Run Migration')
   if (migration.isRunning()) {
     await handleConflict(res, req)
@@ -58,6 +62,9 @@ async function runMigration (req, res, next) {
  * @returns {undefined}
  */
 async function retryMigration (req, res, next) {
+  if (!config.ENABLE_CHALLENGE_CRUD) {
+    return res.sendStatus(403)
+  }
   console.log('Retry Migration')
   if (migration.isRunning()) {
     await handleConflict(res, req)

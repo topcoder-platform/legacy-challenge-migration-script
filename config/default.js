@@ -2,6 +2,7 @@ module.exports = {
   PORT: process.env.PORT || 3001,
   API_VERSION: process.env.API_VERSION || 'v5',
   SCHEDULE_INTERVAL: process.env.SCHEDULE_INTERVAL ? Number(process.env.SCHEDULE_INTERVAL) : 5, // minutes
+  ENABLE_CHALLENGE_CRUD: process.env.ENABLE_CHALLENGE_CRUD || true,
 
   // used to get M2M token
   AUTH0_URL: process.env.AUTH0_URL,
@@ -32,7 +33,7 @@ module.exports = {
     minpool: parseInt(process.env.MINPOOL, 10) || 1,
     maxpool: parseInt(process.env.MAXPOOL, 10) || 60,
     idleTimeout: parseInt(process.env.IDLETIMEOUT, 10) || 3600,
-    timeout: parseInt(process.env.TIMEOUT, 10) || 30000,
+    timeout: parseInt(process.env.TIMEOUT, 10) || 30000
   },
 
   AMAZON: {
