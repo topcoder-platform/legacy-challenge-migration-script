@@ -10,6 +10,7 @@ const { getESClient } = require('../util/helper')
 const util = require('util')
 const getErrorService = require('./errorService')
 const errorService = getErrorService()
+const HashMap = require('hashmap')
 const { executeQueryAsync } = require('../util/informixWrapper')
 
 let allV5Terms
@@ -17,6 +18,8 @@ let challengeTypeMapping
 let challengeSettingsFromApi
 
 let challengeTimelineMapping
+
+const groupsUUIDCache = new HashMap()
 
 /**
  * Get challenge from informix
@@ -583,6 +586,11 @@ async function getChallenges (ids, skip, offset, filter) {
     allV5Terms = (await getAllV5Terms()).map(t => _.omit(t, ['text']))
   }
 
+  const allGroupsOldIds = _.filter((allGroups), g => (g.group_id))
+  // console.log('Initial Groups Array', allGroupsOldIds)
+  const allGroupUUIDs = await convertGroupIdsToV5UUIDs(allGroupsOldIds)
+  // console.log('Completed Groups Array', allGroupUUIDs)
+
   // TODO: Skip already migrated challenges
   _.forEach(challenges, c => {
     logger.info(`Migrating Challenge ${c.id} Created Date ${new Date(Date.parse(c.created))}`)
@@ -625,7 +633,9 @@ async function getChallenges (ids, skip, offset, filter) {
     const tags = _.concat(_.map(_.filter(allTechnologies, t => t.challenge_id === c.id), 'name'),
       _.map(_.filter(allPlatforms, p => p.challenge_id === c.id), 'name')
     )
-    const groups = _.filter(_.map(_.filter(_.compact(allGroups), g => g.challenge_id === c.id), g => String(g.group_id)), g => g !== 'null')
+
+    const groups = _.map(_.filter((allGroupUUIDs), g => (g.group_id && g.challenge_id === c.id)), g => String(g.group_uuid))
+    if (groups.length > 0) console.log('Groups for Challenge', groups)
     const winners = _.map(_.filter(allWinners, w => w.challenge_id === c.id), w => {
       return {
         userId: w.userId,
@@ -736,6 +746,34 @@ async function getAllV5Terms () {
     }
   }
   return allTerms
+}
+
+async function convertGroupIdsToV5UUIDs (groupOldIdArray) {
+  // console.log('Convert to UUIDs', groupOldIdArray)
+  // format groupOldIdArray[{ challenge_id, group_id }]
+  let token = null
+  const groups = []
+
+  for (let i = 0; i < groupOldIdArray.length; i++) {
+    const groupObj = groupOldIdArray[i]
+    const oldId = groupObj.group_id
+    if (groupsUUIDCache.get(oldId)) {
+      console.log('Group Found in Cache!', oldId, groupsUUIDCache.get(oldId))
+      groups.push({ challenge_id: groupObj.challenge_id, group_id: groupObj.group_id, group_uuid: groupsUUIDCache.get(oldId) })
+    } else {
+      if (!token) token = await helper.getM2MToken()
+      console.log('Calling v5 Terms API', `${config.GROUPS_API_URL}?oldId=${oldId}`)
+      const result = await request.get(`${config.GROUPS_API_URL}?oldId=${oldId}`).set({ Authorization: `Bearer ${token}` })
+      const resultObj = JSON.parse(result.text)
+      if (resultObj && resultObj[0]) {
+        groupsUUIDCache.set(oldId, resultObj[0].id)
+        groups.push({ challenge_id: groupObj.challenge_id, group_id: groupObj.group_id, group_uuid: groupsUUIDCache.get(oldId) })
+      } else {
+        logger.error('Group not Found in API', oldId)
+      }
+    }
+  }
+  return groups
 }
 
 module.exports = {
