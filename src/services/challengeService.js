@@ -33,7 +33,7 @@ function getChallengesFromIfx (ids, skip, offset, filter, onlyIds) {
   limitOffset += !_.isUndefined(skip) && skip > 0 ? 'skip ' + skip : ''
   limitOffset += !_.isUndefined(offset) && offset > 0 ? ' first ' + offset : ''
   if (_.get(filter, 'CREATED_DATE_BEGIN')) {
-    logger.info(`Fetching challenges since: ${helper.generateInformxDate(filter.CREATED_DATE_BEGIN)}`)
+    // logger.info(`Fetching challenges since: ${helper.generateInformxDate(filter.CREATED_DATE_BEGIN)}`)
     filterCreatedDate = `and p.create_date > '${helper.generateInformxDate(filter.CREATED_DATE_BEGIN)}'`
   }
 
@@ -274,7 +274,7 @@ function saveItem (challenge, retrying) {
         logger.debug('fail ' + util.inspect(err))
         errorService.put({ challengeId: challenge.legacyId, type: 'dynamodb', message: err.message })
       } else {
-        logger.debug('success ' + challenge.id)
+        // logger.debug('success ' + challenge.id)
         if (retrying) {
           errorService.remove({ challengeId: challenge.legacyId })
         }
@@ -388,7 +388,7 @@ function saveChallengeType (challengeType, retrying) {
         logger.debug('fail ' + util.inspect(err))
         errorService.put({ challengeType: challengeType.name, type: 'dynamodb', message: err.message })
       } else {
-        logger.debug('success ' + challengeType.name)
+        // logger.debug('success ' + challengeType.name)
         if (retrying) {
           errorService.remove({ challengeType: challengeType.name })
         }
@@ -551,7 +551,7 @@ async function getChallenges (ids, skip, offset, filter) {
   }
 
   const challengeIds = _.map(challenges, 'id')
-  logger.debug('Challenge IDs to fetch: ' + challengeIds)
+  // logger.debug('Challenge IDs to fetch: ' + challengeIds)
 
   const tasks = [getPrizeFromIfx, getTechnologyFromIfx, getPlatformFromIfx,
     getGroupFromIfx, getWinnerFromIfx, getPhaseFromIfx, getSettingsFromIfx, getTermsFromIfx]
@@ -585,6 +585,7 @@ async function getChallenges (ids, skip, offset, filter) {
 
   // TODO: Skip already migrated challenges
   _.forEach(challenges, c => {
+    logger.info(`Migrating Challenge ${c.id} Created Date ${new Date(Date.parse(c.created))}`)
     let detailRequirement = ''
     if (c.type_id === 37) {
       detailRequirement = c.marathonmatch_detail_requirements || ''

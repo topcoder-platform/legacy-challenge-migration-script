@@ -41,6 +41,7 @@ const handleConflict = async (res, req) => {
  * @returns {undefined}
  */
 async function runMigration (req, res, next) {
+  console.log('Run Migration')
   if (migration.isRunning()) {
     await handleConflict(res, req)
     return
@@ -57,6 +58,7 @@ async function runMigration (req, res, next) {
  * @returns {undefined}
  */
 async function retryMigration (req, res, next) {
+  console.log('Retry Migration')
   if (migration.isRunning()) {
     await handleConflict(res, req)
     return
@@ -77,6 +79,7 @@ async function checkStatus (req, res) {
     await handleConflict(res, req)
     return
   }
+  console.log('Check Status')
   return res.send({
     status: migration.getStatus(),
     ...(await getPreviousLogs())

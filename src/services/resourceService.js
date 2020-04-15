@@ -23,7 +23,7 @@ async function getResourceRoles (names) {
   const resourceRoles = await getResourceRolesFromIfx(names.map(name => `'${name}'`))
 
   const resourceRoleNames = _.map(resourceRoles, 'name')
-  logger.debug('Names to fetch: ' + resourceRoleNames)
+  // logger.debug('Names to fetch: ' + resourceRoleNames)
 
   const existingResourceRoles = await getExistingResourceRoles(names)
 
@@ -155,7 +155,7 @@ function saveResourceRole (resourceRole, retrying) {
         logger.debug('fail ' + util.inspect(err))
         errorService.put({ resourceRole: resourceRole.name, type: 'dynamodb', message: err.message })
       } else {
-        logger.debug('success ' + resourceRole.name)
+        // logger.debug('success ' + resourceRole.name)
         if (retrying) {
           errorService.remove({ resourceRole: resourceRole.name })
         }
@@ -194,7 +194,7 @@ async function saveResourceRoles (resourceRoles) {
  */
 async function getResources (ids, skip, offset, filter) {
   const resources = await getResourcesFromIfx(ids, skip, offset, filter)
-  logger.debug('IFX response: ' + JSON.stringify(resources, null, 2))
+  // logger.debug('IFX response: ' + JSON.stringify(resources, null, 2))
   if (!_.isArray(resources) || resources.length < 1) {
     return { finish: true, resources: [] }
   }
@@ -202,7 +202,7 @@ async function getResources (ids, skip, offset, filter) {
   const resourceIds = _.map(resources, 'id')
   const resourceChallengeIds = _.map(resources, 'challenge_id')
   const resourceRoleNames = _.map(resources, 'resource_role_name')
-  logger.debug('Resource IDs to fetch: ' + resourceIds)
+  // logger.debug('Resource IDs to fetch: ' + resourceIds)
 
   const challengeIdsToFetch = _.filter(resourceChallengeIds, id => !challengeIdtoUUIDmap[id])
 
@@ -229,7 +229,7 @@ async function getResources (ids, skip, offset, filter) {
     const roleId = _.get(_.map(_.filter(existingResourceRoles, rr => rr.name === r.resource_role_name), 'resourceRoleId'), '[0]')
 
     if (challengeId && roleId) {
-      logger.debug(`Will create resource with role iD ${roleId} for challenge ${challengeId} for member ${r.member_id}`)
+      // logger.debug(`Will create resource with role iD ${roleId} for challenge ${challengeId} for member ${r.member_id}`)
 
       const newResource = {
         id: uuid(),
@@ -324,7 +324,7 @@ function saveResource (resource, retrying) {
         logger.debug('fail ' + util.inspect(err))
         errorService.put({ resourceId: resource.legacyId, type: 'dynamodb', message: err.message })
       } else {
-        logger.debug('success ' + resource.id)
+        // logger.debug('success ' + resource.id)
         if (retrying) {
           errorService.remove({ resourceId: resource.legacyId })
         }

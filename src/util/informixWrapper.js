@@ -127,12 +127,12 @@ const executeQueryAsync = (database, sql, params) => new Promise((resolve, rejec
             }
           }, {
             start: (q) => {
-              logger.debug(`Start to execute ${q}`)
+              // logger.debug(`Start to execute ${q}`)
             },
             finish: (f) => {
               connection.endTransaction(null, () => {
                 connection.disconnect()
-                logger.debug(`Finish executing ${f}`)
+                // logger.debug(`Finish executing ${f}`)
               })
             }
           }).execute(params)
@@ -146,11 +146,11 @@ const executeQueryAsync = (database, sql, params) => new Promise((resolve, rejec
           }
         }, {
           start: function (q) {
-            logger.debug(`Start to execute ${q}`)
+            // logger.debug(`Start to execute ${q}`)
           },
           finish: (f) => {
             connection.disconnect()
-            logger.debug(`Finish executing ${f}`)
+            // logger.debug(`Finish executing ${f}`)
           }
         }).execute(params)
       }

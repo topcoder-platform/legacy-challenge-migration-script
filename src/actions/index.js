@@ -35,7 +35,7 @@ async function retryFailed () {
 async function migrateAll () {
   process.env.IS_RETRYING = false
   const CREATED_DATE_BEGIN = await getDateParamter()
-  console.log(`Migrating All Challenges from ${CREATED_DATE_BEGIN}`)
+  logger.info(`Migrating All Challenges from ${CREATED_DATE_BEGIN}`)
   await processChallengeTypes()
   await processChallengeSettings()
   await processChallengeTimelineTemplates()
@@ -148,6 +148,7 @@ async function getDateParamter () {
   if (!CREATED_DATE_BEGIN) {
     throw new Error('No date parameter found in both env variables and datebase. Please configure the CREATED_DATE_BEGIN env variable and try again.')
   }
+  console.log('Created Date', CREATED_DATE_BEGIN)
   return CREATED_DATE_BEGIN
 }
 
