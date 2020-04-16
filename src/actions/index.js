@@ -7,6 +7,7 @@ const uuid = require('uuid/v4')
 const challengeService = require('../services/challengeService')
 const resourceService = require('../services/resourceService')
 const util = require('util')
+const { scanDynamoModelByProperty } = require('../util/helper')
 const logger = require('../util/logger')
 const getErrorService = require('../services/errorService')
 const { ChallengeHistory, ChallengeMigrationProgress } = require('../models')
@@ -21,8 +22,8 @@ async function retryFailed () {
   const ids = errorService.getErrorIds('challengeId')
   for (const id of ids) {
     logger.info(`Processing challenge with legacyId: ${id}`)
-    await processChallenge(false, id)
-    await processChallengeResources(false, id)
+    const challengeProcessed = await processChallenge(false, id)
+    if (challengeProcessed) await processChallengeResources(false, id)
   }
   errorService.close()
   logger.info('Completed!')
@@ -55,9 +56,11 @@ async function migrateAll () {
       logger.info(`Processing challenge IDs: ${nextSetOfChallenges}`)
       if (nextSetOfChallenges.length > 0) {
         for (const id of nextSetOfChallenges) {
-          await processChallenge(false, id)
-          challengesAdded += 1
-          resourcesAdded += await processChallengeResources(false, id)
+          const challengeProcessed = await processChallenge(false, id)
+          if (challengeProcessed) {
+            challengesAdded += 1
+            resourcesAdded += await processChallengeResources(false, id)
+          }
         }
       } else {
         finish = true
@@ -83,8 +86,8 @@ async function migrateAll () {
  */
 async function migrateOne (challengeId) {
   process.env.IS_RETRYING = true
-  await processChallenge(false, challengeId)
-  await processChallengeResources(false, challengeId)
+  const challengeProcessed = await processChallenge(false, challengeId)
+  if (challengeProcessed) await processChallengeResources(false, challengeId)
   errorService.close()
   logger.info('Completed!')
 }
@@ -111,24 +114,24 @@ async function commitHistory (challengesAdded, resourcesAdded) {
  *
  * @param {Number} challengeId the challenge ID
  */
-async function saveWorkingChallenge (challengeId) {
+async function getOrCreateWorkingChallenge (challengeId) {
+  const existing = await scanDynamoModelByProperty(ChallengeMigrationProgress, 'legacyId', challengeId)
+  if (existing) {
+    return {
+      workingChallenge: existing,
+      isNew: false
+    }
+  }
   const workingChallenge = await ChallengeMigrationProgress.create({
     id: uuid(),
     legacyId: challengeId,
-    date: new Date()
+    date: new Date(),
+    status: config.MIGRATION_PROGRESS_STATUSES.IN_PROGRESS
   })
-  return workingChallenge
-}
-
-/**
- * Check if current working challenge already exists
- * If it already exists, it probably failed the last time
- *
- * @param {Number} challengeId the challenge ID
- */
-async function workingChallengeExists (challengeId) {
-  const exists = await ChallengeMigrationProgress.scan('legacyId').eq(challengeId).exec()
-  return exists.lastKey !== undefined
+  return {
+    workingChallenge,
+    isNew: true
+  }
 }
 
 /**
@@ -266,27 +269,38 @@ async function processChallengeResources (writeError = true, challengeId) {
  */
 async function processChallenge (writeError = true, challengeId) {
   let result
-  const exists = await workingChallengeExists(challengeId)
-  if (!exists) {
+  let challengeProcessed = false
+  const { workingChallenge, isNew } = await getOrCreateWorkingChallenge(challengeId)
+  if (isNew) {
     try {
       logger.info(`Loading challenge ${challengeId}`)
-      const workingItem = await saveWorkingChallenge(challengeId)
       result = await challengeService.getChallenges([challengeId])
+      // TODO: Check if challenge needs to be updated
       if (_.get(result, 'challenges.length', 0) > 0) {
         await challengeService.save(result.challenges)
       }
-      await workingItem.delete()
+      workingChallenge.status = config.MIGRATION_PROGRESS_STATUSES.SUCCESS
+      workingChallenge.date = new Date()
+      await workingChallenge.save()
+      challengeProcessed = true
     } catch (e) {
       console.log('error', e)
       logger.debug(util.inspect(e))
       process.exit(1)
     }
   } else {
-    logger.info(`Challenge ${challengeId} already failed! Will skip...`)
+    let skipReason
+    if (workingChallenge.status === config.MIGRATION_PROGRESS_STATUSES.SUCCESS) {
+      skipReason = 'already migrated'
+    } else {
+      skipReason = 'already failed'
+    }
+    logger.info(`Challenge ${challengeId} ${skipReason}! Will skip...`)
   }
   if (writeError) {
     errorService.close()
   }
+  return challengeProcessed
 }
 
 module.exports = {

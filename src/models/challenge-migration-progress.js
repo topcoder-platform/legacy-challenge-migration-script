@@ -18,6 +18,10 @@ const schema = new Schema({
     rangeKey: true,
     index: true
   },
+  status: {
+    type: String,
+    required: true
+  },
   date: {
     type: Date,
     required: true

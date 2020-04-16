@@ -2,7 +2,6 @@
  * helper methods
  */
 const _ = require('lodash')
-// const ifxnjs = require('ifxnjs')
 const config = require('config')
 const elasticsearch = require('elasticsearch')
 const moment = require('moment-timezone')
@@ -49,28 +48,6 @@ function getESClient () {
   return esClient
 }
 
-// const Pool = ifxnjs.Pool
-// const pool = Promise.promisifyAll(new Pool())
-// pool.setMaxPoolSize(config.get('INFORMIX.POOL_MAX_SIZE'))
-
-// /**
-//  * Get Informix connection using the configured parameters
-//  * @return {Object} Informix connection
-//  */
-// async function getInformixConnection () {
-//   // construct the connection string from the configuration parameters.
-//   const connectionString = 'SERVER=' + config.get('INFORMIX.SERVER') +
-//                            ';DATABASE=' + config.get('INFORMIX.DATABASE') +
-//                            ';HOST=' + config.get('INFORMIX.HOST') +
-//                            ';Protocol=' + config.get('INFORMIX.PROTOCOL') +
-//                            ';SERVICE=' + config.get('INFORMIX.PORT') +
-//                            ';DB_LOCALE=' + config.get('INFORMIX.DB_LOCALE') +
-//                            ';UID=' + config.get('INFORMIX.USER') +
-//                            ';PWD=' + config.get('INFORMIX.PASSWORD')
-//   const conn = await pool.openAsync(connectionString)
-//   return Promise.promisifyAll(conn)
-// }
-
 /**
  * Generate informx-flavor date from date string.
  * Also, changes the timezone to EST
@@ -101,10 +78,32 @@ async function getM2MToken () {
   return m2m.getMachineToken(config.AUTH0_CLIENT_ID, config.AUTH0_CLIENT_SECRET)
 }
 
+/**
+ * Get Data from dynamo by model-id
+ * @param {Object} model The dynamoose model
+ * @param {String} property The property to use for scanning
+ * @param {String} value The value to search for
+ * @returns {Promise<void>}
+ */
+async function scanDynamoModelByProperty (model, property, value) {
+  return new Promise((resolve, reject) => {
+    model.scan(property).eq(value).exec((err, result) => {
+      if (err) {
+        return reject(new Error(err))
+      }
+      if (result.length > 0) {
+        return resolve(result[0])
+      } else {
+        return resolve(undefined)
+      }
+    })
+  })
+}
+
 module.exports = {
   wrapRouter,
   getESClient,
-  // getInformixConnection,
+  scanDynamoModelByProperty,
   generateInformxDate,
   getM2MToken
 }

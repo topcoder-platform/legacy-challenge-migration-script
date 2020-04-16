@@ -77,5 +77,9 @@ module.exports = {
   LOG_FILENAME: './app.log', // log file
 
   // Challenge properties to be included in migration as challenge settings
-  CHALLENGE_SETTINGS_PROPERTIES: process.env.CHALLENGE_SETTINGS_PROPERTIES ? JSON.parse(process.env.CHALLENGE_SETTINGS_PROPERTIES) : ['allowStockArt', 'submissionLimit', 'submissionsViewable', 'filetypes']
+  CHALLENGE_SETTINGS_PROPERTIES: process.env.CHALLENGE_SETTINGS_PROPERTIES ? JSON.parse(process.env.CHALLENGE_SETTINGS_PROPERTIES) : ['allowStockArt', 'submissionLimit', 'submissionsViewable', 'filetypes'],
+  MIGRATION_PROGRESS_STATUSES: {
+    IN_PROGRESS: 'In progress',
+    SUCCESS: 'Sucess'
+  }
 }
