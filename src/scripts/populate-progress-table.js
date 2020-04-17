@@ -6,13 +6,13 @@ global.Promise = require('bluebird')
 const config = require('config')
 const util = require('util')
 const _ = require('lodash')
-const { getOrCreateWorkingChallenge, getDateParamter } = require('../actions')
+const { getOrCreateWorkingChallenge } = require('../actions')
 const challengeService = require('../services/challengeService')
 const logger = require('../util/logger')
 
 const populateTable = async () => {
   const offset = config.get('BATCH_SIZE')
-  const CREATED_DATE_BEGIN = await getDateParamter()
+  const CREATED_DATE_BEGIN = config.get('POPULATE_MIGRATION_TABLE_DATE_BEGIN')
   let finish = false
   let skip = 0
   let batch = 1

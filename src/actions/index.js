@@ -308,6 +308,5 @@ module.exports = {
   retryFailed,
   migrateAll,
   migrateOne,
-  getOrCreateWorkingChallenge,
-  getDateParamter
+  getOrCreateWorkingChallenge
 }
