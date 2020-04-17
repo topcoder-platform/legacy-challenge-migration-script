@@ -307,5 +307,7 @@ async function processChallenge (writeError = true, challengeId) {
 module.exports = {
   retryFailed,
   migrateAll,
-  migrateOne
+  migrateOne,
+  getOrCreateWorkingChallenge,
+  getDateParamter
 }

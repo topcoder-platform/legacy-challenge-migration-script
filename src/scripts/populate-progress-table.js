@@ -6,12 +6,13 @@ global.Promise = require('bluebird')
 const config = require('config')
 const util = require('util')
 const _ = require('lodash')
-const { getOrCreateWorkingChallenge } = require('../actions')
+const { getOrCreateWorkingChallenge, getDateParamter } = require('../actions')
 const challengeService = require('../services/challengeService')
 const logger = require('../util/logger')
 
 const populateTable = async () => {
   const offset = config.get('BATCH_SIZE')
+  const CREATED_DATE_BEGIN = await getDateParamter()
   let finish = false
   let skip = 0
   let batch = 1
@@ -19,7 +20,7 @@ const populateTable = async () => {
   while (!finish) {
     try {
       logger.info(`Batch-${batch} - Loading challenges`)
-      const nextSetOfChallenges = _.map((await challengeService.getChallengesFromIfx(undefined, skip, offset, null, true)), 'id')
+      const nextSetOfChallenges = _.map((await challengeService.getChallengesFromIfx(undefined, skip, offset, { CREATED_DATE_BEGIN }, true)), 'id')
       logger.info(`Processing challenge IDs: ${nextSetOfChallenges}`)
       if (nextSetOfChallenges.length > 0) {
         const challengesFromEs = await challengeService.getChallengesFromES(nextSetOfChallenges)
