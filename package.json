@@ -32,6 +32,7 @@
     "lint": "standard",
     "lint:fix": "standard --fix",
     "init-es": "node src/scripts/init-es.js",
+    "populate-progress-table": "node src/scripts/populate-progress-table.js",
     "drop-tables": "node src/scripts/drop-tables.js",
     "drop-table:challenge": "node src/scripts/drop-tables.js Challenge",
     "drop-table:resource": "node src/scripts/drop-tables.js Resource",

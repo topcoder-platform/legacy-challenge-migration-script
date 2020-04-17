@@ -113,8 +113,9 @@ async function commitHistory (challengesAdded, resourcesAdded) {
  * Save current working challenge
  *
  * @param {Number} challengeId the challenge ID
+ * @param {String} status the default status
  */
-async function getOrCreateWorkingChallenge (challengeId) {
+async function getOrCreateWorkingChallenge (challengeId, status = config.MIGRATION_PROGRESS_STATUSES.IN_PROGRESS) {
   const existing = await scanDynamoModelByProperty(ChallengeMigrationProgress, 'legacyId', challengeId)
   if (existing) {
     return {
@@ -126,7 +127,7 @@ async function getOrCreateWorkingChallenge (challengeId) {
     id: uuid(),
     legacyId: challengeId,
     date: new Date(),
-    status: config.MIGRATION_PROGRESS_STATUSES.IN_PROGRESS
+    status
   })
   return {
     workingChallenge,
