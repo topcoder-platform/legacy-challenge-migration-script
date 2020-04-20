@@ -500,20 +500,34 @@ async function getChallengeTypesFromDynamo () {
 }
 
 /**
- * Search challenge settings
- * @param {String} name name of setting to search, optional
+ * Get challenge settings based on the configured CHALLENGE_SETTINGS_PROPERTIES
  * @returns {Promise<Array>} the challenge settings
  */
-async function getChallengeSettings (name) {
+async function getChallengeSettings () {
+  const names = config.CHALLENGE_SETTINGS_PROPERTIES
+  const result = []
+  for (const name of names) {
+    const setting = await getSingleChallengeSetting(name)
+    if (setting) {
+      result.push(setting)
+    }
+  }
+  return result
+}
+
+/**
+ * Get single challenge setting
+ * @param {String} name name of setting to search
+ * @returns {Promise<Array>} the challenge settings
+ */
+async function getSingleChallengeSetting (name) {
+  if (_.isEmpty(name)) {
+    return
+  }
   const token = await helper.getM2MToken()
   const url = `${config.CHALLENGE_SETTINGS_API_URL}`
-  let res
-  if (_.isEmpty(name)) {
-    res = await request.get(url).set({ Authorization: `Bearer ${token}` })
-  } else {
-    res = await request.get(url).set({ Authorization: `Bearer ${token}` }).query({ name })
-  }
-  return res.body || []
+  const res = await request.get(url).set({ Authorization: `Bearer ${token}` }).query({ name })
+  return _.get(res, 'body[0]')
 }
 
 /**
@@ -579,8 +593,7 @@ async function getChallenges (ids, skip, offset, filter) {
 
   // get challenge settings from backend api
   if (!challengeSettingsFromApi) {
-    const name = config.CHALLENGE_SETTINGS_PROPERTIES.join('|')
-    challengeSettingsFromApi = await getChallengeSettings(name)
+    challengeSettingsFromApi = await getChallengeSettings()
   }
   if (!allV5Terms) {
     allV5Terms = (await getAllV5Terms()).map(t => _.omit(t, ['text']))

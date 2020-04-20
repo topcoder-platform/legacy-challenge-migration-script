@@ -180,9 +180,7 @@ async function processChallengeSettings () {
   let challengeSettings
   try {
     logger.info('Loading challenge settings')
-    const name = config.CHALLENGE_SETTINGS_PROPERTIES.join('|')
-    // search by name
-    challengeSettings = await challengeService.getChallengeSettings(name)
+    challengeSettings = await challengeService.getChallengeSettings()
   } catch (e) {
     logger.debug(util.inspect(e))
     throw e
