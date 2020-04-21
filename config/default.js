@@ -14,8 +14,8 @@ module.exports = {
 
   LOG_LEVEL: process.env.LOG_LEVEL || 'info',
   CHALLENGE_TYPE_API_URL: process.env.CHALLENGE_TYPE_API_URL || 'https://api.topcoder-dev.com/v4/challenge-types',
-  CHALLENGE_TIMELINE_API_URL: process.env.CHALLENGE_TIMELINE_API_URL || 'https://api.topcoder-dev.com/v5/challengetimelines',
-  CHALLENGE_SETTINGS_API_URL: process.env.CHALLENGE_SETTINGS_API_URL || 'https://api.topcoder-dev.com/v5/challengesettings',
+  CHALLENGE_TIMELINE_API_URL: process.env.CHALLENGE_TIMELINE_API_URL || 'https://api.topcoder-dev.com/v5/challenge-timelines',
+  CHALLENGE_SETTINGS_API_URL: process.env.CHALLENGE_SETTINGS_API_URL || 'https://api.topcoder-dev.com/v5/challenge-settings',
   GROUPS_API_URL: process.env.GROUPS_API_URL || 'https://api.topcoder-dev.com/v5/groups',
   TERMS_API_URL: process.env.TERMS_API_URL || 'https://api.topcoder-dev.com/v5/terms',
   CREATED_DATE_BEGIN: process.env.CREATED_DATE_BEGIN,
