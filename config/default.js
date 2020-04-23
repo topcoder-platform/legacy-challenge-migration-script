@@ -13,6 +13,7 @@ module.exports = {
   AUTH0_CLIENT_SECRET: process.env.AUTH0_CLIENT_SECRET,
 
   LOG_LEVEL: process.env.LOG_LEVEL || 'info',
+  PROJECTS_API_URL: process.env.PROJECTS_API_URL || 'https://api.topcoder-dev.com/v5/projects',
   CHALLENGE_TYPE_API_URL: process.env.CHALLENGE_TYPE_API_URL || 'https://api.topcoder-dev.com/v4/challenge-types',
   CHALLENGE_TIMELINE_API_URL: process.env.CHALLENGE_TIMELINE_API_URL || 'https://api.topcoder-dev.com/v5/challenge-timelines',
   CHALLENGE_METADATA_API_URL: process.env.CHALLENGE_METADATA_API_URL || 'https://api.topcoder-dev.com/v5/challenge-metadata',
@@ -77,8 +78,6 @@ module.exports = {
   ERROR_LOG_FILENAME: './error.json', // filename of error log for challenge that fail to migrate
   LOG_FILENAME: './app.log', // log file
 
-  // Challenge properties to be included in migration as challenge settings
-  CHALLENGE_METADATA_PROPERTIES: process.env.CHALLENGE_METADATA_PROPERTIES ? JSON.parse(process.env.CHALLENGE_METADATA_PROPERTIES) : ['allowStockArt', 'submissionLimit', 'submissionsViewable', 'filetypes'],
   MIGRATION_PROGRESS_STATUSES: {
     IN_PROGRESS: 'In progress',
     SUCCESS: 'Sucess'

@@ -38,7 +38,6 @@ async function migrateAll () {
   const CREATED_DATE_BEGIN = await getDateParamter()
   logger.info(`Migrating All Challenges from ${CREATED_DATE_BEGIN}`)
   await processChallengeTypes()
-  await processChallengeMetadata()
   await processChallengeTimelineTemplates()
   await processResourceRoles()
 
@@ -170,29 +169,6 @@ async function processChallengeTypes () {
   }
   if (challengeTypes.length > 0) {
     await challengeService.saveChallengeTypes(challengeTypes)
-  }
-}
-
-/**
- * Migrate challenge metadata
- */
-async function processChallengeMetadata () {
-  let metadata
-  try {
-    logger.info('Loading challenge metadata')
-    metadata = await challengeService.getChallengeMetadata()
-  } catch (e) {
-    logger.debug(util.inspect(e))
-    throw e
-  }
-  if (metadata < 1) {
-    // all are missings
-    await challengeService.saveChallengeMetadata(config.CHALLENGE_METADATA_PROPERTIES)
-  }
-  if (metadata.length > 0) {
-    // check if any of CHALLENGE_METADATA_PROPERTIES is missing in backend
-    const missingMetadata = _.filter(config.CHALLENGE_METADATA_PROPERTIES, s => !metadata.find(entry => entry.name === s))
-    await challengeService.saveChallengeMetadata(missingMetadata)
   }
 }
 

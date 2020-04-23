@@ -58,7 +58,7 @@ const schema = new Schema({
   },
   projectId: {
     type: Number,
-    required: true
+    required: false
   },
   startDate: {
     type: Date,

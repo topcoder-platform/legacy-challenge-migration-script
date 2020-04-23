@@ -15,7 +15,6 @@ const { executeQueryAsync } = require('../util/informixWrapper')
 
 let allV5Terms
 let challengeTypeMapping
-let challengeMetadataFromApi
 
 let challengeTimelineMapping
 
@@ -476,6 +475,18 @@ async function getChallengeTimeline (typeId) {
 }
 
 /**
+ * Get project from v5 API.
+ *
+ * @param {String} directProjectId the direct project id
+ * @returns {Object} the project
+ */
+async function getProjectFromV5 (directProjectId) {
+  const url = `${config.PROJECTS_API_URL}?directProjectId=${directProjectId}`
+  const res = await request.get(url)
+  return _.get(res, 'body[0]')
+}
+
+/**
  * Create challenge timeline mapping from challenge types.
  * @param {Array} typeIds challenge types id
  */
@@ -497,60 +508,6 @@ async function createChallengeTimelineMapping (typeIds) {
 async function getChallengeTypesFromDynamo () {
   const result = await ChallengeType.scan().exec()
   return result
-}
-
-/**
- * Get challenge metadata based on the configured CHALLENGE_METADATA_PROPERTIES
- * @returns {Promise<Array>} the challenge metadata
- */
-async function getChallengeMetadata () {
-  const names = config.CHALLENGE_METADATA_PROPERTIES
-  const result = []
-  for (const name of names) {
-    const metadata = await getSingleChallengeMetadata(name)
-    if (metadata) {
-      result.push(metadata)
-    }
-  }
-  return result
-}
-
-/**
- * Get single challenge metadata
- * @param {String} name name of metadata to search
- * @returns {Promise<Array>} the challenge metadata
- */
-async function getSingleChallengeMetadata (name) {
-  if (_.isEmpty(name)) {
-    return
-  }
-  const token = await helper.getM2MToken()
-  const url = `${config.CHALLENGE_METADATA_API_URL}`
-  const res = await request.get(url).set({ Authorization: `Bearer ${token}` }).query({ name })
-  return _.get(res, 'body[0]')
-}
-
-/**
- * Create a challenge metadata in backend
- *
- * @param {Object} the name of the metadata to save
- * @returns {Promise<Object>} the created challenge metadata
- */
-async function createChallengeMetadata (name) {
-  const token = await helper.getM2MToken()
-  const url = `${config.CHALLENGE_METADATA_API_URL}`
-  const res = await request.post(url).set({ Authorization: `Bearer ${token}` }).send({ name })
-  return res.body || []
-}
-
-/**
- * Save challenge metadata to backend.
- *
- * @param {Array} challengeMetadata the data
- * @returns {undefined}
- */
-async function saveChallengeMetadata (challengeMetadata) {
-  await Promise.all(challengeMetadata.map(cs => createChallengeMetadata(cs, process.env.IS_RETRYING)))
 }
 
 /**
@@ -591,10 +548,6 @@ async function getChallenges (ids, skip, offset, filter) {
     challengeTypeMapping = createChallengeTypeMapping(challengeTypes)
   }
 
-  // get challenge metadata from backend api
-  if (!challengeMetadataFromApi) {
-    challengeMetadataFromApi = await getChallengeMetadata()
-  }
   if (!allV5Terms) {
     allV5Terms = (await getAllV5Terms()).map(t => _.omit(t, ['text']))
   }
@@ -605,7 +558,7 @@ async function getChallenges (ids, skip, offset, filter) {
   // console.log('Completed Groups Array', allGroupUUIDs)
 
   // TODO: Skip already migrated challenges
-  _.forEach(challenges, c => {
+  for (const c of challenges) {
     logger.info(`Migrating Challenge ${c.id} Created Date ${new Date(Date.parse(c.created))}`)
     let detailRequirement = ''
     if (c.type_id === 37) {
@@ -623,11 +576,13 @@ async function getChallenges (ids, skip, offset, filter) {
       legacy: {
         track: c.track,
         forumId: c.forum_id,
+        // confidentialityType: // TODO: Add this
+        directProjectId: c.project_id,
         reviewType: c.review_type || 'COMMUNITY' // TODO: fix this
       },
       name: c.name,
       description: detailRequirement && detailRequirement !== '' ? detailRequirement : 'N/A',
-      projectId: c.project_id,
+      projectId: _.get((await getProjectFromV5(c.project_id)), 'id', null),
       status: c.status,
       created: new Date(Date.parse(c.created)),
       createdBy: c.created_by,
@@ -718,25 +673,21 @@ async function getChallenges (ids, skip, offset, filter) {
 
     const metadata = []
     Object.entries(oneMetadata).forEach(([key, value]) => {
-      const found = challengeMetadataFromApi.find(s => s.name === _.camelCase(key))
-      if (found && !_.isEmpty(value)) {
-        let metadataValue
-        if (!isNaN(parseFloat(value)) && isFinite(value)) {
-          metadataValue = +value
-        } else if (value === 'true' || value === 'false') {
-          metadataValue = value === 'true'
-        } else if (key === 'filetypes') {
-          metadataValue = value.split(',')
-        } else {
-          metadataValue = value
-        }
-
-        metadata.push({ type: found.id, value: JSON.stringify(metadataValue) })
+      let metadataValue
+      if (!isNaN(parseFloat(value)) && isFinite(value)) {
+        metadataValue = +value
+      } else if (value === 'true' || value === 'false') {
+        metadataValue = value === 'true'
+      } else if (key === 'filetypes') {
+        metadataValue = value.split(',')
+      } else {
+        metadataValue = value
       }
+      metadata.push({ type: _.camelCase(key), value: JSON.stringify(metadataValue) })
     })
 
     results.push(_.assign(newChallenge, { prizeSets, tags, groups, winners, phases, metadata, terms }))
-  })
+  }
 
   return { challenges: results, skip: skip, finish: false }
 }
@@ -799,7 +750,5 @@ module.exports = {
   saveChallengeTypes,
   createChallengeTimelineMapping,
   getChallengeTypesFromDynamo,
-  getChallengeMetadata,
-  saveChallengeMetadata,
   getChallengesFromIfx
 }
