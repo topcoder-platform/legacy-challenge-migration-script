@@ -15,7 +15,7 @@ const { executeQueryAsync } = require('../util/informixWrapper')
 
 let allV5Terms
 let challengeTypeMapping
-let challengeSettingsFromApi
+let challengeMetadataFromApi
 
 let challengeTimelineMapping
 
@@ -210,11 +210,11 @@ function getWinnerFromIfx (ids) {
 }
 
 /**
- * Get challenge setting properties
+ * Get challenge metadata properties
  *
  * @param {Array} ids array if ids to fetch (if any)
  */
-function getSettingsFromIfx (ids) {
+function getMetadataFromIfx (ids) {
   const sql = `
   SELECT
     p.project_id AS challenge_id,
@@ -500,57 +500,57 @@ async function getChallengeTypesFromDynamo () {
 }
 
 /**
- * Get challenge settings based on the configured CHALLENGE_SETTINGS_PROPERTIES
- * @returns {Promise<Array>} the challenge settings
+ * Get challenge metadata based on the configured CHALLENGE_METADATA_PROPERTIES
+ * @returns {Promise<Array>} the challenge metadata
  */
-async function getChallengeSettings () {
-  const names = config.CHALLENGE_SETTINGS_PROPERTIES
+async function getChallengeMetadata () {
+  const names = config.CHALLENGE_METADATA_PROPERTIES
   const result = []
   for (const name of names) {
-    const setting = await getSingleChallengeSetting(name)
-    if (setting) {
-      result.push(setting)
+    const metadata = await getSingleChallengeMetadata(name)
+    if (metadata) {
+      result.push(metadata)
     }
   }
   return result
 }
 
 /**
- * Get single challenge setting
- * @param {String} name name of setting to search
- * @returns {Promise<Array>} the challenge settings
+ * Get single challenge metadata
+ * @param {String} name name of metadata to search
+ * @returns {Promise<Array>} the challenge metadata
  */
-async function getSingleChallengeSetting (name) {
+async function getSingleChallengeMetadata (name) {
   if (_.isEmpty(name)) {
     return
   }
   const token = await helper.getM2MToken()
-  const url = `${config.CHALLENGE_SETTINGS_API_URL}`
+  const url = `${config.CHALLENGE_METADATA_API_URL}`
   const res = await request.get(url).set({ Authorization: `Bearer ${token}` }).query({ name })
   return _.get(res, 'body[0]')
 }
 
 /**
- * Create a challenge setting in backend
+ * Create a challenge metadata in backend
  *
- * @param {Object} the name of the setting to save
- * @returns {Promise<Object>} the created challenge setting
+ * @param {Object} the name of the metadata to save
+ * @returns {Promise<Object>} the created challenge metadata
  */
-async function createChallengeSetting (name) {
+async function createChallengeMetadata (name) {
   const token = await helper.getM2MToken()
-  const url = `${config.CHALLENGE_SETTINGS_API_URL}`
+  const url = `${config.CHALLENGE_METADATA_API_URL}`
   const res = await request.post(url).set({ Authorization: `Bearer ${token}` }).send({ name })
   return res.body || []
 }
 
 /**
- * Save challenge settings to backend.
+ * Save challenge metadata to backend.
  *
- * @param {Array} challengeSettings the data
+ * @param {Array} challengeMetadata the data
  * @returns {undefined}
  */
-async function saveChallengeSettings (challengeSettings) {
-  await Promise.all(challengeSettings.map(cs => createChallengeSetting(cs, process.env.IS_RETRYING)))
+async function saveChallengeMetadata (challengeMetadata) {
+  await Promise.all(challengeMetadata.map(cs => createChallengeMetadata(cs, process.env.IS_RETRYING)))
 }
 
 /**
@@ -571,7 +571,7 @@ async function getChallenges (ids, skip, offset, filter) {
   // logger.debug('Challenge IDs to fetch: ' + challengeIds)
 
   const tasks = [getPrizeFromIfx, getTechnologyFromIfx, getPlatformFromIfx,
-    getGroupFromIfx, getWinnerFromIfx, getPhaseFromIfx, getSettingsFromIfx, getTermsFromIfx]
+    getGroupFromIfx, getWinnerFromIfx, getPhaseFromIfx, getMetadataFromIfx, getTermsFromIfx]
 
   const queryResults = await Promise.all(tasks.map(t => t(challengeIds)))
   // construct challenge
@@ -581,7 +581,7 @@ async function getChallenges (ids, skip, offset, filter) {
   const allGroups = queryResults[3]
   const allWinners = queryResults[4]
   const allPhases = queryResults[5]
-  const allSettings = queryResults[6]
+  const allMetadata = queryResults[6]
   const allTerms = queryResults[7]
   const results = []
 
@@ -591,9 +591,9 @@ async function getChallenges (ids, skip, offset, filter) {
     challengeTypeMapping = createChallengeTypeMapping(challengeTypes)
   }
 
-  // get challenge settings from backend api
-  if (!challengeSettingsFromApi) {
-    challengeSettingsFromApi = await getChallengeSettings()
+  // get challenge metadata from backend api
+  if (!challengeMetadataFromApi) {
+    challengeMetadataFromApi = await getChallengeMetadata()
   }
   if (!allV5Terms) {
     allV5Terms = (await getAllV5Terms()).map(t => _.omit(t, ['text']))
@@ -620,12 +620,14 @@ async function getChallenges (ids, skip, offset, filter) {
       id: uuid(),
       legacyId: c.id,
       typeId: challengeTypeMapping[c.type_id],
-      track: c.track,
+      legacy: {
+        track: c.track,
+        forumId: c.forum_id,
+        reviewType: c.review_type || 'COMMUNITY' // TODO: fix this
+      },
       name: c.name,
       description: detailRequirement && detailRequirement !== '' ? detailRequirement : 'N/A',
-      reviewType: c.review_type || 'COMMUNITY', // TODO: fix this
       projectId: c.project_id,
-      forumId: c.forum_id,
       status: c.status,
       created: new Date(Date.parse(c.created)),
       createdBy: c.created_by,
@@ -666,7 +668,7 @@ async function getChallenges (ids, skip, offset, filter) {
     const terms = _.filter(allTerms, (t) => {
       return t.challenge_id === c.id
     }).map((t) => {
-      return _.find(allV5Terms, v5Term => _.toString(v5Term.legacyId) === _.toString(t.terms_of_use_id)) || { legacyId: t.terms_of_use_id }
+      return _.get(_.find(allV5Terms, v5Term => _.toString(v5Term.legacyId) === _.toString(t.terms_of_use_id)) || { id: t.terms_of_use_id }, 'id')
     })
     // get the registrationPhase of this challenge
     const registrationPhase = _.filter(phases, (p) => {
@@ -712,28 +714,28 @@ async function getChallenges (ids, skip, offset, filter) {
       phase.duration = Number(phase.duration)
     }
 
-    const oneSetting = _.omit(_.filter(allSettings, s => s.challenge_id === c.id)[0], ['challenge_id'])
+    const oneMetadata = _.omit(_.filter(allMetadata, s => s.challenge_id === c.id)[0], ['challenge_id'])
 
-    const challengeSettings = []
-    Object.entries(oneSetting).forEach(([key, value]) => {
-      const found = challengeSettingsFromApi.find(s => s.name === _.camelCase(key))
+    const metadata = []
+    Object.entries(oneMetadata).forEach(([key, value]) => {
+      const found = challengeMetadataFromApi.find(s => s.name === _.camelCase(key))
       if (found && !_.isEmpty(value)) {
-        let settingValue
+        let metadataValue
         if (!isNaN(parseFloat(value)) && isFinite(value)) {
-          settingValue = +value
+          metadataValue = +value
         } else if (value === 'true' || value === 'false') {
-          settingValue = value === 'true'
+          metadataValue = value === 'true'
         } else if (key === 'filetypes') {
-          settingValue = value.split(',')
+          metadataValue = value.split(',')
         } else {
-          settingValue = value
+          metadataValue = value
         }
 
-        challengeSettings.push({ type: found.id, value: JSON.stringify(settingValue) })
+        metadata.push({ type: found.id, value: JSON.stringify(metadataValue) })
       }
     })
 
-    results.push(_.assign(newChallenge, { prizeSets, tags, groups, winners, phases, challengeSettings, terms }))
+    results.push(_.assign(newChallenge, { prizeSets, tags, groups, winners, phases, metadata, terms }))
   })
 
   return { challenges: results, skip: skip, finish: false }
@@ -797,7 +799,7 @@ module.exports = {
   saveChallengeTypes,
   createChallengeTimelineMapping,
   getChallengeTypesFromDynamo,
-  getChallengeSettings,
-  saveChallengeSettings,
+  getChallengeMetadata,
+  saveChallengeMetadata,
   getChallengesFromIfx
 }

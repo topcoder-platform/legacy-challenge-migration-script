@@ -15,7 +15,7 @@ module.exports = {
   LOG_LEVEL: process.env.LOG_LEVEL || 'info',
   CHALLENGE_TYPE_API_URL: process.env.CHALLENGE_TYPE_API_URL || 'https://api.topcoder-dev.com/v4/challenge-types',
   CHALLENGE_TIMELINE_API_URL: process.env.CHALLENGE_TIMELINE_API_URL || 'https://api.topcoder-dev.com/v5/challenge-timelines',
-  CHALLENGE_SETTINGS_API_URL: process.env.CHALLENGE_SETTINGS_API_URL || 'https://api.topcoder-dev.com/v5/challenge-settings',
+  CHALLENGE_METADATA_API_URL: process.env.CHALLENGE_METADATA_API_URL || 'https://api.topcoder-dev.com/v5/challenge-metadata',
   GROUPS_API_URL: process.env.GROUPS_API_URL || 'https://api.topcoder-dev.com/v5/groups',
   TERMS_API_URL: process.env.TERMS_API_URL || 'https://api.topcoder-dev.com/v5/terms',
   CREATED_DATE_BEGIN: process.env.CREATED_DATE_BEGIN,
@@ -78,7 +78,7 @@ module.exports = {
   LOG_FILENAME: './app.log', // log file
 
   // Challenge properties to be included in migration as challenge settings
-  CHALLENGE_SETTINGS_PROPERTIES: process.env.CHALLENGE_SETTINGS_PROPERTIES ? JSON.parse(process.env.CHALLENGE_SETTINGS_PROPERTIES) : ['allowStockArt', 'submissionLimit', 'submissionsViewable', 'filetypes'],
+  CHALLENGE_METADATA_PROPERTIES: process.env.CHALLENGE_METADATA_PROPERTIES ? JSON.parse(process.env.CHALLENGE_METADATA_PROPERTIES) : ['allowStockArt', 'submissionLimit', 'submissionsViewable', 'filetypes'],
   MIGRATION_PROGRESS_STATUSES: {
     IN_PROGRESS: 'In progress',
     SUCCESS: 'Sucess'

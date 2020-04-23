@@ -16,11 +16,11 @@ const schema = new Schema({
     type: Number,
     required: false
   },
-  typeId: {
-    type: String,
-    required: true
+  legacy: {
+    type: Object,
+    required: false
   },
-  track: {
+  typeId: {
     type: String,
     required: true
   },
@@ -32,7 +32,7 @@ const schema = new Schema({
     type: String,
     required: true
   },
-  challengeSettings: {
+  metadata: {
     type: [Object],
     required: false
   },
@@ -52,10 +52,6 @@ const schema = new Schema({
     type: [Object],
     required: true
   },
-  reviewType: {
-    type: String,
-    required: true
-  },
   tags: {
     type: Array,
     required: true
@@ -63,10 +59,6 @@ const schema = new Schema({
   projectId: {
     type: Number,
     required: true
-  },
-  forumId: {
-    type: Number,
-    required: false
   },
   startDate: {
     type: Date,

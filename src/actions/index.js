@@ -38,7 +38,7 @@ async function migrateAll () {
   const CREATED_DATE_BEGIN = await getDateParamter()
   logger.info(`Migrating All Challenges from ${CREATED_DATE_BEGIN}`)
   await processChallengeTypes()
-  await processChallengeSettings()
+  await processChallengeMetadata()
   await processChallengeTimelineTemplates()
   await processResourceRoles()
 
@@ -174,25 +174,25 @@ async function processChallengeTypes () {
 }
 
 /**
- * Migrate challenge settings
+ * Migrate challenge metadata
  */
-async function processChallengeSettings () {
-  let challengeSettings
+async function processChallengeMetadata () {
+  let metadata
   try {
-    logger.info('Loading challenge settings')
-    challengeSettings = await challengeService.getChallengeSettings()
+    logger.info('Loading challenge metadata')
+    metadata = await challengeService.getChallengeMetadata()
   } catch (e) {
     logger.debug(util.inspect(e))
     throw e
   }
-  if (challengeSettings < 1) {
+  if (metadata < 1) {
     // all are missings
-    await challengeService.saveChallengeSettings(config.CHALLENGE_SETTINGS_PROPERTIES)
+    await challengeService.saveChallengeMetadata(config.CHALLENGE_METADATA_PROPERTIES)
   }
-  if (challengeSettings.length > 0) {
-    // check if any of CHALLENGE_SETTINGS_PROPERTIES is missing in backend
-    const missingSettings = _.filter(config.CHALLENGE_SETTINGS_PROPERTIES, s => !challengeSettings.find(setting => setting.name === s))
-    await challengeService.saveChallengeSettings(missingSettings)
+  if (metadata.length > 0) {
+    // check if any of CHALLENGE_METADATA_PROPERTIES is missing in backend
+    const missingMetadata = _.filter(config.CHALLENGE_METADATA_PROPERTIES, s => !metadata.find(entry => entry.name === s))
+    await challengeService.saveChallengeMetadata(missingMetadata)
   }
 }
 
