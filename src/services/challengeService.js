@@ -53,6 +53,7 @@ function getChallengesFromIfx (ids, skip, offset, filter, onlyIds) {
       pstatus.name AS status,
       review_type_info.value AS review_type,
       forum_id_info.value AS forum_id,
+      confidentiality_type.value AS confidentiality_type,
       p.tc_direct_project_id AS project_id,
       pspec.detailed_requirements_text AS software_detail_requirements,
       pss.contest_description AS studio_detail_requirements,
@@ -66,6 +67,8 @@ function getChallengesFromIfx (ids, skip, offset, filter, onlyIds) {
       AND pn.project_info_type_id = 6
       LEFT JOIN project_info AS forum_id_info ON forum_id_info.project_id = p.project_id
       AND forum_id_info.project_info_type_id = 4
+      LEFT JOIN project_info AS confidentiality_type ON confidentiality_type.project_id = p.project_id
+      AND confidentiality_type.project_info_type_id = 34
       LEFT JOIN project_info AS review_type_info ON review_type_info.project_id = p.project_id
       AND review_type_info.project_info_type_id = 79
       LEFT JOIN project_spec pspec ON pspec.project_id = p.project_id
@@ -481,8 +484,9 @@ async function getChallengeTimeline (typeId) {
  * @returns {Object} the project
  */
 async function getProjectFromV5 (directProjectId) {
+  const token = await helper.getM2MToken()
   const url = `${config.PROJECTS_API_URL}?directProjectId=${directProjectId}`
-  const res = await request.get(url)
+  const res = await request.get(url).set({ Authorization: `Bearer ${token}` })
   return _.get(res, 'body[0]')
 }
 
@@ -576,7 +580,7 @@ async function getChallenges (ids, skip, offset, filter) {
       legacy: {
         track: c.track,
         forumId: c.forum_id,
-        // confidentialityType: // TODO: Add this
+        confidentialityType: c.confidentiality_type,
         directProjectId: c.project_id,
         reviewType: c.review_type || 'COMMUNITY' // TODO: fix this
       },
