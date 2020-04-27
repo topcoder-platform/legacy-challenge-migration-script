@@ -243,39 +243,45 @@ async function processChallengeResources (writeError = true, challengeId) {
  * @param {Number} challengeId the challenge ID
  */
 async function processChallenge (writeError = true, challengeId) {
-  let result
-  let challengeProcessed = false
-  const { workingChallenge, isNew } = await getOrCreateWorkingChallenge(challengeId)
-  if (isNew) {
-    try {
+  try {
+    let result
+    let challengeProcessed = false
+    const { workingChallenge, isNew } = await getOrCreateWorkingChallenge(challengeId)
+    if (!isNew) {
+      let skipReason
+      if (workingChallenge.status === config.MIGRATION_PROGRESS_STATUSES.SUCCESS) {
+        skipReason = 'already migrated'
+      } else {
+        skipReason = 'already failed'
+      }
+      logger.info(`Challenge ${challengeId} ${skipReason}! Will skip...`)
+    } else {
       logger.info(`Loading challenge ${challengeId}`)
+      const [existingV5Challenge] = await challengeService.getChallengesFromES([challengeId])
       result = await challengeService.getChallenges([challengeId])
-      // TODO: Check if challenge needs to be updated
       if (_.get(result, 'challenges.length', 0) > 0) {
-        await challengeService.save(result.challenges)
+        if (existingV5Challenge && _.get(existingV5Challenge, 'legacy.informixModified') !== result.challenges[0].updatedAt) {
+          // TODO: Upsert data
+          logger.info('Should upsert challenge data')
+        } else {
+          await challengeService.save(result.challenges)
+        }
       }
       workingChallenge.status = config.MIGRATION_PROGRESS_STATUSES.SUCCESS
       workingChallenge.date = new Date()
       await workingChallenge.save()
       challengeProcessed = true
-    } catch (e) {
-      console.log('error', e)
-      logger.debug(util.inspect(e))
-      process.exit(1)
     }
-  } else {
-    let skipReason
-    if (workingChallenge.status === config.MIGRATION_PROGRESS_STATUSES.SUCCESS) {
-      skipReason = 'already migrated'
-    } else {
-      skipReason = 'already failed'
+
+    if (writeError) {
+      errorService.close()
     }
-    logger.info(`Challenge ${challengeId} ${skipReason}! Will skip...`)
+    return challengeProcessed
+  } catch (e) {
+    console.log('error', e)
+    logger.debug(util.inspect(e))
+    process.exit(1)
   }
-  if (writeError) {
-    errorService.close()
-  }
-  return challengeProcessed
 }
 
 module.exports = {

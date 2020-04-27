@@ -350,6 +350,9 @@ async function getChallengesFromES (legacyIds) {
   // Extract data from hits
   return _.map(docs.hits.hits, item => ({
     legacyId: item._source.legacyId,
+    legacy: {
+      informixModified: _.get(item._source, 'legacy.informixModified')
+    },
     challengeId: item._source.id
   }))
 }
@@ -640,16 +643,17 @@ async function getChallenges (ids, skip, offset, filter) {
 
     phases = phases.map((phase) => {
       phase.id = uuid()
-      phase.name = config.get('PHASE_NAME_MAPPINGS')[phase.type_id]
-      phase.duration = Number(phase.duration)
+      phase.name = config.get('PHASE_NAME_MAPPINGS')[phase.type_id].name
+      phase.phaseId = config.get('PHASE_NAME_MAPPINGS')[phase.type_id].phaseId
+      phase.duration = Number(phase.duration) / 1000 // legacy uses milliseconds. V5 uses seconds
       phase = _.mapKeys(phase, (v, k) => {
         switch (k) {
           case 'scheduled_start_time' :
-            return 'scheduledStartTime'
+            return 'scheduledStartDate'
           case 'actual_start_time' :
-            return 'actualStartTime'
+            return 'actualStartDate'
           case 'actual_end_time':
-            return 'actualEndTime'
+            return 'actualEndDate'
           default:
             return k
         }
@@ -667,11 +671,6 @@ async function getChallenges (ids, skip, offset, filter) {
       }
       return phase
     })
-    for (const phase of phases) {
-      phase.id = uuid()
-      phase.name = config.get('PHASE_NAME_MAPPINGS')[phase.type_id]
-      phase.duration = Number(phase.duration)
-    }
 
     const oneMetadata = _.omit(_.filter(allMetadata, s => s.challenge_id === c.id)[0], ['challenge_id'])
 
