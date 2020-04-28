@@ -645,7 +645,7 @@ async function getChallenges (ids, skip, offset, filter) {
       phase.id = uuid()
       phase.name = config.get('PHASE_NAME_MAPPINGS')[phase.type_id].name
       phase.phaseId = config.get('PHASE_NAME_MAPPINGS')[phase.type_id].phaseId
-      phase.duration = Number(phase.duration) / 1000 // legacy uses milliseconds. V5 uses seconds
+      phase.duration = _.toInteger(Number(phase.duration) / 1000) // legacy uses milliseconds. V5 uses seconds
       phase = _.mapKeys(phase, (v, k) => {
         switch (k) {
           case 'scheduled_start_time' :
