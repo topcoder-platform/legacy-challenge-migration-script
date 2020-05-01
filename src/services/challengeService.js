@@ -15,7 +15,6 @@ const { executeQueryAsync } = require('../util/informixWrapper')
 
 let allV5Terms
 let challengeTypeMapping
-let challengeSettingsFromApi
 
 let challengeTimelineMapping
 
@@ -54,6 +53,7 @@ function getChallengesFromIfx (ids, skip, offset, filter, onlyIds) {
       pstatus.name AS status,
       review_type_info.value AS review_type,
       forum_id_info.value AS forum_id,
+      confidentiality_type.value AS confidentiality_type,
       p.tc_direct_project_id AS project_id,
       pspec.detailed_requirements_text AS software_detail_requirements,
       pss.contest_description AS studio_detail_requirements,
@@ -67,6 +67,8 @@ function getChallengesFromIfx (ids, skip, offset, filter, onlyIds) {
       AND pn.project_info_type_id = 6
       LEFT JOIN project_info AS forum_id_info ON forum_id_info.project_id = p.project_id
       AND forum_id_info.project_info_type_id = 4
+      LEFT JOIN project_info AS confidentiality_type ON confidentiality_type.project_id = p.project_id
+      AND confidentiality_type.project_info_type_id = 34
       LEFT JOIN project_info AS review_type_info ON review_type_info.project_id = p.project_id
       AND review_type_info.project_info_type_id = 79
       LEFT JOIN project_spec pspec ON pspec.project_id = p.project_id
@@ -210,11 +212,11 @@ function getWinnerFromIfx (ids) {
 }
 
 /**
- * Get challenge setting properties
+ * Get challenge metadata properties
  *
  * @param {Array} ids array if ids to fetch (if any)
  */
-function getSettingsFromIfx (ids) {
+function getMetadataFromIfx (ids) {
   const sql = `
   SELECT
     p.project_id AS challenge_id,
@@ -348,6 +350,9 @@ async function getChallengesFromES (legacyIds) {
   // Extract data from hits
   return _.map(docs.hits.hits, item => ({
     legacyId: item._source.legacyId,
+    legacy: {
+      informixModified: _.get(item._source, 'legacy.informixModified')
+    },
     challengeId: item._source.id
   }))
 }
@@ -476,6 +481,19 @@ async function getChallengeTimeline (typeId) {
 }
 
 /**
+ * Get project from v5 API.
+ *
+ * @param {String} directProjectId the direct project id
+ * @returns {Object} the project
+ */
+async function getProjectFromV5 (directProjectId) {
+  const token = await helper.getM2MToken()
+  const url = `${config.PROJECTS_API_URL}?directProjectId=${directProjectId}`
+  const res = await request.get(url).set({ Authorization: `Bearer ${token}` })
+  return _.get(res, 'body[0]')
+}
+
+/**
  * Create challenge timeline mapping from challenge types.
  * @param {Array} typeIds challenge types id
  */
@@ -500,60 +518,6 @@ async function getChallengeTypesFromDynamo () {
 }
 
 /**
- * Get challenge settings based on the configured CHALLENGE_SETTINGS_PROPERTIES
- * @returns {Promise<Array>} the challenge settings
- */
-async function getChallengeSettings () {
-  const names = config.CHALLENGE_SETTINGS_PROPERTIES
-  const result = []
-  for (const name of names) {
-    const setting = await getSingleChallengeSetting(name)
-    if (setting) {
-      result.push(setting)
-    }
-  }
-  return result
-}
-
-/**
- * Get single challenge setting
- * @param {String} name name of setting to search
- * @returns {Promise<Array>} the challenge settings
- */
-async function getSingleChallengeSetting (name) {
-  if (_.isEmpty(name)) {
-    return
-  }
-  const token = await helper.getM2MToken()
-  const url = `${config.CHALLENGE_SETTINGS_API_URL}`
-  const res = await request.get(url).set({ Authorization: `Bearer ${token}` }).query({ name })
-  return _.get(res, 'body[0]')
-}
-
-/**
- * Create a challenge setting in backend
- *
- * @param {Object} the name of the setting to save
- * @returns {Promise<Object>} the created challenge setting
- */
-async function createChallengeSetting (name) {
-  const token = await helper.getM2MToken()
-  const url = `${config.CHALLENGE_SETTINGS_API_URL}`
-  const res = await request.post(url).set({ Authorization: `Bearer ${token}` }).send({ name })
-  return res.body || []
-}
-
-/**
- * Save challenge settings to backend.
- *
- * @param {Array} challengeSettings the data
- * @returns {undefined}
- */
-async function saveChallengeSettings (challengeSettings) {
-  await Promise.all(challengeSettings.map(cs => createChallengeSetting(cs, process.env.IS_RETRYING)))
-}
-
-/**
  * Get challenge from informix
  *
  * @param {Object} conn informix connection instance
@@ -571,7 +535,7 @@ async function getChallenges (ids, skip, offset, filter) {
   // logger.debug('Challenge IDs to fetch: ' + challengeIds)
 
   const tasks = [getPrizeFromIfx, getTechnologyFromIfx, getPlatformFromIfx,
-    getGroupFromIfx, getWinnerFromIfx, getPhaseFromIfx, getSettingsFromIfx, getTermsFromIfx]
+    getGroupFromIfx, getWinnerFromIfx, getPhaseFromIfx, getMetadataFromIfx, getTermsFromIfx]
 
   const queryResults = await Promise.all(tasks.map(t => t(challengeIds)))
   // construct challenge
@@ -581,7 +545,7 @@ async function getChallenges (ids, skip, offset, filter) {
   const allGroups = queryResults[3]
   const allWinners = queryResults[4]
   const allPhases = queryResults[5]
-  const allSettings = queryResults[6]
+  const allMetadata = queryResults[6]
   const allTerms = queryResults[7]
   const results = []
 
@@ -591,10 +555,6 @@ async function getChallenges (ids, skip, offset, filter) {
     challengeTypeMapping = createChallengeTypeMapping(challengeTypes)
   }
 
-  // get challenge settings from backend api
-  if (!challengeSettingsFromApi) {
-    challengeSettingsFromApi = await getChallengeSettings()
-  }
   if (!allV5Terms) {
     allV5Terms = (await getAllV5Terms()).map(t => _.omit(t, ['text']))
   }
@@ -605,7 +565,12 @@ async function getChallenges (ids, skip, offset, filter) {
   // console.log('Completed Groups Array', allGroupUUIDs)
 
   // TODO: Skip already migrated challenges
-  _.forEach(challenges, c => {
+  for (const c of challenges) {
+    // Trim properties that are used as a lookup
+    _.each(['track', 'review_type', 'status'], (key) => {
+      c[key] = _.trim(c[key])
+    })
+    c.track = _.trim(c.track)
     logger.info(`Migrating Challenge ${c.id} Created Date ${new Date(Date.parse(c.created))}`)
     let detailRequirement = ''
     if (c.type_id === 37) {
@@ -620,12 +585,16 @@ async function getChallenges (ids, skip, offset, filter) {
       id: uuid(),
       legacyId: c.id,
       typeId: challengeTypeMapping[c.type_id],
-      track: c.track,
+      legacy: {
+        track: c.track,
+        forumId: c.forum_id,
+        confidentialityType: c.confidentiality_type,
+        directProjectId: c.project_id,
+        reviewType: c.review_type || 'COMMUNITY' // TODO: fix this
+      },
       name: c.name,
       description: detailRequirement && detailRequirement !== '' ? detailRequirement : 'N/A',
-      reviewType: c.review_type || 'COMMUNITY', // TODO: fix this
-      projectId: c.project_id,
-      forumId: c.forum_id,
+      projectId: _.get((await getProjectFromV5(c.project_id)), 'id', null),
       status: c.status,
       created: new Date(Date.parse(c.created)),
       createdBy: c.created_by,
@@ -666,7 +635,7 @@ async function getChallenges (ids, skip, offset, filter) {
     const terms = _.filter(allTerms, (t) => {
       return t.challenge_id === c.id
     }).map((t) => {
-      return _.find(allV5Terms, v5Term => _.toString(v5Term.legacyId) === _.toString(t.terms_of_use_id)) || { legacyId: t.terms_of_use_id }
+      return _.get(_.find(allV5Terms, v5Term => _.toString(v5Term.legacyId) === _.toString(t.terms_of_use_id)) || { id: t.terms_of_use_id }, 'id')
     })
     // get the registrationPhase of this challenge
     const registrationPhase = _.filter(phases, (p) => {
@@ -676,23 +645,28 @@ async function getChallenges (ids, skip, offset, filter) {
     if (registrationPhase) {
       newChallenge.startDate = new Date(Date.parse(registrationPhase.scheduled_start_time))
     }
-
+    let challengeEndDate = newChallenge.startDate
     phases = phases.map((phase) => {
+      // console.log(phase.scheduled_start_time, Date.parse(phase.scheduled_start_time), phase.duration, (phase.duration / 1000 / 60 / 60))
+      challengeEndDate = new Date(Date.parse(phase.scheduled_start_time) + (phase.duration))
+      phase.scheduledEndDate = new Date(Date.parse(phase.scheduled_start_time) + (phase.duration))
       phase.id = uuid()
-      phase.name = config.get('PHASE_NAME_MAPPINGS')[phase.type_id]
-      phase.duration = Number(phase.duration)
+      phase.name = config.get('PHASE_NAME_MAPPINGS')[phase.type_id].name
+      phase.phaseId = config.get('PHASE_NAME_MAPPINGS')[phase.type_id].phaseId
+      phase.duration = _.toInteger(Number(phase.duration) / 1000) // legacy uses milliseconds. V5 uses seconds
       phase = _.mapKeys(phase, (v, k) => {
         switch (k) {
           case 'scheduled_start_time' :
-            return 'scheduledStartTime'
+            return 'scheduledStartDate'
           case 'actual_start_time' :
-            return 'actualStartTime'
+            return 'actualStartDate'
           case 'actual_end_time':
-            return 'actualEndTime'
+            return 'actualEndDate'
           default:
             return k
         }
       })
+      newChallenge.endDate = challengeEndDate
 
       if (phase.phase_status === 'Open') {
         phase.isOpen = true
@@ -706,35 +680,28 @@ async function getChallenges (ids, skip, offset, filter) {
       }
       return phase
     })
-    for (const phase of phases) {
-      phase.id = uuid()
-      phase.name = config.get('PHASE_NAME_MAPPINGS')[phase.type_id]
-      phase.duration = Number(phase.duration)
-    }
 
-    const oneSetting = _.omit(_.filter(allSettings, s => s.challenge_id === c.id)[0], ['challenge_id'])
+    console.log('Migrated Date', newChallenge.startDate, newChallenge.endDate)
 
-    const challengeSettings = []
-    Object.entries(oneSetting).forEach(([key, value]) => {
-      const found = challengeSettingsFromApi.find(s => s.name === _.camelCase(key))
-      if (found && !_.isEmpty(value)) {
-        let settingValue
-        if (!isNaN(parseFloat(value)) && isFinite(value)) {
-          settingValue = +value
-        } else if (value === 'true' || value === 'false') {
-          settingValue = value === 'true'
-        } else if (key === 'filetypes') {
-          settingValue = value.split(',')
-        } else {
-          settingValue = value
-        }
+    const oneMetadata = _.omit(_.filter(allMetadata, s => s.challenge_id === c.id)[0], ['challenge_id'])
 
-        challengeSettings.push({ type: found.id, value: JSON.stringify(settingValue) })
+    const metadata = []
+    Object.entries(oneMetadata).forEach(([key, value]) => {
+      let metadataValue
+      if (!isNaN(parseFloat(value)) && isFinite(value)) {
+        metadataValue = +value
+      } else if (value === 'true' || value === 'false') {
+        metadataValue = value === 'true'
+      } else if (key === 'filetypes') {
+        metadataValue = value.split(',')
+      } else {
+        metadataValue = value
       }
+      metadata.push({ type: _.camelCase(key), value: JSON.stringify(metadataValue) })
     })
 
-    results.push(_.assign(newChallenge, { prizeSets, tags, groups, winners, phases, challengeSettings, terms }))
-  })
+    results.push(_.assign(newChallenge, { prizeSets, tags, groups, winners, phases, metadata, terms }))
+  }
 
   return { challenges: results, skip: skip, finish: false }
 }
@@ -797,7 +764,5 @@ module.exports = {
   saveChallengeTypes,
   createChallengeTimelineMapping,
   getChallengeTypesFromDynamo,
-  getChallengeSettings,
-  saveChallengeSettings,
   getChallengesFromIfx
 }

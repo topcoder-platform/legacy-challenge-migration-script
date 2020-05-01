@@ -1,5 +1,6 @@
 module.exports = {
   PORT: process.env.PORT || 3001,
+  MIGRATION_CRON_ENABLED: process.env.MIGRATION_CRON_ENABLED || false,
   API_VERSION: process.env.API_VERSION || 'v5',
   SCHEDULE_INTERVAL: process.env.SCHEDULE_INTERVAL ? Number(process.env.SCHEDULE_INTERVAL) : 5, // minutes
   ENABLE_CHALLENGE_CRUD: process.env.ENABLE_CHALLENGE_CRUD || true,
@@ -13,9 +14,10 @@ module.exports = {
   AUTH0_CLIENT_SECRET: process.env.AUTH0_CLIENT_SECRET,
 
   LOG_LEVEL: process.env.LOG_LEVEL || 'info',
+  PROJECTS_API_URL: process.env.PROJECTS_API_URL || 'https://api.topcoder-dev.com/v5/projects',
   CHALLENGE_TYPE_API_URL: process.env.CHALLENGE_TYPE_API_URL || 'https://api.topcoder-dev.com/v4/challenge-types',
   CHALLENGE_TIMELINE_API_URL: process.env.CHALLENGE_TIMELINE_API_URL || 'https://api.topcoder-dev.com/v5/challenge-timelines',
-  CHALLENGE_SETTINGS_API_URL: process.env.CHALLENGE_SETTINGS_API_URL || 'https://api.topcoder-dev.com/v5/challenge-settings',
+  CHALLENGE_METADATA_API_URL: process.env.CHALLENGE_METADATA_API_URL || 'https://api.topcoder-dev.com/v5/challenge-metadata',
   GROUPS_API_URL: process.env.GROUPS_API_URL || 'https://api.topcoder-dev.com/v5/groups',
   TERMS_API_URL: process.env.TERMS_API_URL || 'https://api.topcoder-dev.com/v5/terms',
   CREATED_DATE_BEGIN: process.env.CREATED_DATE_BEGIN,
@@ -64,12 +66,74 @@ module.exports = {
 
   // map phase_type_id to name
   PHASE_NAME_MAPPINGS: {
-    1: 'Registration',
-    2: 'Submission',
-    4: 'Review',
-    5: 'Apeal',
-    6: 'Apeal Response',
-    15: 'Checkpoint Submission'
+    1: {
+      name: 'Registration',
+      phaseId: 'a93544bc-c165-4af4-b55e-18f3593b457a'
+    },
+    2: {
+      name: 'Submission',
+      phaseId: '6950164f-3c5e-4bdc-abc8-22aaf5a1bd49'
+    },
+    4: {
+      name: 'Review',
+      phaseId: 'aa5a3f78-79e0-4bf7-93ff-b11e8f5b398b'
+    },
+    5: {
+      name: 'Appeals',
+      phaseId: '1c24cfb3-5b0a-4dbd-b6bd-4b0dff5349c6'
+    },
+    6: {
+      name: 'Appeals Response',
+      phaseId: '797a6af7-cd3f-4436-9fca-9679f773bee9'
+    },
+    7: {
+      name: 'Aggregation',
+      phaseId: '2691ed2b-8574-4f16-929a-35ac94e1c3ee'
+    },
+    8: {
+      name: 'Aggregation Review',
+      phaseId: 'a290be40-02eb-48df-822b-71971c00403f'
+    },
+    9: {
+      name: 'Final Fix',
+      phaseId: '20036dd3-3d67-4c81-8085-a4cb785c313b'
+    },
+    10: {
+      name: 'Final Review',
+      phaseId: 'f3acaf26-1dd5-42ae-9f0d-8eb0fd24ae59'
+    },
+    11: {
+      name: 'Approval',
+      phaseId: 'ad985cff-ad3e-44de-b54e-3992505ba0ae'
+    },
+    12: {
+      name: 'Post-Mortem',
+      phaseId: 'f308bdb4-d3da-43d8-942b-134dfbaf5c45'
+    },
+    13: {
+      name: 'Specification Submission',
+      phaseId: 'fb21431c-119e-4bc7-b447-d0af3f2be6b4'
+    },
+    14: {
+      name: 'Specification Review',
+      phaseId: '2752454b-0952-4a42-a4f0-f3fb88a9b065'
+    },
+    15: {
+      name: 'Checkpoint Submission',
+      phaseId: 'd8a2cdbe-84d1-4687-ab75-78a6a7efdcc8'
+    },
+    16: {
+      name: 'Checkpoint Screening',
+      phaseId: 'ce1afb4c-74f9-496b-9e4b-087ae73ab032'
+    },
+    17: {
+      name: 'Checkpoint Review',
+      phaseId: '84b43897-2aab-44d6-a95a-42c433657eed'
+    },
+    18: {
+      name: 'Iterative Review',
+      phaseId: '003a4b14-de5d-43fc-9e35-835dbeb6af1f'
+    }
   },
   // Resource role to be included in migration
   RESOURCE_ROLE: ['Submitter', 'Reviewer', 'Copilot', 'Manager', 'Observer', 'Iterative Reviewer', 'Post-Mortem Reviewer', 'Approver'],
@@ -77,8 +141,6 @@ module.exports = {
   ERROR_LOG_FILENAME: './error.json', // filename of error log for challenge that fail to migrate
   LOG_FILENAME: './app.log', // log file
 
-  // Challenge properties to be included in migration as challenge settings
-  CHALLENGE_SETTINGS_PROPERTIES: process.env.CHALLENGE_SETTINGS_PROPERTIES ? JSON.parse(process.env.CHALLENGE_SETTINGS_PROPERTIES) : ['allowStockArt', 'submissionLimit', 'submissionsViewable', 'filetypes'],
   MIGRATION_PROGRESS_STATUSES: {
     IN_PROGRESS: 'In progress',
     SUCCESS: 'Sucess'

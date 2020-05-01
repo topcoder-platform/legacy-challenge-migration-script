@@ -38,7 +38,6 @@ async function migrateAll () {
   const CREATED_DATE_BEGIN = await getDateParamter()
   logger.info(`Migrating All Challenges from ${CREATED_DATE_BEGIN}`)
   await processChallengeTypes()
-  await processChallengeSettings()
   await processChallengeTimelineTemplates()
   await processResourceRoles()
 
@@ -174,29 +173,6 @@ async function processChallengeTypes () {
 }
 
 /**
- * Migrate challenge settings
- */
-async function processChallengeSettings () {
-  let challengeSettings
-  try {
-    logger.info('Loading challenge settings')
-    challengeSettings = await challengeService.getChallengeSettings()
-  } catch (e) {
-    logger.debug(util.inspect(e))
-    throw e
-  }
-  if (challengeSettings < 1) {
-    // all are missings
-    await challengeService.saveChallengeSettings(config.CHALLENGE_SETTINGS_PROPERTIES)
-  }
-  if (challengeSettings.length > 0) {
-    // check if any of CHALLENGE_SETTINGS_PROPERTIES is missing in backend
-    const missingSettings = _.filter(config.CHALLENGE_SETTINGS_PROPERTIES, s => !challengeSettings.find(setting => setting.name === s))
-    await challengeService.saveChallengeSettings(missingSettings)
-  }
-}
-
-/**
  * Migrate challenge timeline templates
  */
 async function processChallengeTimelineTemplates () {
@@ -267,39 +243,45 @@ async function processChallengeResources (writeError = true, challengeId) {
  * @param {Number} challengeId the challenge ID
  */
 async function processChallenge (writeError = true, challengeId) {
-  let result
-  let challengeProcessed = false
-  const { workingChallenge, isNew } = await getOrCreateWorkingChallenge(challengeId)
-  if (isNew) {
-    try {
+  try {
+    let result
+    let challengeProcessed = false
+    const { workingChallenge, isNew } = await getOrCreateWorkingChallenge(challengeId)
+    if (!isNew) {
+      let skipReason
+      if (workingChallenge.status === config.MIGRATION_PROGRESS_STATUSES.SUCCESS) {
+        skipReason = 'already migrated'
+      } else {
+        skipReason = 'already failed'
+      }
+      logger.info(`Challenge ${challengeId} ${skipReason}! Will skip...`)
+    } else {
       logger.info(`Loading challenge ${challengeId}`)
+      const [existingV5Challenge] = await challengeService.getChallengesFromES([challengeId])
       result = await challengeService.getChallenges([challengeId])
-      // TODO: Check if challenge needs to be updated
       if (_.get(result, 'challenges.length', 0) > 0) {
-        await challengeService.save(result.challenges)
+        if (existingV5Challenge && _.get(existingV5Challenge, 'legacy.informixModified') !== result.challenges[0].updatedAt) {
+          // TODO: Upsert data
+          logger.info('Should upsert challenge data')
+        } else {
+          await challengeService.save(result.challenges)
+        }
       }
       workingChallenge.status = config.MIGRATION_PROGRESS_STATUSES.SUCCESS
       workingChallenge.date = new Date()
       await workingChallenge.save()
       challengeProcessed = true
-    } catch (e) {
-      console.log('error', e)
-      logger.debug(util.inspect(e))
-      process.exit(1)
     }
-  } else {
-    let skipReason
-    if (workingChallenge.status === config.MIGRATION_PROGRESS_STATUSES.SUCCESS) {
-      skipReason = 'already migrated'
-    } else {
-      skipReason = 'already failed'
+
+    if (writeError) {
+      errorService.close()
     }
-    logger.info(`Challenge ${challengeId} ${skipReason}! Will skip...`)
+    return challengeProcessed
+  } catch (e) {
+    console.log('error', e)
+    logger.debug(util.inspect(e))
+    process.exit(1)
   }
-  if (writeError) {
-    errorService.close()
-  }
-  return challengeProcessed
 }
 
 module.exports = {
