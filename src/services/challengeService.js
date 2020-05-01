@@ -666,7 +666,6 @@ async function getChallenges (ids, skip, offset, filter) {
             return k
         }
       })
-      // console.log('Date!!', newChallenge.startDate, endDate)
 
       newChallenge.endDate = endDate
 
@@ -682,6 +681,8 @@ async function getChallenges (ids, skip, offset, filter) {
       }
       return phase
     })
+
+    console.log('Migrated Date', newChallenge.startDate, newChallenge.endDate)
 
     const oneMetadata = _.omit(_.filter(allMetadata, s => s.challenge_id === c.id)[0], ['challenge_id'])
 
