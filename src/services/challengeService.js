@@ -566,6 +566,11 @@ async function getChallenges (ids, skip, offset, filter) {
 
   // TODO: Skip already migrated challenges
   for (const c of challenges) {
+    // Trim properties that are used as a lookup
+    _.each(['track', 'review_type', 'status'], (key) => {
+      c[key] = _.trim(c[key])
+    })
+    c.track = _.trim(c.track)
     logger.info(`Migrating Challenge ${c.id} Created Date ${new Date(Date.parse(c.created))}`)
     let detailRequirement = ''
     if (c.type_id === 37) {
@@ -648,7 +653,7 @@ async function getChallenges (ids, skip, offset, filter) {
       phase.id = uuid()
       phase.name = config.get('PHASE_NAME_MAPPINGS')[phase.type_id].name
       phase.phaseId = config.get('PHASE_NAME_MAPPINGS')[phase.type_id].phaseId
-      phase.duration = Number(phase.duration) / 1000 // legacy uses milliseconds. V5 uses seconds
+      phase.duration = _.toInteger(Number(phase.duration) / 1000) // legacy uses milliseconds. V5 uses seconds
       phase = _.mapKeys(phase, (v, k) => {
         switch (k) {
           case 'scheduled_start_time' :
