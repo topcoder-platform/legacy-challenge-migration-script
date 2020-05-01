@@ -640,8 +640,11 @@ async function getChallenges (ids, skip, offset, filter) {
     if (registrationPhase) {
       newChallenge.startDate = new Date(Date.parse(registrationPhase.scheduled_start_time))
     }
-
+    let endDate = newChallenge.startDate
     phases = phases.map((phase) => {
+      // console.log(phase.scheduled_start_time, Date.parse(phase.scheduled_start_time), phase.duration, (phase.duration / 1000 / 60 / 60))
+      endDate = new Date(Date.parse(phase.scheduled_start_time) + (phase.duration))
+
       phase.id = uuid()
       phase.name = config.get('PHASE_NAME_MAPPINGS')[phase.type_id].name
       phase.phaseId = config.get('PHASE_NAME_MAPPINGS')[phase.type_id].phaseId
@@ -658,6 +661,9 @@ async function getChallenges (ids, skip, offset, filter) {
             return k
         }
       })
+      // console.log('Date!!', newChallenge.startDate, endDate)
+
+      newChallenge.endDate = endDate
 
       if (phase.phase_status === 'Open') {
         phase.isOpen = true
