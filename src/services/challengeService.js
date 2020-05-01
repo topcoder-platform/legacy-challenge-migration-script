@@ -649,7 +649,7 @@ async function getChallenges (ids, skip, offset, filter) {
     phases = phases.map((phase) => {
       // console.log(phase.scheduled_start_time, Date.parse(phase.scheduled_start_time), phase.duration, (phase.duration / 1000 / 60 / 60))
       challengeEndDate = new Date(Date.parse(phase.scheduled_start_time) + (phase.duration))
-
+      phase.scheduledEndDate = new Date(Date.parse(phase.scheduled_start_time) + (phase.duration))
       phase.id = uuid()
       phase.name = config.get('PHASE_NAME_MAPPINGS')[phase.type_id].name
       phase.phaseId = config.get('PHASE_NAME_MAPPINGS')[phase.type_id].phaseId
@@ -666,7 +666,6 @@ async function getChallenges (ids, skip, offset, filter) {
             return k
         }
       })
-      phase.scheduledEndDate = new Date(Date.parse(phase.scheduled_start_time) + (phase.duration))
       newChallenge.endDate = challengeEndDate
 
       if (phase.phase_status === 'Open') {
