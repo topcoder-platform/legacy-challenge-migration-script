@@ -261,8 +261,8 @@ async function processChallenge (writeError = true, challengeId) {
       result = await challengeService.getChallenges([challengeId])
       if (_.get(result, 'challenges.length', 0) > 0) {
         if (existingV5Challenge && _.get(existingV5Challenge, 'legacy.informixModified') !== result.challenges[0].updatedAt) {
-          // TODO: Upsert data
-          logger.info('Should upsert challenge data')
+          result.challenges[0].id = existingV5Challenge.id
+          await challengeService.update(result.challenges)
         } else {
           await challengeService.save(result.challenges)
         }

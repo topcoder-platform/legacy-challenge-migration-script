@@ -304,6 +304,45 @@ function saveItem (challenge, retrying) {
 }
 
 /**
+ * Update challenge data to new system
+ *
+ * @param {Object} challenge challenge data
+ * @param {Boolean} retrying if user is retrying
+ */
+function updateItem (challenge, retrying) {
+  return new Promise((resolve) => {
+    Challenge.update({ id: challenge.id }, challenge, async (err, item) => {
+      if (err) {
+        logger.debug('fail ' + util.inspect(err))
+        errorService.put({ challenidgeId: challenge.legacyId, type: 'dynamodb', message: err.message })
+      } else {
+        if (retrying) {
+          errorService.remove({ challengeId: challenge.legacyId })
+        }
+        try {
+          await getESClient().update({
+            index: config.get('ES.CHALLENGE_ES_INDEX'),
+            type: config.get('ES.CHALLENGE_ES_TYPE'),
+            refresh: config.get('ES.ES_REFRESH'),
+            id: item[0].id,
+            body: {
+              doc: {
+                ...challenge,
+                groups: _.filter(challenge.groups, g => _.toString(g).toLowerCase() !== 'null')
+              },
+              doc_as_upsert: true
+            }
+          })
+        } catch (err) {
+          errorService.put({ challengeId: challenge.legacyId, type: 'es', message: err.message })
+        }
+      }
+      resolve(challenge)
+    })
+  })
+}
+
+/**
  * Put all challenge data to new system
  *
  * @param {Object} challenges data
@@ -311,6 +350,15 @@ function saveItem (challenge, retrying) {
  */
 async function save (challenges) {
   await Promise.all(challenges.map(c => saveItem(c, process.env.IS_RETRYING)))
+}
+
+/**
+ * Update all challenge data to new system
+ *
+ * @param {Object} challenges data
+ */
+async function update (challenges) {
+  await Promise.all(challenges.map(c => updateItem(c, process.env.IS_RETRYING)))
 }
 
 /**
@@ -759,6 +807,7 @@ async function convertGroupIdsToV5UUIDs (groupOldIdArray) {
 module.exports = {
   getChallenges,
   save,
+  update,
   getChallengesFromES,
   getChallengeTypes,
   saveChallengeTypes,
