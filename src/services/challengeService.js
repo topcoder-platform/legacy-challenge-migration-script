@@ -335,7 +335,7 @@ function getChallengeRegistrants (ids) {
  */
 function saveItem (challenge, retrying) {
   return new Promise((resolve) => {
-    const newChallenge = new Challenge(challenge)
+    const newChallenge = new Challenge(_.omit(challenge, ['numOfSubmissions', 'numOfRegistrants']))
     newChallenge.save(async (err) => {
       if (err) {
         logger.debug('fail ' + util.inspect(err))
