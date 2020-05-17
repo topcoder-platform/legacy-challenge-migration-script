@@ -280,9 +280,10 @@ function getChallengeSubmissions (ids) {
     usr.handle as submitter,
     ssl.name AS submissionStatus
   FROM
-    upload u, submission_status_lu ssl, user usr, submission s
+    upload u, submission_status_lu ssl, user usr, submission s, project p
   WHERE
     u.upload_id = s.upload_id
+    AND u.project_id = p.project_id
     AND s.create_user = usr.user_id
     AND s.submission_status_id = ssl.submission_status_id
     AND s.submission_status_id <> 5
