@@ -32,6 +32,11 @@ const schema = new Schema({
     type: String,
     required: true
   },
+  descriptionFormat: {
+    type: String,
+    default: 'HTML',
+    required: true
+  },
   metadata: {
     type: [Object],
     required: false
