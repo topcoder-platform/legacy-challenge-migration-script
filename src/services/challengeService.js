@@ -708,6 +708,7 @@ async function getChallenges (ids, skip, offset, filter) {
       },
       name: c.name,
       description: detailRequirement && detailRequirement !== '' ? detailRequirement : 'N/A',
+      descriptionFormat: 'HTML',
       projectId: _.get((await getProjectFromV5(c.project_id)), 'id', null),
       status: c.status,
       created: new Date(Date.parse(c.created)),
