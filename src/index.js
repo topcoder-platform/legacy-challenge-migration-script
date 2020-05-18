@@ -13,8 +13,8 @@ const { migration } = require('./migrationInstance')
 const rule = new schedule.RecurrenceRule()
 rule.minute = new schedule.Range(0, 59, config.SCHEDULE_INTERVAL)
 schedule.scheduleJob(rule, () => {
-  // logger.info('Enable: migration.run()')
-  if(config.MIGRATION_CRON_ENABLED) {
+  logger.info(`migration.run() enabled: ${config.MIGRATION_CRON_ENABLED}`)
+  if (config.MIGRATION_CRON_ENABLED === true) {
     logger.info('Auto-Migration Start')
     migration.run()
   } else {
