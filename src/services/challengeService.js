@@ -266,6 +266,69 @@ function getTermsFromIfx (ids) {
 }
 
 /**
+ * Get challenge submissions
+ *
+ * @param {Array} ids array if ids to fetch
+ */
+function getChallengeSubmissions (ids) {
+  const sql = `
+  SELECT
+    u.project_id as challengeId,
+    s.submission_id as submissionId,
+    s.submission_type_id as submissionTypeId,
+    s.create_user as submitterId,
+    usr.handle as submitter,
+    ssl.name AS submissionStatus
+  FROM
+    upload u, submission_status_lu ssl, user usr, submission s, project p
+  WHERE
+    u.upload_id = s.upload_id
+    AND u.project_id = p.project_id
+    AND s.create_user = usr.user_id
+    AND s.submission_status_id = ssl.submission_status_id
+    AND s.submission_status_id <> 5
+    AND s.submission_type_id in (1,3)
+    AND u.upload_type_id = 1
+    AND u.upload_status_id = 1
+  `
+  return execQuery(sql, ids)
+}
+
+/**
+ * Get challenge registrants
+ *
+ * @param {Array} ids array if ids to fetch
+ */
+function getChallengeRegistrants (ids) {
+  const sql = `
+  select
+    u.handle AS handle,
+    rur.create_date AS registrationDate,
+    ri5.value::int AS reliability,
+    p.project_id AS challengeId
+  from resource rur
+    , resource_info ri1
+    , project p
+    , user u
+    , project_category_lu pcl
+    , outer resource_info ri4
+    , outer resource_info ri5
+  where
+    p.project_id = rur.project_id
+    and rur.resource_id = ri1.resource_id
+    and rur.resource_role_id = 1
+    and ri1.resource_info_type_id = 1
+    and ri4.resource_id = rur.resource_id
+    and ri4.resource_info_type_id = 4
+    and ri5.resource_id = rur.resource_id
+    and ri5.resource_info_type_id = 5
+    and ri1.value = u.user_id
+    and pcl.project_category_id = p.project_category_id
+  `
+  return execQuery(sql, ids)
+}
+
+/**
  * Put challenge data to new system
  *
  * @param {Object} challenge new challenge data
@@ -273,7 +336,7 @@ function getTermsFromIfx (ids) {
  */
 function saveItem (challenge, retrying) {
   return new Promise((resolve) => {
-    const newChallenge = new Challenge(challenge)
+    const newChallenge = new Challenge(_.omit(challenge, ['numOfSubmissions', 'numOfRegistrants']))
     newChallenge.save(async (err) => {
       if (err) {
         logger.debug('fail ' + util.inspect(err))
@@ -304,6 +367,45 @@ function saveItem (challenge, retrying) {
 }
 
 /**
+ * Update challenge data to new system
+ *
+ * @param {Object} challenge challenge data
+ * @param {Boolean} retrying if user is retrying
+ */
+function updateItem (challenge, retrying) {
+  return new Promise((resolve) => {
+    Challenge.update({ id: challenge.id }, challenge, async (err, item) => {
+      if (err) {
+        logger.debug('fail ' + util.inspect(err))
+        errorService.put({ challenidgeId: challenge.legacyId, type: 'dynamodb', message: err.message })
+      } else {
+        if (retrying) {
+          errorService.remove({ challengeId: challenge.legacyId })
+        }
+        try {
+          await getESClient().update({
+            index: config.get('ES.CHALLENGE_ES_INDEX'),
+            type: config.get('ES.CHALLENGE_ES_TYPE'),
+            refresh: config.get('ES.ES_REFRESH'),
+            id: item[0].id,
+            body: {
+              doc: {
+                ...challenge,
+                groups: _.filter(challenge.groups, g => _.toString(g).toLowerCase() !== 'null')
+              },
+              doc_as_upsert: true
+            }
+          })
+        } catch (err) {
+          errorService.put({ challengeId: challenge.legacyId, type: 'es', message: err.message })
+        }
+      }
+      resolve(challenge)
+    })
+  })
+}
+
+/**
  * Put all challenge data to new system
  *
  * @param {Object} challenges data
@@ -311,6 +413,15 @@ function saveItem (challenge, retrying) {
  */
 async function save (challenges) {
   await Promise.all(challenges.map(c => saveItem(c, process.env.IS_RETRYING)))
+}
+
+/**
+ * Update all challenge data to new system
+ *
+ * @param {Object} challenges data
+ */
+async function update (challenges) {
+  await Promise.all(challenges.map(c => updateItem(c, process.env.IS_RETRYING)))
 }
 
 /**
@@ -535,7 +646,8 @@ async function getChallenges (ids, skip, offset, filter) {
   // logger.debug('Challenge IDs to fetch: ' + challengeIds)
 
   const tasks = [getPrizeFromIfx, getTechnologyFromIfx, getPlatformFromIfx,
-    getGroupFromIfx, getWinnerFromIfx, getPhaseFromIfx, getMetadataFromIfx, getTermsFromIfx]
+    getGroupFromIfx, getWinnerFromIfx, getPhaseFromIfx, getMetadataFromIfx, getTermsFromIfx,
+    getChallengeSubmissions, getChallengeRegistrants]
 
   const queryResults = await Promise.all(tasks.map(t => t(challengeIds)))
   // construct challenge
@@ -547,6 +659,8 @@ async function getChallenges (ids, skip, offset, filter) {
   const allPhases = queryResults[5]
   const allMetadata = queryResults[6]
   const allTerms = queryResults[7]
+  const allSubmissions = queryResults[8]
+  const allRegistrants = queryResults[9]
   const results = []
 
   // get challenge types from dynamodb
@@ -594,6 +708,7 @@ async function getChallenges (ids, skip, offset, filter) {
       },
       name: c.name,
       description: detailRequirement && detailRequirement !== '' ? detailRequirement : 'N/A',
+      descriptionFormat: 'HTML',
       projectId: _.get((await getProjectFromV5(c.project_id)), 'id', null),
       status: c.status,
       created: new Date(Date.parse(c.created)),
@@ -603,7 +718,9 @@ async function getChallenges (ids, skip, offset, filter) {
       timelineTemplateId: _.get(challengeTimelineMapping, `[${challengeTypeMapping[c.type_id]}].id`, 'N/A'), // TODO: fix this
       phases: [],
       terms: [],
-      startDate: new Date()
+      startDate: new Date(),
+      numOfSubmissions: _.get(allSubmissions, 'length', 0),
+      numOfRegistrants: _.get(allRegistrants, 'length', 0)
     }
 
     const prizeSets = [_.assign({ type: 'Challenge Prize', description: 'Challenge Prize' },
@@ -759,6 +876,7 @@ async function convertGroupIdsToV5UUIDs (groupOldIdArray) {
 module.exports = {
   getChallenges,
   save,
+  update,
   getChallengesFromES,
   getChallengeTypes,
   saveChallengeTypes,
