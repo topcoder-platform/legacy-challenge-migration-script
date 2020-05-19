@@ -201,7 +201,7 @@ function getWinnerFromIfx (ids) {
     p.project_id as challenge_id,
     user.handle as handle,
     s.placement as placement,
-    user.user_id as userId
+    user.user_id as userid
   FROM upload p
         INNER JOIN submission s ON s.upload_id = p.upload_id
         INNER JOIN prize pr ON pr.prize_id = s.prize_id
@@ -737,7 +737,7 @@ async function getChallenges (ids, skip, offset, filter) {
     if (groups.length > 0) console.log('Groups for Challenge', groups)
     const winners = _.map(_.filter(allWinners, w => w.challenge_id === c.id), w => {
       return {
-        userId: w.userId,
+        userId: w.userid,
         handle: w.handle,
         placement: w.placement
       }
