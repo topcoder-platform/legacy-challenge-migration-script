@@ -695,6 +695,14 @@ async function getChallenges (ids, skip, offset, filter) {
       detailRequirement = c.software_detail_requirements || ''
     }
 
+    let connectProjectId = null
+    if (c.project_id) {
+      // can't query v5 api for "undefined", so catch it here
+      connectProjectId = _.get((await getProjectFromV5(c.project_id)), 'id', null)
+    } else {
+      logger.warn(`Project has no directProjectId: ${c.id}`)
+    }
+
     const newChallenge = {
       id: uuid(),
       legacyId: c.id,
@@ -709,7 +717,7 @@ async function getChallenges (ids, skip, offset, filter) {
       name: c.name,
       description: detailRequirement && detailRequirement !== '' ? detailRequirement : 'N/A',
       descriptionFormat: 'HTML',
-      projectId: _.get((await getProjectFromV5(c.project_id)), 'id', null),
+      projectId: connectProjectId,
       status: c.status,
       created: new Date(Date.parse(c.created)),
       createdBy: c.created_by,
