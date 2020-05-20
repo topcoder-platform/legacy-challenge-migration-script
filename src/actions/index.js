@@ -225,8 +225,7 @@ async function processChallengeResources (writeError = true, challengeId) {
       logger.warn(`No Resources for Challenge ID ${challengeId}`)
     }
   } catch (e) {
-    console.log('error', e)
-    logger.debug(util.inspect(e))
+    logger.error(util.inspect(e))
     process.exit(1)
   }
 
@@ -278,8 +277,8 @@ async function processChallenge (writeError = true, challengeId) {
     }
     return challengeProcessed
   } catch (e) {
-    console.log('error', e)
-    logger.debug(util.inspect(e))
+    // console.log('error', e)
+    logger.error(util.inspect(e))
     process.exit(1)
   }
 }

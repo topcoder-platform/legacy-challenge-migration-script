@@ -142,6 +142,6 @@ module.exports = {
 
   MIGRATION_PROGRESS_STATUSES: {
     IN_PROGRESS: 'In progress',
-    SUCCESS: 'Sucess'
+    SUCCESS: 'Success'
   }
 }
