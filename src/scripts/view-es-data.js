@@ -24,7 +24,7 @@ async function showESData (name) {
 // print to console
 showESData(process.argv[2].toUpperCase())
   .then(result => {
-    logger.info('All data in ES is shown belows.')
+    logger.info('All data in ES is shown below.')
     console.log(
       JSON.stringify(result.hits.hits, null, 2)
     )

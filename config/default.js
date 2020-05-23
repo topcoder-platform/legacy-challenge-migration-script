@@ -60,6 +60,11 @@ module.exports = {
     RESOURCE_ES_TYPE: process.env.RESOURCE_ES_TYPE || '_doc', // resource es type
     RESOURCE_ROLE_ES_TYPE: process.env.RESOURCE_ROLE_ES_TYPE || '_doc', // resource role es type
     CHALLENGE_TYPE_ES_TYPE: process.env.CHALLENGE_TYPE_ES_TYPE || '_doc', // challenge type es type
+
+    MIGRATION_ES_INDEX: process.env.MIGRATION_ES_INDEX || 'challenge_migration',
+    MIGRATION_ES_TYPE: process.env.MIGRATION_ES_TYPE || '_doc',
+    HISTORY_ES_INDEX: process.env.HISTORY_ES_INDEX || 'challenge_history',
+    HISTORY_ES_TYPE: process.env.HISTORY_ES_TYPE || '_doc',
     ES_REFRESH: process.env.ES_REFRESH || 'true'
   },
 
@@ -142,6 +147,7 @@ module.exports = {
 
   MIGRATION_PROGRESS_STATUSES: {
     IN_PROGRESS: 'In progress',
+    FAILED: 'Failed',
     SUCCESS: 'Success'
   }
 }

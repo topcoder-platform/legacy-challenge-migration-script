@@ -469,6 +469,50 @@ async function getChallengesFromES (legacyIds) {
 }
 
 /**
+ * Get existing challenges from ES using legacyId
+ */
+async function getChallengeFromES (legacyId) {
+  const esQuery = {
+    index: config.get('ES.CHALLENGE_ES_INDEX'),
+    type: config.get('ES.CHALLENGE_ES_TYPE'),
+    size: _.get(legacyId, 'length', 1),
+    from: 0, // Es Index starts from 0
+    body: {
+      query: {
+        bool: {
+          should: {
+            match: {
+              legacyId
+            }
+          }
+        }
+      }
+    }
+  }
+  // Search with constructed query
+  let docs
+  try {
+    docs = await getESClient().search(esQuery)
+  } catch (e) {
+    // Catch error when the ES is fresh and has no data
+    docs = {
+      hits: {
+        total: 0,
+        hits: []
+      }
+    }
+  }
+  // Extract data from hits
+  return _.map(docs.hits.hits, item => ({
+    legacyId: item._source.legacyId,
+    legacy: {
+      informixModified: _.get(item._source, 'legacy.informixModified')
+    },
+    challengeId: item._source.id
+  }))
+}
+
+/**
  * Execute query
  *
  * @param {Object} conn informix connection instance
@@ -885,6 +929,7 @@ module.exports = {
   getChallenges,
   save,
   update,
+  getChallengeFromES,
   getChallengesFromES,
   getChallengeTypes,
   saveChallengeTypes,
