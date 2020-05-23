@@ -44,7 +44,7 @@ module.exports = {
     // AWS_SECRET_ACCESS_KEY: process.env.AWS_SECRET_ACCESS_KEY || 'FAKE_SECRET_ACCESS_KEY', // aws secret key
     AWS_REGION: process.env.AWS_REGION || 'ap-northeast-1', // aws region
     IS_LOCAL_DB: process.env.IS_LOCAL_DB ? process.env.IS_LOCAL_DB === 'true' : true, // true or uninitialize if we use local instance
-    DYNAMODB_URL: process.env.DYNAMODB_URL || 'http://localhost:7777', // just for local development
+    DYNAMODB_URL: process.env.DYNAMODB_URL || 'http://localhost:8000', // just for local development
     S3_API_VERSION: process.env.S3_API_VERSION || '2006-03-01'
   },
 
