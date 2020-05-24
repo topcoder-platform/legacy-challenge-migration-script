@@ -339,7 +339,7 @@ function saveItem (challenge, retrying) {
     const newChallenge = new Challenge(_.omit(challenge, ['numOfSubmissions', 'numOfRegistrants']))
     newChallenge.save(async (err) => {
       if (err) {
-        logger.debug('fail ' + util.inspect(err))
+        logger.error('Challenge Dynamo Write Fail ' + JSON.stringify(err))
         errorService.put({ challengeId: challenge.legacyId, type: 'dynamodb', message: err.message })
       } else {
         // logger.debug('success ' + challenge.id)
@@ -358,6 +358,7 @@ function saveItem (challenge, retrying) {
             }
           })
         } catch (err) {
+          logger.error('Challenge ES Write Fail ' + JSON.stringify(err.message))
           errorService.put({ challengeId: challenge.legacyId, type: 'es', message: err.message })
         }
       }

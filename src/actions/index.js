@@ -260,7 +260,11 @@ async function processChallenge (legacyId) {
 
         await challengeService.save(result.challenges)
         const [newV5Challenge] = await challengeService.getChallengeFromES(legacyId)
-        v5ChallengeId = newV5Challenge.challengeId
+        if (newV5Challenge) {
+          v5ChallengeId = newV5Challenge.challengeId
+        } else {
+          logger.error(`Challenge ${legacyId} saved, but not found in es?`)
+        }
       }
       // console.log('update', v5ChallengeId, legacyId, config.MIGRATION_PROGRESS_STATUSES.SUCCESS, new Date())
       challengeMigrationStatusService.updateProgressRecord(
