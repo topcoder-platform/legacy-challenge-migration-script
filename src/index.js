@@ -23,6 +23,12 @@ schedule.scheduleJob(rule, () => {
 })
 logger.info(`The migration is scheduled to be executed every ${config.SCHEDULE_INTERVAL} minutes`)
 
+logger.debug([
+  `migrationInterval: ${config.SCHEDULE_INTERVAL}`,
+  `awsKeyID: ${config.AMAZON.AWS_ACCESS_KEY_ID}`,
+  `esHost: ${config.ES.HOST}`,
+  `dynamoHost: ${config.AMAZON.DYNAMODB_URL}`])
+
 // setup express app
 const app = express()
 app.set('port', config.PORT)

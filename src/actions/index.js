@@ -24,8 +24,8 @@ async function retryFailed () {
   const ids = errorService.getErrorIds('challengeId')
   for (const id of ids) {
     logger.info(`Processing challenge with legacyId: ${id}`)
-    const challengeProcessed = await processChallenge(false, id)
-    if (challengeProcessed) await processChallengeResources(false, id)
+    const challengeProcessed = await processChallenge(id)
+    if (challengeProcessed) await processChallengeResources(id)
   }
   errorService.close()
   logger.info('Completed!')
@@ -35,9 +35,15 @@ async function retryFailed () {
  * Migrate all challenge records and their resources
  *
  */
-async function migrateAll () {
+async function migrateAll (startDateOverride) {
   process.env.IS_RETRYING = false
-  const CREATED_DATE_BEGIN = await getDateParameter()
+  let CREATED_DATE_BEGIN = null
+  if (startDateOverride) {
+    CREATED_DATE_BEGIN = startDateOverride
+  } else {
+    CREATED_DATE_BEGIN = await getDateParameter()
+  }
+
   logger.info(`Migrating All Challenges from ${CREATED_DATE_BEGIN}`)
   await processChallengeTypes()
   await processChallengeTimelineTemplates()
@@ -88,8 +94,8 @@ async function migrateAll () {
  */
 async function migrateOne (challengeId) {
   process.env.IS_RETRYING = true
-  const challengeProcessed = await processChallenge(false, challengeId)
-  if (challengeProcessed) await processChallengeResources(false, challengeId)
+  const challengeProcessed = await processChallenge(challengeId)
+  if (challengeProcessed) await processChallengeResources(challengeId)
   errorService.close()
   logger.info('Completed!')
 }
@@ -106,13 +112,15 @@ async function getDateParameter () {
     }
   }
   const history = await challengeMigrationHistoryService.getLatestHistory()
-  const lastRunDate = history.date
-  const CREATED_DATE_BEGIN = lastRunDate || config.CREATED_DATE_BEGIN
-  if (!CREATED_DATE_BEGIN) {
+  let lastRunDate = config.CREATED_DATE_BEGIN
+
+  if (history && history.date) {
+    lastRunDate = history.date
+  }
+  if (!lastRunDate) {
     throw new Error('No date parameter found in both env variables and datebase. Please configure the CREATED_DATE_BEGIN env variable and try again.')
   }
-  console.log('Created Date', CREATED_DATE_BEGIN)
-  return CREATED_DATE_BEGIN
+  return lastRunDate
 }
 
 /**
@@ -197,65 +205,78 @@ async function processChallengeResources (challengeId) {
  * @param {Number} legacyId the challenge ID
  */
 async function processChallenge (legacyId) {
-  // look it up in migration progress
   try {
     const legacyIdProgress = await challengeMigrationStatusService.getProgressByLegacyId(legacyId)
-    let result
-    // let challengeProcessed = false
+    // console.log('Checking Progress', legacyIdProgress)
     if (legacyIdProgress) {
-      let skipReason
-      if (legacyIdProgress.status === config.MIGRATION_PROGRESS_STATUSES.SUCCESS) {
-        skipReason = 'already migrated'
-      } else {
-        skipReason = 'already failed'
+      switch (legacyIdProgress.status) {
+        case config.MIGRATION_PROGRESS_STATUSES.IN_PROGRESS:
+          logger.info(`Challenge ${legacyId} in progress...`)
+          return
+        case config.MIGRATION_PROGRESS_STATUSES.SUCCESS:
+          logger.info(`Challenge ${legacyId} migrated previously.`)
+          break
+        case config.MIGRATION_PROGRESS_STATUSES.FAILED:
+          logger.error(`Challenge ${legacyId} Failed!`)
+          break
       }
-      logger.info(`Challenge ${legacyId} ${skipReason}! Will skip...`)
-    } else {
-      logger.info(`Loading challenge ${legacyId}`)
-      const [existingV5Challenge] = await challengeService.getChallengeFromES(legacyId)
-      result = await challengeService.getChallenges([legacyId])
-      let v5ChallengeId = null
-      if (_.get(result, 'challenges.length', 0) > 0) {
-        const legacyChallenge = result.challenges[0]
-        challengeMigrationStatusService.updateProgressRecord(
-          v5ChallengeId,
-          legacyId,
-          config.MIGRATION_PROGRESS_STATUSES.IN_PROGRESS,
-          new Date()
-        )
+    }
+    // logger.info(`Loading challenge ${legacyId}`)
+    const [existingV5Challenge] = await challengeService.getChallengeFromES(legacyId)
+    const result = await challengeService.getChallenges([legacyId])
+    let v5ChallengeId = null
+    if (_.get(result, 'challenges.length', 0) > 0) {
+      const legacyChallenge = result.challenges[0]
+      const v5informixModifiedDate = Date.parse(_.get(existingV5Challenge, 'legacy.informixModified'))
+      const legacyModifiedDate = Date.parse(legacyChallenge.updated)
 
-        if (existingV5Challenge && _.get(existingV5Challenge, 'legacy.informixModified') !== legacyChallenge.updatedAt) {
+      if (existingV5Challenge) {
+        if (legacyModifiedDate > v5informixModifiedDate) {
           // challenge exists, but is different - update
           legacyChallenge.id = existingV5Challenge.id
           v5ChallengeId = existingV5Challenge.id
 
-          await challengeService.update(result.challenges)
-        } else {
-          // challenge doesn't exist, create
-          challengeMigrationStatusService.createProgressRecord(
-            null,
+          challengeMigrationStatusService.updateProgressRecord(
+            v5ChallengeId,
             legacyId,
             config.MIGRATION_PROGRESS_STATUSES.IN_PROGRESS,
-            new Date()
+            legacyModifiedDate
           )
 
-          await challengeService.save(result.challenges)
-          const [newV5Challenge] = await challengeService.getChallengeFromES(legacyId)
-          v5ChallengeId = newV5Challenge.id
+          await challengeService.update(result.challenges)
+        } else {
+          logger.info('Challenge was migrated and the dates were equal')
+          logger.debug(`v5 modified date: ${v5informixModifiedDate} legacy.updated: ${legacyModifiedDate}`)
+          return false
         }
-        challengeMigrationStatusService.updateProgressRecord(
-          v5ChallengeId,
+      } else {
+        // challenge doesn't exist, create
+        challengeMigrationStatusService.createProgressRecord(
+          null,
           legacyId,
-          config.MIGRATION_PROGRESS_STATUSES.SUCCESS,
-          new Date()
+          config.MIGRATION_PROGRESS_STATUSES.IN_PROGRESS,
+          legacyModifiedDate
         )
+
+        await challengeService.save(result.challenges)
+        const [newV5Challenge] = await challengeService.getChallengeFromES(legacyId)
+        v5ChallengeId = newV5Challenge.challengeId
       }
+      // console.log('update', v5ChallengeId, legacyId, config.MIGRATION_PROGRESS_STATUSES.SUCCESS, new Date())
+      challengeMigrationStatusService.updateProgressRecord(
+        v5ChallengeId,
+        legacyId,
+        config.MIGRATION_PROGRESS_STATUSES.SUCCESS,
+        legacyModifiedDate
+      )
+      return true
     }
   } catch (e) {
     // console.log('error', e)
     logger.error(util.inspect(e))
     process.exit(1)
   }
+  return false
 }
 
 module.exports = {

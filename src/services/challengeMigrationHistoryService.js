@@ -1,7 +1,7 @@
 // challenge service
 const config = require('config')
 const uuid = require('uuid/v4')
-const { map } = require('lodash')
+// const { map } = require('lodash')
 const { getESClient } = require('../util/helper')
 // const getErrorService = require('./errorService')
 const logger = require('../util/logger')
@@ -41,19 +41,23 @@ async function getLatestHistory () {
     type: config.get('ES.HISTORY_ES_TYPE'),
     size: 1,
     from: 0, // Es Index starts from 0
-    sort: { date: 'desc' },
     body: {
       query: {
         match_all: {}
-      }
+      },
+      sort: [{ date: { order: 'desc' } }]
     }
   }
+
+  // logger.info('Query Object', esQuery)
   // Search with constructed query
   let docs
   try {
     docs = await getESClient().search(esQuery)
+    // console.log(docs)
   } catch (e) {
     // Catch error when the ES is fresh and has no data
+    console.log('error', e)
     docs = {
       hits: {
         total: 0,
@@ -61,14 +65,16 @@ async function getLatestHistory () {
       }
     }
   }
-  // Extract data from hits
-  return map(docs.hits.hits, item => ({
-    id: item.id,
-    date: item.date,
-    challengesAdded: item.challeengesAdded,
-    resourcesAdded: item.resourcesAdded
 
-  }))
+  const item = docs.hits.hits[0]
+  if (item) {
+    return {
+      id: item._source._id,
+      date: item._source.date,
+      challengesAdded: item._source.challengesAdded,
+      resourcesAdded: item._source.resourcesAdded
+    }
+  }
 }
 
 module.exports = {

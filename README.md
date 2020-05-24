@@ -43,7 +43,7 @@ Other configuration is for `informix`, `dynamodb` and `elastic-search` which use
 ### Note
 - If `CREATED_DATE_BEGIN` is not set from env variable, the date will be read from
     the most recent record in the ChallengeHistory table and an error will be thrown if no record exists in the table.
-
+- You can pass in a start date and override the env var `POST http://localhost:3000/v5/challenge-migration?startDate=2020-05-08`
 ## Local Deployment
 
 ### Foreman Setup
@@ -51,7 +51,7 @@ To install foreman follow this [link](https://theforeman.org/manuals/1.24/#3.Ins
 To know how to use foreman follow this [link](https://theforeman.org/manuals/1.24/#2.Quickstart) 
 
 ### Deployment
- To simplyfies deployment, we're using docker. To build the images
+ To simplify deployment, we're using docker. To build the images
 or run the container:
 ```
 cd <legacy-challenge-migration-cli>/docker

@@ -42,15 +42,12 @@ const handleConflict = async (res, req) => {
  * @returns {undefined}
  */
 async function runMigration (req, res, next) {
-  if (!config.ENABLE_CHALLENGE_CRUD) {
-    return res.sendStatus(403)
-  }
   console.log('Run Migration')
   if (migration.isRunning()) {
     await handleConflict(res, req)
     return
   }
-  migration.run().catch(next)
+  migration.run(req.query.startDate).catch(next)
   res.sendStatus(200)
 }
 
@@ -62,9 +59,6 @@ async function runMigration (req, res, next) {
  * @returns {undefined}
  */
 async function retryMigration (req, res, next) {
-  if (!config.ENABLE_CHALLENGE_CRUD) {
-    return res.sendStatus(403)
-  }
   console.log('Retry Migration')
   if (migration.isRunning()) {
     await handleConflict(res, req)

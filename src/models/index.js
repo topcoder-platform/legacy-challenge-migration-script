@@ -25,6 +25,9 @@ dynamoose.setDefaults({
   waitForActive: false
 })
 
+// console.log(config.AMAZON.IS_LOCAL_DB, config.AMAZON.AWS_ACCESS_KEY_ID, config.AMAZON.AWS_SECRET_ACCESS_KEY)
+// console.log(JSON.stringify(dynamoose.AWS.config))
+
 module.exports = {
   Challenge: dynamoose.model('Challenge', require('./challenge')),
   Resource: dynamoose.model('Resource', require('./resource')),

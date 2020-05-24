@@ -22,7 +22,8 @@ async function createProgressRecord (challengeId, legacyId, status, informixModi
       body: {
         challengeId,
         status,
-        informixModified
+        informixModified,
+        dateMigrated: new Date()
       }
     })
   } catch (err) {
@@ -47,13 +48,14 @@ async function updateProgressRecord (challengeId, legacyId, status, informixModi
         doc: {
           challengeId,
           status,
-          informixModified
+          informixModified,
+          dateMigrated: new Date()
         },
         doc_as_upsert: true
       }
     })
   } catch (err) {
-    errorService.put({ challengeId: legacyId, type: 'es', message: err.message })
+    errorService.put({ legacyId, type: 'es', message: err.message })
   }
 }
 
@@ -106,12 +108,8 @@ async function getProgressByLegacyId (legacyId) {
     from: 0, // Es Index starts from 0
     body: {
       query: {
-        bool: {
-          should: {
-            match: {
-              id: legacyId
-            }
-          }
+        terms: {
+          _id: [legacyId]
         }
       }
     }
@@ -130,11 +128,17 @@ async function getProgressByLegacyId (legacyId) {
     }
   }
   // Extract data from hits
-  return map(docs.hits.hits, item => ({
-    challengeId: item.challengeId,
-    status: item.status,
-    informixModified: item.informixModified
-  }))
+  const item = docs.hits.hits[0]
+  if (item) {
+    return {
+      challengeId: item._source.challengeId,
+      status: item._source.status,
+      informixModified: item._source.informixModified,
+      dateMigrated: item._source.dateMigrated
+    }
+  }
+
+  return false
 }
 
 module.exports = {

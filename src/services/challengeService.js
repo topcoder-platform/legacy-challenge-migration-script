@@ -756,6 +756,7 @@ async function getChallenges (ids, skip, offset, filter) {
         forumId: c.forum_id,
         confidentialityType: c.confidentiality_type,
         directProjectId: c.project_id,
+        informixModified: new Date(Date.parse(c.updated)),
         reviewType: c.review_type || 'COMMUNITY' // TODO: fix this
       },
       name: c.name,
@@ -850,7 +851,7 @@ async function getChallenges (ids, skip, offset, filter) {
       return phase
     })
 
-    console.log('Migrated Date', newChallenge.startDate, newChallenge.endDate)
+    // logger.debug(`Challenge Start & End Date ${newChallenge.startDate} ${newChallenge.endDate}`)
 
     const oneMetadata = _.omit(_.filter(allMetadata, s => s.challenge_id === c.id)[0], ['challenge_id'])
 

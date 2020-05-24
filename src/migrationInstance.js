@@ -18,12 +18,12 @@ const retry = {}
  *
  * @returns {Promise} migration become idle when resolved
  */
-migration.run = () => {
+migration.run = (startDateOverride) => {
   if (migration.isRunning()) {
     return Promise.resolve()
   }
   currentStatus = status.RUNNING
-  return actions.migrateAll()
+  return actions.migrateAll(startDateOverride)
     .catch((err) => {
       logger.logFullError(err)
     })
