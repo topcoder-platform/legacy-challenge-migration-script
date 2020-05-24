@@ -264,6 +264,13 @@ async function processChallenge (legacyId) {
           v5ChallengeId = newV5Challenge.challengeId
         } else {
           logger.error(`Challenge ${legacyId} saved, but not found in es?`)
+          challengeMigrationStatusService.updateProgressRecord(
+            v5ChallengeId,
+            legacyId,
+            config.MIGRATION_PROGRESS_STATUSES.FAILED,
+            legacyModifiedDate
+          )
+          return false
         }
       }
       // console.log('update', v5ChallengeId, legacyId, config.MIGRATION_PROGRESS_STATUSES.SUCCESS, new Date())
