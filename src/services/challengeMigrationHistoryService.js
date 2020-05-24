@@ -57,7 +57,7 @@ async function getLatestHistory () {
     // console.log(docs)
   } catch (e) {
     // Catch error when the ES is fresh and has no data
-    console.log('error', e)
+    logger.error(e)
     docs = {
       hits: {
         total: 0,
