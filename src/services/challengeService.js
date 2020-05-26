@@ -32,87 +32,24 @@ function getScorecardInformationFromIfx (ids, skip, offset) {
   limitOffset += !_.isUndefined(offset) && offset > 0 ? ' first ' + offset : ''
   const sql = `
     SELECT ${limitOffset}
-      p.project_id as legacyid,
-      pc3.parameter AS screeningscorecardid,
-      pc4.parameter AS reviewscorecardid
-    FROM project p
-      , project_status_lu pstatus
-      , outer project_spec ps
-      , outer project_studio_specification sps
-      , outer project_mm_specification pmms
-      , project_phase pp1 
-      , project_phase pp2 
-      , outer project_phase pp6 
-      , outer project_phase pp15 
-      , outer project_phase pp9 
-      , outer ( project_phase pp3  
-      , outer phase_criteria pc3 ) 
-      , outer ( project_phase pp4 
-      , outer phase_criteria pc4 )
-      , project_info pn
-      , project_info pidr
-      , outer project_phase nd_phase
-      , outer project_info pi70 
-      , project_category_lu pcl
-      , outer project_info pi4
-      , outer project_info pi1
-      , outer project_info pi51
-      , outer project_info pi52
-      , outer project_info pi78
-      , outer project_info pi79
-      , outer project_info pi56
-      , outer project_info pi87
-    WHERE 1=1
-      AND p.project_status_id = pstatus.project_status_id
-      AND p.project_id = pn.project_id
-      AND pn.project_info_type_id = 6
-      AND pp1.project_id = p.project_id
-      AND pp1.phase_type_id = 1  
-      AND pp2.project_id = p.project_id
-      AND pp2.phase_type_id = 2  
-      AND pp6.project_id = p.project_id
-      AND pp6.phase_type_id = 6  
-      AND pp15.project_id = p.project_id
-      AND pp15.phase_type_id = 15 
-      AND pp9.project_id = p.project_id
-      AND pp9.phase_type_id = 9  
-      AND pp9.project_phase_id = (SELECT MAX(project_phase_id) FROM project_phase WHERE project_id = p.project_id AND phase_type_id = 9)
-      AND pp3.project_id = p.project_id
-      AND pp3.phase_type_id = 3  
-      AND pp3.project_phase_id = pc3.project_phase_id
-      AND pc3.phase_criteria_type_id = 1
-      AND pp4.project_id = p.project_id
-      AND (pp4.phase_type_id = 4 OR (pp4.phase_type_id = 18 AND p.project_category_id = 38))
-      AND pp4.project_phase_id = pc4.project_phase_id
-      AND pp4.project_phase_id = (SELECT MAX(project_phase_id) FROM project_phase WHERE project_id = p.project_id AND phase_type_id IN (4,18))
-      AND pc4.phase_criteria_type_id = 1 
-      AND pidr.project_id = p.project_id
-      AND pidr.project_info_type_id = 26  
-      AND pi70.project_id = p.project_id
-      AND pi70.project_info_type_id = 70  
-      AND pi4.project_id = p.project_id
-      AND pi4.project_info_type_id = 4  
-      AND pi1.project_info_type_id = 1 
-      AND pi1.project_id = p.project_id
-      AND pi51.project_info_type_id = 51
-      AND pi51.project_id = p.project_id
-      AND pi52.project_info_type_id = 52 
-      AND pi52.project_id = p.project_id
-      AND pi78.project_info_type_id = 78 
-      AND pi78.project_id = p.project_id
-      AND pi79.project_info_type_id = 79 
-      AND pi79.project_id = p.project_id
-      AND pi56.project_info_type_id = 56
-      AND pi56.project_id = p.project_id
-      AND p.project_id = nd_phase.project_id
-      AND nd_phase.phase_type_id = (SELECT MIN(phase_type_id) FROM project_phase WHERE project_id = p.project_id AND phase_status_id = 2 AND phase_type_id not in (13,14))
-      AND p.project_category_id = pcl.project_category_id
-      AND ps.project_id = p.project_id
-      AND sps.project_studio_spec_id = p.project_studio_spec_id
-      AND pmms.project_mm_spec_id = p.project_mm_spec_id
-      AND pi87.project_info_type_id = 87
-      AND pi87.project_id = p.project_id
-      AND ps.version = (SELECT max(version) FROM project_spec ps2 WHERE ps2.project_id = ps.project_id)
+    p.project_id as legacyid,
+    pc3.parameter AS screeningscorecardid,
+    pc4.parameter AS reviewscorecardid
+ FROM project p
+    , outer ( project_phase pp3  
+    , outer phase_criteria pc3 ) 
+    , outer ( project_phase pp4 
+    , outer phase_criteria pc4 ) 
+WHERE 1=1
+  AND pp3.project_id = p.project_id
+  AND pp3.phase_type_id = 3  
+  AND pp3.project_phase_id = pc3.project_phase_id
+  AND pc3.phase_criteria_type_id = 1
+  AND pp4.project_id = p.project_id
+  AND (pp4.phase_type_id = 4 OR (pp4.phase_type_id = 18 AND p.project_category_id = 38))
+  AND pp4.project_phase_id = pc4.project_phase_id
+  AND pp4.project_phase_id = (SELECT MAX(project_phase_id) FROM project_phase WHERE project_id = p.project_id AND phase_type_id IN (4,18))
+  AND pc4.phase_criteria_type_id = 1
     `
   return execQuery(sql, ids)
 }
@@ -560,7 +497,9 @@ async function getChallengesFromES (legacyIds) {
   return _.map(docs.hits.hits, item => ({
     legacyId: item._source.legacyId,
     legacy: {
-      informixModified: _.get(item._source, 'legacy.informixModified')
+      informixModified: _.get(item._source, 'legacy.informixModified'),
+      screeningScorecardId: _.get(item._source, 'legacy.screeningScorecardId'),
+      reviewScorecardId: _.get(item._source, 'legacy.reviewScorecardId')
     },
     challengeId: item._source.id
   }))
@@ -604,7 +543,9 @@ async function getChallengeFromES (legacyId) {
   return _.map(docs.hits.hits, item => ({
     legacyId: item._source.legacyId,
     legacy: {
-      informixModified: _.get(item._source, 'legacy.informixModified')
+      informixModified: _.get(item._source, 'legacy.informixModified'),
+      screeningScorecardId: _.get(item._source, 'legacy.screeningScorecardId'),
+      reviewScorecardId: _.get(item._source, 'legacy.reviewScorecardId')
     },
     challengeId: item._source.id
   }))
@@ -856,9 +797,7 @@ async function getChallenges (ids, skip, offset, filter) {
         confidentialityType: c.confidentiality_type,
         directProjectId: c.project_id,
         informixModified: new Date(Date.parse(c.updated)),
-        reviewType: c.review_type || 'COMMUNITY', // TODO: fix this
-        screeningScorecardId: _.find(allScorecards, s => s.legacyId === c.legacyId).screeningscorecardid,
-        reviewScorecardId: _.find(allScorecards, s => s.legacyId === c.legacyId).reviewscorecardid
+        reviewType: c.review_type || 'COMMUNITY' // TODO: fix this
       },
       name: c.name,
       description: detailRequirement && detailRequirement !== '' ? detailRequirement : 'N/A',
@@ -875,6 +814,13 @@ async function getChallenges (ids, skip, offset, filter) {
       startDate: new Date(),
       numOfSubmissions: _.get(allSubmissions, 'length', 0),
       numOfRegistrants: _.get(allRegistrants, 'length', 0)
+    }
+
+    if (_.find(allScorecards, s => s.legacyId === c.legacyId).screeningscorecardid) {
+      newChallenge.legacy.screeningScorecardId = _.find(allScorecards, s => s.legacyId === c.legacyId).screeningscorecardid
+    }
+    if (_.find(allScorecards, s => s.legacyId === c.legacyId).reviewscorecardid) {
+      newChallenge.legacy.reviewScorecardId = _.find(allScorecards, s => s.legacyId === c.legacyId).reviewscorecardid
     }
 
     const prizeSets = [_.assign({ type: 'Challenge Prize', description: 'Challenge Prize' },
