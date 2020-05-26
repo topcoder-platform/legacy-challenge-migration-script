@@ -2,18 +2,15 @@
  * Run migrations on data
  */
 global.Promise = require('bluebird')
-
-const config = require('config')
-const util = require('util')
-const _ = require('lodash')
-const { getOrCreateWorkingChallenge } = require('../actions')
-const challengeService = require('../services/challengeService')
 const logger = require('../util/logger')
+const fs = require('fs')
 
 const runDataMigration = async () => {
   const script = process.argv.pop()
-  console.log(script)
-  return false
+  if (!fs.existsSync(`${__dirname}/migrations/${script}.js`)) {
+    throw new Error(`./migrations/${script}.js does not exist`)
+  }
+  await require(`./migrations/${script}`).run()
 }
 
 runDataMigration().then(() => {
