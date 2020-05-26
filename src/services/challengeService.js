@@ -816,11 +816,10 @@ async function getChallenges (ids, skip, offset, filter) {
       numOfRegistrants: _.get(allRegistrants, 'length', 0)
     }
 
-    if (_.find(allScorecards, s => s.legacyId === c.legacyId).screeningscorecardid) {
-      newChallenge.legacy.screeningScorecardId = _.find(allScorecards, s => s.legacyId === c.legacyId).screeningscorecardid
-    }
-    if (_.find(allScorecards, s => s.legacyId === c.legacyId).reviewscorecardid) {
-      newChallenge.legacy.reviewScorecardId = _.find(allScorecards, s => s.legacyId === c.legacyId).reviewscorecardid
+    const scorecard = _.find(allScorecards, s => s.legacyId === c.legacyId)
+    if (scorecard) {
+      if (scorecard.screeningscorecardid) newChallenge.legacy.screeningScorecardId = scorecard.screeningscorecardid
+      if (scorecard.reviewscorecardid) newChallenge.legacy.reviewScorecardId = scorecard.reviewscorecardid
     }
 
     const prizeSets = [_.assign({ type: 'Challenge Prize', description: 'Challenge Prize' },
