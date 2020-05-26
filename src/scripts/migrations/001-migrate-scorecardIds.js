@@ -23,7 +23,9 @@ const migrationFunction = {
           const [challenge] = await challengeService.getChallenges([entry.legacyid])
           _.set(challenge, 'legacy.screeningScorecardId', entry.screeningscorecardid)
           _.set(challenge, 'legacy.reviewScorecardId', entry.reviewscorecardid)
-          challengeService.update([challenge])
+          console.log(challenge)
+          // await challengeService.update([challenge])
+          finish = true
         }
       } else {
         finish = true

@@ -857,8 +857,8 @@ async function getChallenges (ids, skip, offset, filter) {
         directProjectId: c.project_id,
         informixModified: new Date(Date.parse(c.updated)),
         reviewType: c.review_type || 'COMMUNITY', // TODO: fix this
-        screeningScorecardId: _.find(allScorecards, s => s.legacyId === c.id).screeningScorecardId,
-        reviewScorecardId: _.find(allScorecards, s => s.legacyId === c.id).reviewScorecardId
+        screeningScorecardId: _.find(allScorecards, s => s.legacyId === c.legacyId).screeningscorecardid,
+        reviewScorecardId: _.find(allScorecards, s => s.legacyId === c.legacyId).reviewscorecardid
       },
       name: c.name,
       description: detailRequirement && detailRequirement !== '' ? detailRequirement : 'N/A',
