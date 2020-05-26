@@ -90,14 +90,15 @@ async function getProgressByChallengeId (challengeId) {
       }
     }
   }
-  // Extract data from hits
-  return map(docs.hits.hits, item => ({
-    legacyId: item._source.legacyId,
-    legacy: {
-      informixModified: get(item._source, 'legacy.informixModified')
-    },
-    challengeId: item._source.id
-  }))
+  const item = docs.hits.hits[0]
+  if (item) {
+    return {
+      challengeId: item._source.challengeId,
+      status: item._source.status,
+      informixModified: item._source.informixModified,
+      dateMigrated: item._source.dateMigrated
+    }
+  }
 }
 
 async function getProgressByLegacyId (legacyId) {
