@@ -6,9 +6,9 @@ global.Promise = require('bluebird')
 const config = require('config')
 const util = require('util')
 const _ = require('lodash')
-const { getOrCreateWorkingChallenge } = require('../actions')
-const challengeService = require('../services/challengeService')
-const logger = require('../util/logger')
+const { getOrCreateWorkingChallenge } = require('../../actions')
+const challengeService = require('../../services/challengeService')
+const logger = require('../../util/logger')
 
 const populateTable = async () => {
   const offset = config.get('BATCH_SIZE')
@@ -26,7 +26,6 @@ const populateTable = async () => {
         const challengesFromEs = await challengeService.getChallengesFromES(nextSetOfChallenges)
         for (const id of nextSetOfChallenges) {
           if (_.find(challengesFromEs, c => c.legacyId === id)) {
-            // TODO - update this to work with the ES updates
             await getOrCreateWorkingChallenge(id, config.MIGRATION_PROGRESS_STATUSES.SUCCESS)
           }
         }

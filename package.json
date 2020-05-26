@@ -32,16 +32,8 @@
     "lint": "standard",
     "lint:fix": "standard --fix",
     "init-es": "node src/scripts/init-es.js",
-    "populate-progress-table": "node src/scripts/populate-progress-table.js",
-    "view-data": "node src/scripts/view-data.js Challenge",
-    "view-data:challengehistory": "node src/scripts/view-data.js ChallengeHistory",
-    "view-data:resource": "node src/scripts/view-data.js Resource",
-    "view-data:resourcerole": "node src/scripts/view-data.js ResourceRole",
-    "view-data:challengetype": "node src/scripts/view-data.js ChallengeType",
-    "view-es-data": "node src/scripts/view-es-data.js challenge",
-    "view-es-data:resource": "node src/scripts/view-es-data.js resource",
-    "view-es-data:resourcerole": "node src/scripts/view-es-data.js resource_role",
-    "view-es-data:challengetype": "node src/scripts/view-es-data.js resource_role"
+    "migrate": "node src/scripts/migration.js -- $MIGRATION",
+    "populate-progress-table": "node src/scripts/populate-progress-table.js"
   },
   "author": "TCSCODER",
   "license": ""
