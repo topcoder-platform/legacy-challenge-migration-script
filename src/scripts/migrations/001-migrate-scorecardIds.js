@@ -20,7 +20,8 @@ const migrationFunction = {
       const entries = await challengeService.getScorecardInformationFromIfx(null, skip, offset)
       if (entries.length > 0) {
         for (const entry of entries) {
-          const [challenge] = await challengeService.getChallenges([entry.legacyid])
+          const result = await challengeService.getChallenges([entry.legacyid])
+          const challenge = result.challenges[0]
           _.set(challenge, 'legacy.screeningScorecardId', entry.screeningscorecardid)
           _.set(challenge, 'legacy.reviewScorecardId', entry.reviewscorecardid)
           console.log(challenge)
