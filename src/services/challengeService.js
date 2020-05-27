@@ -30,26 +30,85 @@ function getScorecardInformationFromIfx (ids, skip, offset) {
   let limitOffset = ''
   limitOffset += !_.isUndefined(skip) && skip > 0 ? 'skip ' + skip : ''
   limitOffset += !_.isUndefined(offset) && offset > 0 ? ' first ' + offset : ''
+  // Ifx returns all properties as all lowercase
   const sql = `
     SELECT ${limitOffset}
-    p.project_id as legacyid,
-    pc3.parameter AS screeningscorecardid,
-    pc4.parameter AS reviewscorecardid
- FROM project p
-    , outer ( project_phase pp3  
-    , outer phase_criteria pc3 ) 
-    , outer ( project_phase pp4 
-    , outer phase_criteria pc4 ) 
-WHERE 1=1
-  AND pp3.project_id = p.project_id
-  AND pp3.phase_type_id = 3  
-  AND pp3.project_phase_id = pc3.project_phase_id
-  AND pc3.phase_criteria_type_id = 1
-  AND pp4.project_id = p.project_id
-  AND (pp4.phase_type_id = 4 OR (pp4.phase_type_id = 18 AND p.project_category_id = 38))
-  AND pp4.project_phase_id = pc4.project_phase_id
-  AND pp4.project_phase_id = (SELECT MAX(project_phase_id) FROM project_phase WHERE project_id = p.project_id AND phase_type_id IN (4,18))
-  AND pc4.phase_criteria_type_id = 1
+     p.project_id AS challengeid
+     , pc3.parameter AS screeningscorecardid
+     , pc4.parameter AS reviewscorecardid
+     , CASE WHEN pidr.value = 'On' THEN 
+       NVL((SELECT value::decimal FROM project_info pi_dr WHERE pi_dr.project_info_type_id = 30 AND pi_dr.project_id = p.project_id), (SELECT NVL(pi16.value::decimal, 1) FROM project_info pi16 WHERE pi16.project_info_type_id = 16 AND pi16.project_id = p.project_id))
+       ELSE NULL END AS digitalrunpoints
+     , pi51.value AS submissionLimit
+     , pi52.value AS allowStockArt
+     , (SELECT value FROM project_info pi53 WHERE project_id = p.project_id AND project_info_type_id = 53) AS submissionsViewable
+     , (SELECT value FROM project_info pi84 WHERE project_id = p.project_id AND project_info_type_id = 84) AS environment
+     , (SELECT value FROM project_info pi85 WHERE project_id = p.project_id AND project_info_type_id = 85) AS codeRepo
+     , REPLACE(
+                 REPLACE(
+                    REPLACE(
+                         REPLACE(
+                             MULTISET(
+                                 SELECT  ITEM description
+                                 FROM project_file_type_xref x
+                                INNER JOIN file_type_lu l ON l.file_type_id = x.file_type_id
+                                 WHERE x.project_id = p.project_id)::lvarchar,
+                             'MULTISET{'''
+                         ), '''}'
+                     ),''''
+                 ),'MULTISET{}'
+              ) AS filetypes
+      , (pi87.value = 'Banner') as isBanner
+  FROM project p
+     , outer ( project_phase pp3  
+     , outer phase_criteria pc3 ) 
+     , outer ( project_phase pp4 
+     , outer phase_criteria pc4 )
+     , project_info pn
+     , project_info pidr
+     , outer project_info pi70 
+     , project_category_lu pcl
+     , outer project_info pi4
+     , outer project_info pi1
+     , outer project_info pi51
+     , outer project_info pi52
+     , outer project_info pi78
+     , outer project_info pi79
+     , outer project_info pi56
+     , outer project_info pi87
+ WHERE 1=1
+   AND p.project_id = pn.project_id
+   AND pn.project_info_type_id = 6
+   AND pp3.project_id = p.project_id
+   AND pp3.phase_type_id = 3  
+   AND pp3.project_phase_id = pc3.project_phase_id
+   AND pc3.phase_criteria_type_id = 1
+   AND pp4.project_id = p.project_id
+   AND (pp4.phase_type_id = 4 OR (pp4.phase_type_id = 18 AND p.project_category_id = 38))
+   AND pp4.project_phase_id = pc4.project_phase_id
+   AND pp4.project_phase_id = (SELECT MAX(project_phase_id) FROM project_phase WHERE project_id = p.project_id AND phase_type_id IN (4,18))
+   AND pc4.phase_criteria_type_id = 1 
+   AND pidr.project_id = p.project_id
+   AND pidr.project_info_type_id = 26  
+   AND pi70.project_id = p.project_id
+   AND pi70.project_info_type_id = 70  
+   AND pi4.project_id = p.project_id
+   AND pi4.project_info_type_id = 4  
+   AND pi1.project_info_type_id = 1 
+   AND pi1.project_id = p.project_id
+   AND pi51.project_info_type_id = 51
+   AND pi51.project_id = p.project_id
+   AND pi52.project_info_type_id = 52 
+   AND pi52.project_id = p.project_id
+   AND pi78.project_info_type_id = 78 
+   AND pi78.project_id = p.project_id
+   AND pi79.project_info_type_id = 79 
+   AND pi79.project_id = p.project_id
+   AND pi56.project_info_type_id = 56
+   AND pi56.project_id = p.project_id
+   AND p.project_category_id = pcl.project_category_id
+   AND pi87.project_info_type_id = 87
+   AND pi87.project_id = p.project_id
     `
   return execQuery(sql, ids)
 }
@@ -251,13 +310,46 @@ function getWinnerFromIfx (ids) {
  * @param {Array} ids array if ids to fetch (if any)
  */
 function getMetadataFromIfx (ids) {
+  // const sql = `
+  // SELECT
+  //   p.project_id AS challenge_id,
+  //   pi51.value AS submission_limit,
+  //   pi52.value AS allow_stock_art,
+  //   (SELECT value FROM project_info pi53 WHERE project_id = p.project_id AND project_info_type_id = 53) AS submissions_viewable,
+  //   REPLACE(
+  //                REPLACE(
+  //                   REPLACE(
+  //                        REPLACE(
+  //                            MULTISET(
+  //                                SELECT  ITEM description
+  //                                FROM project_file_type_xref x
+  //                               INNER JOIN file_type_lu l ON l.file_type_id = x.file_type_id
+  //                                WHERE x.project_id = p.project_id)::lvarchar,
+  //                            'MULTISET{'''
+  //                        ), '''}'
+  //                    ),''''
+  //                ),'MULTISET{}'
+  //             ) AS filetypes
+  // FROM project p,
+  // OUTER project_info pi51,
+  // OUTER project_info pi52
+  // WHERE pi51.project_info_type_id = 51
+  // AND pi51.project_id = p.project_id
+  // AND pi52.project_info_type_id = 52
+  // AND pi52.project_id = p.project_id
+  // `
   const sql = `
   SELECT
-    p.project_id AS challenge_id,
-    pi51.value AS submission_limit,
-    pi52.value AS allow_stock_art,
-    (SELECT value FROM project_info pi53 WHERE project_id = p.project_id AND project_info_type_id = 53) AS submissions_viewable,
-    REPLACE(
+    p.project_id AS challenge_id
+     , CASE WHEN pidr.value = 'On' THEN 
+       NVL((SELECT value::decimal FROM project_info pi_dr WHERE pi_dr.project_info_type_id = 30 AND pi_dr.project_id = p.project_id), (SELECT NVL(pi16.value::decimal, 1) FROM project_info pi16 WHERE pi16.project_info_type_id = 16 AND pi16.project_id = p.project_id))
+       ELSE NULL END AS digital_run_points
+     , pi51.value AS submission_limit
+     , pi52.value AS allow_stock_art
+     , (SELECT value FROM project_info pi53 WHERE project_id = p.project_id AND project_info_type_id = 53) AS submissions_viewable
+     , (SELECT value FROM project_info pi84 WHERE project_id = p.project_id AND project_info_type_id = 84) AS environment
+     , (SELECT value FROM project_info pi85 WHERE project_id = p.project_id AND project_info_type_id = 85) AS codeRepo
+     , REPLACE(
                  REPLACE(
                     REPLACE(
                          REPLACE(
@@ -271,14 +363,45 @@ function getMetadataFromIfx (ids) {
                      ),''''
                  ),'MULTISET{}'
               ) AS filetypes
-  FROM project p,
-  OUTER project_info pi51,
-  OUTER project_info pi52
-  WHERE pi51.project_info_type_id = 51
-  AND pi51.project_id = p.project_id
-  AND pi52.project_info_type_id = 52
-  AND pi52.project_id = p.project_id
-  `
+      , (pi87.value = 'Banner') as isBanner
+  FROM project p
+     , project_info pn
+     , project_info pidr
+     , outer project_info pi70 
+     , project_category_lu pcl
+     , outer project_info pi4
+     , outer project_info pi1
+     , outer project_info pi51
+     , outer project_info pi52
+     , outer project_info pi78
+     , outer project_info pi79
+     , outer project_info pi56
+     , outer project_info pi87
+ WHERE 1=1
+   AND p.project_id = pn.project_id
+   AND pn.project_info_type_id = 6
+   AND pidr.project_id = p.project_id
+   AND pidr.project_info_type_id = 26  
+   AND pi70.project_id = p.project_id
+   AND pi70.project_info_type_id = 70  
+   AND pi4.project_id = p.project_id
+   AND pi4.project_info_type_id = 4  
+   AND pi1.project_info_type_id = 1 
+   AND pi1.project_id = p.project_id
+   AND pi51.project_info_type_id = 51
+   AND pi51.project_id = p.project_id
+   AND pi52.project_info_type_id = 52 
+   AND pi52.project_id = p.project_id
+   AND pi78.project_info_type_id = 78 
+   AND pi78.project_id = p.project_id
+   AND pi79.project_info_type_id = 79 
+   AND pi79.project_id = p.project_id
+   AND pi56.project_info_type_id = 56
+   AND pi56.project_id = p.project_id
+   AND p.project_category_id = pcl.project_category_id
+   AND pi87.project_info_type_id = 87
+   AND pi87.project_id = p.project_id
+   `
   return execQuery(sql, ids)
 }
 
@@ -904,6 +1027,7 @@ async function getChallenges (ids, skip, offset, filter) {
     const metadata = []
     Object.entries(oneMetadata).forEach(([key, value]) => {
       let metadataValue
+      if (key === 'filetypes' && value.length <= 0) { return }; // skip empty filetypes arrays
       if (!isNaN(parseFloat(value)) && isFinite(value)) {
         metadataValue = +value
       } else if (value === 'true' || value === 'false') {
@@ -980,6 +1104,7 @@ module.exports = {
   getChallengesFromES,
   getChallengeTypes,
   saveChallengeTypes,
+  getMetadataFromIfx,
   createChallengeTimelineMapping,
   getChallengeTypesFromDynamo,
   getChallengesFromIfx,
