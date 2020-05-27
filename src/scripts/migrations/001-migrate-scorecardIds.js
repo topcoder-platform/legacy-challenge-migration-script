@@ -22,14 +22,19 @@ const migrationFunction = {
       const entries = await getChallengesMissingData(page, perPage)
       // logger.info(`Found ${entries.length} challenges`)
       if (entries.length > 0) {
-        const legacyIds = _.map(entries, e => e.legacyId)
-        // logger.debug(`Processing ${JSON.stringify(legacyIds)}`)
+        const legacyIds = _.compact(_.map(entries, e => e.legacyId))
+        logger.debug(`Processing ${JSON.stringify(legacyIds)}`)
         const legacyScorecardInfo = await challengeService.getScorecardInformationFromIfx(legacyIds)
 
         for (const entry of entries) {
           const thisScorecard = _.find(legacyScorecardInfo, s => s.legacyid === entry.legacyId)
-          await updateDynamoChallengeProperties(entry.challengeId, thisScorecard.screeningscorecardid, thisScorecard.reviewscorecardid)
-          await updateESChallengeProperties(entry.challengeId, thisScorecard.screeningscorecardid, thisScorecard.reviewscorecardid)
+          if (thisScorecard) {
+            logger.info(`Migrating ${entry.challengeId} - ${entry.legacyId}`)
+            await updateDynamoChallengeProperties(entry.challengeId, thisScorecard.screeningscorecardid, thisScorecard.reviewscorecardid)
+            await updateESChallengeProperties(entry.challengeId, thisScorecard.screeningscorecardid, thisScorecard.reviewscorecardid)
+          } else {
+            logger.warn(`No scorecard found for ${entry.legacyId}`)
+          }
         }
       } else {
         finish = true
@@ -98,6 +103,7 @@ async function getChallengeFromDynamoById (id) {
 async function updateDynamoChallengeProperties (id, screeningScorecardId, reviewScorecardId) {
   const dynamoObj = await getChallengeFromDynamoById(id)
   // set the properties if they exist
+  // logger.debug(`Migrating IDs ${id}`)
   if (screeningScorecardId) dynamoObj.legacy.screeningScorecardId = screeningScorecardId
   if (reviewScorecardId) dynamoObj.legacy.reviewScorecardId = reviewScorecardId
 
