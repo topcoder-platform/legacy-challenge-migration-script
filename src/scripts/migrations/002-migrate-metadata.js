@@ -29,7 +29,7 @@ const migrationFunction = {
           // const thisData = _.find(legacyMetadataInfo, s => s.challenge_id === entry.legacyId)
           const oneMetadata = _.omit(_.filter(legacyMetadataInfo, s => s.challenge_id === entry.legacyId)[0], ['challenge_id'])
           if (oneMetadata) {
-            console.log(oneMetadata)
+            // console.log(oneMetadata)
             const metadata = []
             Object.entries(oneMetadata).forEach(([key, value]) => {
               // console.log(key, value)
@@ -54,7 +54,7 @@ const migrationFunction = {
             // metadata.push({ type: 'imported', value: '002' })
 
             logger.info(`Migrating ${entry.challengeId} - ${entry.legacyId}`)
-            logger.info(`Migrating ${metadata}`)
+            // logger.info(`Migrating ${metadata}`)
             // console.log(entry.challengeId)
             await updateDynamoChallengeMetadata(entry.challengeId, metadata, oneMetadata.final_submission_guidelines)
           } else {
