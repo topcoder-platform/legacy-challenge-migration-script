@@ -286,9 +286,9 @@ function getResourcesFromIfx (ids, skip, offset, filter) {
         INNER JOIN user u on
             r.user_id = u.user_id
         INNER JOIN user u2 on
-            r.create_user = u2.user_id
+            TO_CHAR(r.create_user) = TO_CHAR(u2.user_id)
         INNER JOIN user u3 on
-            r.modify_user = u3.user_id
+            TO_CHAR(r.modify_user) = TO_CHAR(u3.user_id)
         WHERE 1=1 ${filterCreatedDate}
     `
   return execQuery(sql, ids, 'order by r.project_id')

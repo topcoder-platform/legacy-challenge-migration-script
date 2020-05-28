@@ -14,7 +14,7 @@ const rule = new schedule.RecurrenceRule()
 rule.minute = new schedule.Range(0, 59, config.SCHEDULE_INTERVAL)
 schedule.scheduleJob(rule, () => {
   logger.info(`migration.run() enabled: ${config.MIGRATION_CRON_ENABLED}`)
-  if (config.MIGRATION_CRON_ENABLED === true) {
+  if (config.MIGRATION_CRON_ENABLED) {
     logger.info('Auto-Migration Start')
     migration.run()
   } else {
