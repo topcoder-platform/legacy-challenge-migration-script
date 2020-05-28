@@ -32,83 +32,25 @@ function getScorecardInformationFromIfx (ids, skip, offset) {
   limitOffset += !_.isUndefined(offset) && offset > 0 ? ' first ' + offset : ''
   // Ifx returns all properties as all lowercase
   const sql = `
-    SELECT ${limitOffset}
-     p.project_id AS challengeid
-     , pc3.parameter AS screeningscorecardid
-     , pc4.parameter AS reviewscorecardid
-     , CASE WHEN pidr.value = 'On' THEN 
-       NVL((SELECT value::decimal FROM project_info pi_dr WHERE pi_dr.project_info_type_id = 30 AND pi_dr.project_id = p.project_id), (SELECT NVL(pi16.value::decimal, 1) FROM project_info pi16 WHERE pi16.project_info_type_id = 16 AND pi16.project_id = p.project_id))
-       ELSE NULL END AS digitalrunpoints
-     , pi51.value AS submissionLimit
-     , pi52.value AS allowStockArt
-     , (SELECT value FROM project_info pi53 WHERE project_id = p.project_id AND project_info_type_id = 53) AS submissionsViewable
-     , (SELECT value FROM project_info pi84 WHERE project_id = p.project_id AND project_info_type_id = 84) AS environment
-     , (SELECT value FROM project_info pi85 WHERE project_id = p.project_id AND project_info_type_id = 85) AS codeRepo
-     , REPLACE(
-                 REPLACE(
-                    REPLACE(
-                         REPLACE(
-                             MULTISET(
-                                 SELECT  ITEM description
-                                 FROM project_file_type_xref x
-                                INNER JOIN file_type_lu l ON l.file_type_id = x.file_type_id
-                                 WHERE x.project_id = p.project_id)::lvarchar,
-                             'MULTISET{'''
-                         ), '''}'
-                     ),''''
-                 ),'MULTISET{}'
-              ) AS filetypes
-      , (pi87.value = 'Banner') as isBanner
-  FROM project p
-     , outer ( project_phase pp3  
-     , outer phase_criteria pc3 ) 
-     , outer ( project_phase pp4 
-     , outer phase_criteria pc4 )
-     , project_info pn
-     , project_info pidr
-     , outer project_info pi70 
-     , project_category_lu pcl
-     , outer project_info pi4
-     , outer project_info pi1
-     , outer project_info pi51
-     , outer project_info pi52
-     , outer project_info pi78
-     , outer project_info pi79
-     , outer project_info pi56
-     , outer project_info pi87
- WHERE 1=1
-   AND p.project_id = pn.project_id
-   AND pn.project_info_type_id = 6
-   AND pp3.project_id = p.project_id
-   AND pp3.phase_type_id = 3  
-   AND pp3.project_phase_id = pc3.project_phase_id
-   AND pc3.phase_criteria_type_id = 1
-   AND pp4.project_id = p.project_id
-   AND (pp4.phase_type_id = 4 OR (pp4.phase_type_id = 18 AND p.project_category_id = 38))
-   AND pp4.project_phase_id = pc4.project_phase_id
-   AND pp4.project_phase_id = (SELECT MAX(project_phase_id) FROM project_phase WHERE project_id = p.project_id AND phase_type_id IN (4,18))
-   AND pc4.phase_criteria_type_id = 1 
-   AND pidr.project_id = p.project_id
-   AND pidr.project_info_type_id = 26  
-   AND pi70.project_id = p.project_id
-   AND pi70.project_info_type_id = 70  
-   AND pi4.project_id = p.project_id
-   AND pi4.project_info_type_id = 4  
-   AND pi1.project_info_type_id = 1 
-   AND pi1.project_id = p.project_id
-   AND pi51.project_info_type_id = 51
-   AND pi51.project_id = p.project_id
-   AND pi52.project_info_type_id = 52 
-   AND pi52.project_id = p.project_id
-   AND pi78.project_info_type_id = 78 
-   AND pi78.project_id = p.project_id
-   AND pi79.project_info_type_id = 79 
-   AND pi79.project_id = p.project_id
-   AND pi56.project_info_type_id = 56
-   AND pi56.project_id = p.project_id
-   AND p.project_category_id = pcl.project_category_id
-   AND pi87.project_info_type_id = 87
-   AND pi87.project_id = p.project_id
+  SELECT ${limitOffset}
+  p.project_id as legacyid,
+  pc3.parameter AS screeningscorecardid,
+  pc4.parameter AS reviewscorecardid
+FROM project p
+  , outer ( project_phase pp3  
+  , outer phase_criteria pc3 ) 
+  , outer ( project_phase pp4 
+  , outer phase_criteria pc4 ) 
+WHERE 1=1
+AND pp3.project_id = p.project_id
+AND pp3.phase_type_id = 3  
+AND pp3.project_phase_id = pc3.project_phase_id
+AND pc3.phase_criteria_type_id = 1
+AND pp4.project_id = p.project_id
+AND (pp4.phase_type_id = 4 OR (pp4.phase_type_id = 18 AND p.project_category_id = 38))
+AND pp4.project_phase_id = pc4.project_phase_id
+AND pp4.project_phase_id = (SELECT MAX(project_phase_id) FROM project_phase WHERE project_id = p.project_id AND phase_type_id IN (4,18))
+AND pc4.phase_criteria_type_id = 1
     `
   return execQuery(sql, ids)
 }
@@ -149,6 +91,7 @@ function getChallengesFromIfx (ids, skip, offset, filter, onlyIds) {
       confidentiality_type.value AS confidentiality_type,
       p.tc_direct_project_id AS project_id,
       pspec.detailed_requirements_text AS software_detail_requirements,
+      pspec.final_submission_guidelines_text AS final_submission_guidelines,
       pss.contest_description AS studio_detail_requirements,
       pmm_spec.match_details AS marathonmatch_detail_requirements
     FROM
@@ -902,6 +845,10 @@ async function getChallenges (ids, skip, offset, filter) {
       detailRequirement = c.software_detail_requirements || ''
     }
 
+    if (c.final_submission_guidelines && c.final_submission_guidelines.trim() !== '') {
+      detailRequirement += '<br /><br /><h2>Final Submission Guidelines</h2>' + c.final_submission_guidelines
+    }
+
     let connectProjectId = null
     if (c.project_id) {
       // can't query v5 api for "undefined", so catch it here
@@ -1082,7 +1029,7 @@ async function convertGroupIdsToV5UUIDs (groupOldIdArray) {
       groups.push({ challenge_id: groupObj.challenge_id, group_id: groupObj.group_id, group_uuid: groupsUUIDCache.get(oldId) })
     } else {
       if (!token) token = await helper.getM2MToken()
-      logger.debug(`Calling v5 Terms API - ${config.GROUPS_API_URL}?oldId=${oldId}`)
+      logger.debug(`Calling v5 Groups API - ${config.GROUPS_API_URL}?oldId=${oldId}`)
       const result = await request.get(`${config.GROUPS_API_URL}?oldId=${oldId}`).set({ Authorization: `Bearer ${token}` })
       const resultObj = JSON.parse(result.text)
       if (resultObj && resultObj[0]) {
@@ -1100,6 +1047,7 @@ module.exports = {
   getChallenges,
   save,
   update,
+  execQuery,
   getChallengeFromES,
   getChallengesFromES,
   getChallengeTypes,
