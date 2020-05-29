@@ -1,5 +1,6 @@
 const uuid = require('uuid/v4')
 const _ = require('lodash')
+// const moment = require('moment')
 const config = require('config')
 const { Resource, ResourceRole } = require('../models')
 const logger = require('../util/logger')
@@ -22,7 +23,7 @@ const challengeIdtoUUIDmap = {}
 async function getResourceRoles (names) {
   const resourceRoles = await getResourceRolesFromIfx(names.map(name => `'${name}'`))
 
-  const resourceRoleNames = _.map(resourceRoles, 'name')
+  // const resourceRoleNames = _.map(resourceRoles, 'name')
   // logger.debug('Names to fetch: ' + resourceRoleNames)
 
   const existingResourceRoles = await getExistingResourceRoles(names)
@@ -80,7 +81,9 @@ async function execQuery (sql, ids, order) {
   }
   // console.log(`Query - Executing: ${sql} ${filter} ${order}`)
   // const result = connection.query(`${sql} ${filter} ${order}`)
+  // logger.debug(`Query - Executing: ${sql} ${filter} ${order}`)
   const result = await executeQueryAsync('tcs_catalog', `${sql} ${filter} ${order}`)
+  // logger.debug(`Resource execQuery end ${sql} ${moment()}`)
   // console.log(`Query - Result: ${result}`)
   return result
 }
@@ -193,7 +196,9 @@ async function saveResourceRoles (resourceRoles) {
  * @param {Number} offset Number of row to fetch
  */
 async function getResources (ids, skip, offset, filter) {
+  // logger.debug('Start Get Resources')
   const resources = await getResourcesFromIfx(ids, skip, offset, filter)
+  // logger.debug('Got Resources from Ifx')
   // logger.debug('IFX response: ' + JSON.stringify(resources, null, 2))
   if (!_.isArray(resources) || resources.length < 1) {
     return { finish: true, resources: [] }
@@ -206,10 +211,12 @@ async function getResources (ids, skip, offset, filter) {
 
   const challengeIdsToFetch = _.filter(resourceChallengeIds, id => !challengeIdtoUUIDmap[id])
 
+  // logger.debug('Start DB Queries')
   const dbQueries = [
     getExistingResources(resourceIds),
     getResourceRolesFromDynamo(resourceRoleNames) // TODO: Performance issue
   ]
+  // logger.debug('DB Queries Returned')
   if (challengeIdsToFetch.length > 0) {
     dbQueries.push(challengeService.getChallengesFromES(challengeIdsToFetch))
   }
@@ -224,7 +231,9 @@ async function getResources (ids, skip, offset, filter) {
   }
   const results = []
 
+  // logger.debug('Start Resource FOR')
   _.forEach(_.filter(resources, r => !(existingResources.includes(r.id))), r => {
+    // logger.debug('Start Resource FOR LOOP')
     const challengeId = challengeIdtoUUIDmap[r.challenge_id] // _.get(_.map(_.filter(existingChallenges, p => p.legacyId === r.challenge_id), 'challengeId'), '[0]')
     const roleId = _.get(_.map(_.filter(existingResourceRoles, rr => rr.name === r.resource_role_name), 'resourceRoleId'), '[0]')
 
@@ -285,11 +294,12 @@ function getResourcesFromIfx (ids, skip, offset, filter) {
             r.resource_role_id = rr.resource_role_id
         INNER JOIN user u on
             r.user_id = u.user_id
-        INNER JOIN user u2 on
-            TO_CHAR(r.create_user) = TO_CHAR(u2.user_id)
-        INNER JOIN user u3 on
-            TO_CHAR(r.modify_user) = TO_CHAR(u3.user_id)
-        WHERE 1=1 ${filterCreatedDate}
+            , user u2
+            , user u3
+        WHERE 1=1 
+          AND r.create_user = u2.user_id
+          AND r.modify_user = u3.user_id
+          ${filterCreatedDate}
     `
   return execQuery(sql, ids, 'order by r.project_id')
 }

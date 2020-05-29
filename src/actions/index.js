@@ -225,12 +225,14 @@ async function processChallenge (legacyId) {
     const [existingV5Challenge] = await challengeService.getChallengeFromES(legacyId)
     const result = await challengeService.getChallenges([legacyId])
     let v5ChallengeId = null
+    // console.log('Result', result)
     if (_.get(result, 'challenges.length', 0) > 0) {
       const legacyChallenge = result.challenges[0]
       const v5informixModifiedDate = Date.parse(_.get(existingV5Challenge, 'legacy.informixModified'))
       const legacyModifiedDate = Date.parse(legacyChallenge.updated)
 
       if (existingV5Challenge) {
+        // console.log('Challenge Exists', existingV5Challenge)
         if (legacyModifiedDate > v5informixModifiedDate) {
           // challenge exists, but is different - update
           legacyChallenge.id = existingV5Challenge.id
@@ -251,6 +253,7 @@ async function processChallenge (legacyId) {
         }
       } else {
         // challenge doesn't exist, create
+        // console.log('Challenge Doesnt Exist')
         challengeMigrationStatusService.createProgressRecord(
           null,
           legacyId,

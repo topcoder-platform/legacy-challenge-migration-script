@@ -253,34 +253,6 @@ function getWinnerFromIfx (ids) {
  * @param {Array} ids array if ids to fetch (if any)
  */
 function getMetadataFromIfx (ids) {
-  // const sql = `
-  // SELECT
-  //   p.project_id AS challenge_id,
-  //   pi51.value AS submission_limit,
-  //   pi52.value AS allow_stock_art,
-  //   (SELECT value FROM project_info pi53 WHERE project_id = p.project_id AND project_info_type_id = 53) AS submissions_viewable,
-  //   REPLACE(
-  //                REPLACE(
-  //                   REPLACE(
-  //                        REPLACE(
-  //                            MULTISET(
-  //                                SELECT  ITEM description
-  //                                FROM project_file_type_xref x
-  //                               INNER JOIN file_type_lu l ON l.file_type_id = x.file_type_id
-  //                                WHERE x.project_id = p.project_id)::lvarchar,
-  //                            'MULTISET{'''
-  //                        ), '''}'
-  //                    ),''''
-  //                ),'MULTISET{}'
-  //             ) AS filetypes
-  // FROM project p,
-  // OUTER project_info pi51,
-  // OUTER project_info pi52
-  // WHERE pi51.project_info_type_id = 51
-  // AND pi51.project_id = p.project_id
-  // AND pi52.project_info_type_id = 52
-  // AND pi52.project_id = p.project_id
-  // `
   const sql = `
   SELECT
     p.project_id AS challenge_id
@@ -344,6 +316,23 @@ function getMetadataFromIfx (ids) {
    AND p.project_category_id = pcl.project_category_id
    AND pi87.project_info_type_id = 87
    AND pi87.project_id = p.project_id
+   `
+  return execQuery(sql, ids)
+}
+
+/**
+ * Get challenge metadata properties
+ *
+ * @param {Array} ids array if ids to fetch (if any)
+ */
+function getEventMetadataFromIfx (ids) {
+  const sql = `
+  SELECT c.event_id as id, p.project_id as challenge_id, e.event_desc as name, e.event_short_desc as key
+        from contest_project_xref x, contest c, project p, event e
+        where
+                x.project_id = p.project_id
+                and c.contest_id = x.contest_id
+                and c.event_id = e.event_id
    `
   return execQuery(sql, ids)
 }
@@ -437,6 +426,7 @@ function getChallengeRegistrants (ids) {
 function saveItem (challenge, retrying) {
   return new Promise((resolve) => {
     const newChallenge = new Challenge(_.omit(challenge, ['numOfSubmissions', 'numOfRegistrants']))
+    // logger.warn(`saving challenge ${challenge.id}`)
     newChallenge.save(async (err) => {
       if (err) {
         logger.error('Challenge Dynamo Write Fail ' + JSON.stringify(err))
@@ -796,7 +786,7 @@ async function getChallenges (ids, skip, offset, filter) {
 
   const tasks = [getPrizeFromIfx, getTechnologyFromIfx, getPlatformFromIfx,
     getGroupFromIfx, getWinnerFromIfx, getPhaseFromIfx, getMetadataFromIfx, getTermsFromIfx,
-    getChallengeSubmissions, getChallengeRegistrants, getScorecardInformationFromIfx]
+    getChallengeSubmissions, getChallengeRegistrants, getScorecardInformationFromIfx, getEventMetadataFromIfx]
 
   const queryResults = await Promise.all(tasks.map(t => t(challengeIds)))
   // construct challenge
@@ -811,6 +801,7 @@ async function getChallenges (ids, skip, offset, filter) {
   const allSubmissions = queryResults[8]
   const allRegistrants = queryResults[9]
   const allScorecards = queryResults[10]
+  const allEvents = queryResults[11]
   const results = []
 
   // get challenge types from dynamodb
@@ -987,6 +978,20 @@ async function getChallenges (ids, skip, offset, filter) {
       metadata.push({ type: _.camelCase(key), value: JSON.stringify(metadataValue) })
     })
 
+    // console.log('All Events', allEvents)
+    const events = _.filter(allEvents, s => s.challenge_id === c.id)
+    if (events && events.length > 0) {
+      const eventArray = []
+      for (const event of events) {
+        eventArray.push({
+          id: event.id,
+          name: event.name,
+          key: event.key
+        })
+      }
+      metadata.push({ events: eventArray })
+    }
+
     results.push(_.assign(newChallenge, { prizeSets, tags, groups, winners, phases, metadata, terms }))
   }
 
@@ -1056,5 +1061,6 @@ module.exports = {
   createChallengeTimelineMapping,
   getChallengeTypesFromDynamo,
   getChallengesFromIfx,
+  getEventMetadataFromIfx,
   getScorecardInformationFromIfx
 }
