@@ -15,13 +15,16 @@ rule.minute = new schedule.Range(0, 59, config.SCHEDULE_INTERVAL)
 schedule.scheduleJob(rule, () => {
   logger.info(`migration.run() enabled: ${config.MIGRATION_CRON_ENABLED}`)
   if (config.MIGRATION_CRON_ENABLED) {
-    logger.info('Auto-Migration Start')
     migration.run()
   } else {
     logger.info('Auto-Migration Disabled')
   }
 })
-logger.info(`The migration is scheduled to be executed every ${config.SCHEDULE_INTERVAL} minutes`)
+if (config.MIGRATION_CRON_ENABLED) {
+  logger.info(`The migration is scheduled to be executed every ${config.SCHEDULE_INTERVAL} minutes`)
+} else {
+  logger.warn(`The auto-migration is disabled ${config.MIGRATION_CRON_ENABLED}`)
+}
 
 logger.debug([
   `migrationInterval: ${config.SCHEDULE_INTERVAL}`,
