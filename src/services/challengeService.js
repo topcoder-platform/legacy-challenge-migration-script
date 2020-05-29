@@ -70,8 +70,8 @@ function getChallengesFromIfx (ids, skip, offset, filter, onlyIds) {
   limitOffset += !_.isUndefined(skip) && skip > 0 ? 'skip ' + skip : ''
   limitOffset += !_.isUndefined(offset) && offset > 0 ? ' first ' + offset : ''
   if (_.get(filter, 'CREATED_DATE_BEGIN')) {
-    // logger.info(`Fetching challenges since: ${helper.generateInformxDate(filter.CREATED_DATE_BEGIN)}`)
-    filterCreatedDate = `and p.create_date > '${helper.generateInformxDate(filter.CREATED_DATE_BEGIN)}'`
+    // make sure only to get challenges whose modify_date is newer than the last run time
+    filterCreatedDate = `and p.modify_date > '${helper.generateInformxDate(filter.CREATED_DATE_BEGIN)}'`
   }
 
   const sql = onlyIds ? `SELECT ${limitOffset} p.project_id AS id FROM project p WHERE 1=1 ${filterCreatedDate}` : `

@@ -233,6 +233,7 @@ async function processChallenge (legacyId) {
 
       if (existingV5Challenge) {
         // console.log('Challenge Exists', existingV5Challenge)
+        logger.debug(`Challenge Exists - v5 modified date: ${v5informixModifiedDate} legacy.updated: ${legacyModifiedDate}`)
         if (legacyModifiedDate > v5informixModifiedDate) {
           // challenge exists, but is different - update
           legacyChallenge.id = existingV5Challenge.id
@@ -248,7 +249,7 @@ async function processChallenge (legacyId) {
           await challengeService.update(result.challenges)
         } else {
           logger.info('Challenge was migrated and the dates were equal')
-          logger.debug(`v5 modified date: ${v5informixModifiedDate} legacy.updated: ${legacyModifiedDate}`)
+          // logger.debug(`v5 modified date: ${v5informixModifiedDate} legacy.updated: ${legacyModifiedDate}`)
           return false
         }
       } else {
