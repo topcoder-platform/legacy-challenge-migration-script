@@ -12,14 +12,16 @@ const logger = createLogger({
     new transports.Console({
       format: format.combine(
         format.colorize(),
+        format.timestamp(),
+        format.align(),
         format.simple()
       )
-    }),
-    new transports.File({
-      format: format.simple(),
-      level: 'debug',
-      filename: config.LOG_FILENAME
     })
+    // new transports.File({
+    //   format: format.simple(),
+    //   level: 'debug',
+    //   filename: config.LOG_FILENAME
+    // })
   ]
 })
 

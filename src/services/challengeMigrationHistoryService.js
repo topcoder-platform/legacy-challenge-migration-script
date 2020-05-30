@@ -77,7 +77,12 @@ async function getLatestHistory () {
   }
 }
 
+async function getLatestDate () {
+  return await getLatestHistory().date || null
+}
+
 module.exports = {
   createHistoryRecord,
-  getLatestHistory
+  getLatestHistory,
+  getLatestDate
 }

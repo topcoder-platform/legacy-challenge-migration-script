@@ -139,7 +139,29 @@ module.exports = {
     }
   },
   // Resource role to be included in migration
-  RESOURCE_ROLE: ['Submitter', 'Reviewer', 'Copilot', 'Manager', 'Observer', 'Iterative Reviewer', 'Post-Mortem Reviewer', 'Approver'],
+  RESOURCE_ROLE: [
+    'Submitter',
+    'Primary Screener',
+    'Screener',
+    'Reviewer',
+    'Accuracy Reviewer',
+    'Failure Reviewer',
+    'Stress Reviewer',
+    'Aggregator',
+    'Final Reviewer',
+    'Approver',
+    'Designer',
+    'Observer',
+    'Manager',
+    'Copilot',
+    'Client Manager',
+    'Post-Mortem Reviewer',
+    'Specification Submitter',
+    'Specification Reviewer',
+    'Checkpoint Screener',
+    'Checkpoint Reviewer',
+    'Iterative Reviewer'
+  ],
   BATCH_SIZE: 10, // max challenges will be load from informix on 1 query
   MIGRATION_SCRIPT_BATCH_SIZE: 40, // max challenges will be load from informix on 1 query when running a migration script
   ERROR_LOG_FILENAME: './error.json', // filename of error log for challenge that fail to migrate

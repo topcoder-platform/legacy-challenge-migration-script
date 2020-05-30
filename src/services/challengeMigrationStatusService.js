@@ -1,9 +1,10 @@
 // challenge service
 const config = require('config')
-const { map, get } = require('lodash')
+// const { map, get } = require('lodash')
 const { getESClient } = require('../util/helper')
-const getErrorService = require('./errorService')
-const errorService = getErrorService()
+const logger = require('../util/logger')
+// const getErrorService = require('./errorService')
+// const errorService = getErrorService()
 
 /**
  * Put progress into
@@ -27,7 +28,8 @@ async function createProgressRecord (challengeId, legacyId, status, informixModi
       }
     })
   } catch (err) {
-    errorService.put({ challengeId: legacyId, type: 'es', message: err.message })
+    // errorService.put({ challengeId: legacyId, type: 'es', message: err.message })
+    logger.error(`createProgressRecord failed ${err}`)
   }
 }
 
@@ -55,7 +57,7 @@ async function updateProgressRecord (challengeId, legacyId, status, informixModi
       }
     })
   } catch (err) {
-    errorService.put({ legacyId, type: 'es', message: err.message })
+    logger.error(`createProgressRecord failed ${err}`)
   }
 }
 

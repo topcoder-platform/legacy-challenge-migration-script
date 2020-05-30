@@ -8,10 +8,10 @@ const logger = require('../util/logger')
 const helper = require('../util/helper')
 const { getESClient } = require('../util/helper')
 const util = require('util')
-const getErrorService = require('./errorService')
-const errorService = getErrorService()
+// const getErrorService = require('./errorService')
+// const errorService = getErrorService()
 const HashMap = require('hashmap')
-const { executeQueryAsync } = require('../util/informixWrapper')
+const challengeInformixService = require('./challengeInformixService')
 
 let allV5Terms
 let challengeTypeMapping
@@ -20,441 +20,42 @@ let challengeTimelineMapping
 
 const groupsUUIDCache = new HashMap()
 
-/**
- * Get challenge scorecard information from informix
- *
- * @param {Number} skip number of row to skip
- * @param {Number} offset number of row to fetch
- */
-function getScorecardInformationFromIfx (ids, skip, offset) {
-  let limitOffset = ''
-  limitOffset += !_.isUndefined(skip) && skip > 0 ? 'skip ' + skip : ''
-  limitOffset += !_.isUndefined(offset) && offset > 0 ? ' first ' + offset : ''
-  // Ifx returns all properties as all lowercase
-  const sql = `
-  SELECT ${limitOffset}
-  p.project_id as legacyid,
-  pc3.parameter AS screeningscorecardid,
-  pc4.parameter AS reviewscorecardid
-FROM project p
-  , outer ( project_phase pp3  
-  , outer phase_criteria pc3 ) 
-  , outer ( project_phase pp4 
-  , outer phase_criteria pc4 ) 
-WHERE 1=1
-AND pp3.project_id = p.project_id
-AND pp3.phase_type_id = 3  
-AND pp3.project_phase_id = pc3.project_phase_id
-AND pc3.phase_criteria_type_id = 1
-AND pp4.project_id = p.project_id
-AND (pp4.phase_type_id = 4 OR (pp4.phase_type_id = 18 AND p.project_category_id = 38))
-AND pp4.project_phase_id = pc4.project_phase_id
-AND pp4.project_phase_id = (SELECT MAX(project_phase_id) FROM project_phase WHERE project_id = p.project_id AND phase_type_id IN (4,18))
-AND pc4.phase_criteria_type_id = 1
-    `
-  return execQuery(sql, ids)
-}
-
-/**
- * Get challenge from informix
- *
- * @param {Array} ids array if legacy ids (if any)
- * @param {Number} skip number of row to skip
- * @param {Number} offset number of row to fetch
- * @param {Object} filter the filter object
- * @param {Boolean} onlyIds should return only the challenge Ids
- */
-function getChallengesFromIfx (ids, skip, offset, filter, onlyIds) {
-  let limitOffset = ''
-  let filterCreatedDate = ''
-  limitOffset += !_.isUndefined(skip) && skip > 0 ? 'skip ' + skip : ''
-  limitOffset += !_.isUndefined(offset) && offset > 0 ? ' first ' + offset : ''
-  if (_.get(filter, 'CREATED_DATE_BEGIN')) {
-    // make sure only to get challenges whose modify_date is newer than the last run time
-    filterCreatedDate = `and p.modify_date > '${helper.generateInformxDate(filter.CREATED_DATE_BEGIN)}'`
+async function save (challenge) {
+  if (challenge.id) {
+    return updateChallenge(challenge)
   }
-
-  const sql = onlyIds ? `SELECT ${limitOffset} p.project_id AS id FROM project p WHERE 1=1 ${filterCreatedDate}` : `
-    SELECT  ${limitOffset}
-      p.create_user AS created_by, p.create_date AS created, p.modify_user AS updated_by,
-      p.modify_date AS updated, p.project_id AS id, pn.value AS name,
-      CASE
-        WHEN (ptl.description = 'Application') THEN 'DEVELOP'
-        WHEN (ptl.description = 'Component') THEN 'DEVELOP'
-        WHEN (ptl.description = 'Studio') THEN 'DESIGN'
-        ELSE 'GENERIC'
-      END AS track,
-      pcl.project_category_id AS type_id,
-      pstatus.name AS status,
-      review_type_info.value AS review_type,
-      forum_id_info.value AS forum_id,
-      confidentiality_type.value AS confidentiality_type,
-      p.tc_direct_project_id AS project_id,
-      pspec.detailed_requirements_text AS software_detail_requirements,
-      pspec.final_submission_guidelines_text AS final_submission_guidelines,
-      pss.contest_description AS studio_detail_requirements,
-      pmm_spec.match_details AS marathonmatch_detail_requirements
-    FROM
-      project p
-      INNER JOIN project_status_lu pstatus ON pstatus.project_status_id = p.project_status_id
-      INNER JOIN project_category_lu pcl ON pcl.project_category_id = p.project_category_id
-      INNER JOIN project_type_lu ptl ON ptl.project_type_id = pcl.project_type_id
-      INNER JOIN project_info pn ON pn.project_id = p.project_id
-      AND pn.project_info_type_id = 6
-      LEFT JOIN project_info AS forum_id_info ON forum_id_info.project_id = p.project_id
-      AND forum_id_info.project_info_type_id = 4
-      LEFT JOIN project_info AS confidentiality_type ON confidentiality_type.project_id = p.project_id
-      AND confidentiality_type.project_info_type_id = 34
-      LEFT JOIN project_info AS review_type_info ON review_type_info.project_id = p.project_id
-      AND review_type_info.project_info_type_id = 79
-      LEFT JOIN project_spec pspec ON pspec.project_id = p.project_id
-            AND pspec.version = (select MAX(project_spec.version) from project_spec where project_spec.project_id = p.project_id)
-      LEFT JOIN project_studio_specification pss ON pss.project_studio_spec_id = p.project_studio_spec_id
-      LEFT JOIN project_mm_specification pmm_spec ON pmm_spec.project_mm_spec_id = p.project_mm_spec_id
-      WHERE 1=1 ${filterCreatedDate}
-`
-
-  return execQuery(sql, ids, 'order by p.project_id')
+  return createChallenge(challenge)
 }
-
-/**
- * Get challenge prizes
- *
- * @param {Array} ids array if ids to fetch (if any)
- */
-function getPrizeFromIfx (ids) {
-  const sql = `
-    SELECT
-      case
-        when prize.place = 1 then 'First Placement'
-        when prize.place = 2 then 'Second Placement'
-        when prize.place = 3 then 'Third Placement'
-        when prize.place = 4 then 'Forth Placement'
-        when prize.place = 5 then 'Fifth Placement'
-      end as type,
-      prize.prize_amount as value,
-      prize.project_id as challenge_id
-    FROM
-      prize AS prize
-    INNER JOIN project AS p  ON prize.project_id = p.project_id
-    WHERE prize.prize_type_id = 15
-  `
-  return execQuery(sql, ids, 'order by prize.place')
-}
-
-/**
- * Get challenge phases
- *
- * @param {Array} ids array if ids to fetch (if any)
- */
-function getPhaseFromIfx (ids) {
-  const sql = `
-    SELECT
-      phase.project_phase_id as id,
-      phase.phase_type_id as type_id,
-      case
-        when phase.phase_type_id = 1 then 'Registration'
-        when phase.phase_type_id = 2 then 'Submission'
-        when phase.phase_type_id = 4 then 'Review'
-        when phase.phase_type_id = 5 then 'Apeal'
-        when phase.phase_type_id = 6 then 'Apeal Response'
-        when phase.phase_type_id = 15 then 'Checkpoint Submission'
-      end as name,
-      phase.actual_end_time as actual_end_time,
-      phase.actual_start_time as actual_start_time,
-      phase.scheduled_start_time as scheduled_start_time,
-      phase.duration as duration,
-      phase.project_id as challenge_id,
-      s.description as phase_status
-    FROM
-      project_phase AS phase
-    INNER JOIN project AS p  ON phase.project_id = p.project_id
-    INNER JOIN phase_status_lu AS s  ON phase.phase_status_id = s.phase_status_id
-    WHERE (phase.phase_type_id = 1 or phase.phase_type_id = 2 or phase.phase_type_id = 4 or phase.phase_type_id = 5 or phase.phase_type_id = 6 or phase.phase_type_id = 15)
-  `
-  return execQuery(sql, ids)
-}
-
-/**
- * Get technology
- *
- * @param {Array} ids array if ids to fetch (if any)
- */
-function getTechnologyFromIfx (ids) {
-  const sql = `
-  select tt.technology_name as name, p.project_id as challenge_id
-  from comp_technology ct
-  inner join technology_types tt on ct.technology_type_id = tt.technology_type_id
-  inner join project_info p on p.value = ct.comp_vers_id and p.project_info_type_id = 1
-  where 1=1
-  `
-  return execQuery(sql, ids)
-}
-
-/**
- * Get challenge platform
- *
- * @param {Array} ids array if ids to fetch (if any)
- */
-function getPlatformFromIfx (ids) {
-  const sql = `
-  select ppl.name as name, p.project_id as challenge_id
-  from project_platform_lu ppl
-  inner join project_platform p
-  on ppl.project_platform_id = p.project_platform_id
-  where 1=1
-  `
-  return execQuery(sql, ids)
-}
-
-/**
- * Get challenge group
- *
- * @param {Array} ids array if ids to fetch (if any)
- */
-function getGroupFromIfx (ids) {
-  const sql = `
-  SELECT distinct
-    p.project_id AS challenge_id,
-    gce.group_id AS group_id
-  FROM project p
-  INNER JOIN project_category_lu pcl ON pcl.project_category_id = p.project_category_id
-  LEFT JOIN contest_eligibility ce ON ce.contest_id = p.project_id
-  LEFT JOIN group_contest_eligibility gce ON gce.contest_eligibility_id = ce.contest_eligibility_id
-  WHERE pcl.project_category_id NOT IN (27,37)
-  `
-  return execQuery(sql, ids)
-}
-
-/**
- * Get challenge winner
- *
- * @param {Array} ids array if ids to fetch (if any)
- */
-function getWinnerFromIfx (ids) {
-  const sql = `
-    SELECT
-    p.project_id as challenge_id,
-    user.handle as handle,
-    s.placement as placement,
-    user.user_id as userid
-  FROM upload p
-        INNER JOIN submission s ON s.upload_id = p.upload_id
-        INNER JOIN prize pr ON pr.prize_id = s.prize_id
-        INNER JOIN user ON user.user_id = s.create_user
-  WHERE s.submission_type_id = 1 AND pr.prize_type_id in (15,16)
-  `
-  return execQuery(sql, ids, 'order by s.placement')
-}
-
-/**
- * Get challenge metadata properties
- *
- * @param {Array} ids array if ids to fetch (if any)
- */
-function getMetadataFromIfx (ids) {
-  const sql = `
-  SELECT
-    p.project_id AS challenge_id
-     , CASE WHEN pidr.value = 'On' THEN 
-       NVL((SELECT value::decimal FROM project_info pi_dr WHERE pi_dr.project_info_type_id = 30 AND pi_dr.project_id = p.project_id), (SELECT NVL(pi16.value::decimal, 1) FROM project_info pi16 WHERE pi16.project_info_type_id = 16 AND pi16.project_id = p.project_id))
-       ELSE NULL END AS digital_run_points
-     , pi51.value AS submission_limit
-     , pi52.value AS allow_stock_art
-     , (SELECT value FROM project_info pi53 WHERE project_id = p.project_id AND project_info_type_id = 53) AS submissions_viewable
-     , (SELECT value FROM project_info pi84 WHERE project_id = p.project_id AND project_info_type_id = 84) AS environment
-     , (SELECT value FROM project_info pi85 WHERE project_id = p.project_id AND project_info_type_id = 85) AS codeRepo
-     , REPLACE(
-                 REPLACE(
-                    REPLACE(
-                         REPLACE(
-                             MULTISET(
-                                 SELECT  ITEM description
-                                 FROM project_file_type_xref x
-                                INNER JOIN file_type_lu l ON l.file_type_id = x.file_type_id
-                                 WHERE x.project_id = p.project_id)::lvarchar,
-                             'MULTISET{'''
-                         ), '''}'
-                     ),''''
-                 ),'MULTISET{}'
-              ) AS filetypes
-      , (pi87.value = 'Banner') as isBanner
-  FROM project p
-     , project_info pn
-     , project_info pidr
-     , outer project_info pi70 
-     , project_category_lu pcl
-     , outer project_info pi4
-     , outer project_info pi1
-     , outer project_info pi51
-     , outer project_info pi52
-     , outer project_info pi78
-     , outer project_info pi79
-     , outer project_info pi56
-     , outer project_info pi87
- WHERE 1=1
-   AND p.project_id = pn.project_id
-   AND pn.project_info_type_id = 6
-   AND pidr.project_id = p.project_id
-   AND pidr.project_info_type_id = 26  
-   AND pi70.project_id = p.project_id
-   AND pi70.project_info_type_id = 70  
-   AND pi4.project_id = p.project_id
-   AND pi4.project_info_type_id = 4  
-   AND pi1.project_info_type_id = 1 
-   AND pi1.project_id = p.project_id
-   AND pi51.project_info_type_id = 51
-   AND pi51.project_id = p.project_id
-   AND pi52.project_info_type_id = 52 
-   AND pi52.project_id = p.project_id
-   AND pi78.project_info_type_id = 78 
-   AND pi78.project_id = p.project_id
-   AND pi79.project_info_type_id = 79 
-   AND pi79.project_id = p.project_id
-   AND pi56.project_info_type_id = 56
-   AND pi56.project_id = p.project_id
-   AND p.project_category_id = pcl.project_category_id
-   AND pi87.project_info_type_id = 87
-   AND pi87.project_id = p.project_id
-   `
-  return execQuery(sql, ids)
-}
-
-/**
- * Get challenge metadata properties
- *
- * @param {Array} ids array if ids to fetch (if any)
- */
-function getEventMetadataFromIfx (ids) {
-  const sql = `
-  SELECT c.event_id as id, p.project_id as challenge_id, e.event_desc as name, e.event_short_desc as key
-        from contest_project_xref x, contest c, project p, event e
-        where
-                x.project_id = p.project_id
-                and c.contest_id = x.contest_id
-                and c.event_id = e.event_id
-   `
-  return execQuery(sql, ids)
-}
-
-/**
- * Get challenge terms
- *
- * @param {Array} ids array if ids to fetch (if any)
- */
-function getTermsFromIfx (ids) {
-  const sql = `
-  SELECT distinct
-    p.project_id AS challenge_id,
-    t.terms_of_use_id
-  FROM project p
-  INNER JOIN project_role_terms_of_use_xref t ON t.project_id = p.project_id
-  WHERE 1=1
-  `
-  return execQuery(sql, ids)
-}
-
-/**
- * Get challenge submissions
- *
- * @param {Array} ids array if ids to fetch
- */
-function getChallengeSubmissions (ids) {
-  const sql = `
-  SELECT
-    u.project_id as challengeId,
-    s.submission_id as submissionId,
-    s.submission_type_id as submissionTypeId,
-    s.create_user as submitterId,
-    usr.handle as submitter,
-    ssl.name AS submissionStatus
-  FROM
-    upload u, submission_status_lu ssl, user usr, submission s, project p
-  WHERE
-    u.upload_id = s.upload_id
-    AND u.project_id = p.project_id
-    AND s.create_user = usr.user_id
-    AND s.submission_status_id = ssl.submission_status_id
-    AND s.submission_status_id <> 5
-    AND s.submission_type_id in (1,3)
-    AND u.upload_type_id = 1
-    AND u.upload_status_id = 1
-  `
-  return execQuery(sql, ids)
-}
-
-/**
- * Get challenge registrants
- *
- * @param {Array} ids array if ids to fetch
- */
-function getChallengeRegistrants (ids) {
-  const sql = `
-  select
-    u.handle AS handle,
-    rur.create_date AS registrationDate,
-    ri5.value::int AS reliability,
-    p.project_id AS challengeId
-  from resource rur
-    , resource_info ri1
-    , project p
-    , user u
-    , project_category_lu pcl
-    , outer resource_info ri4
-    , outer resource_info ri5
-  where
-    p.project_id = rur.project_id
-    and rur.resource_id = ri1.resource_id
-    and rur.resource_role_id = 1
-    and ri1.resource_info_type_id = 1
-    and ri4.resource_id = rur.resource_id
-    and ri4.resource_info_type_id = 4
-    and ri5.resource_id = rur.resource_id
-    and ri5.resource_info_type_id = 5
-    and ri1.value = u.user_id
-    and pcl.project_category_id = p.project_category_id
-  `
-  return execQuery(sql, ids)
-}
-
 /**
  * Put challenge data to new system
  *
  * @param {Object} challenge new challenge data
  * @param {Boolean} retrying if user is retrying
  */
-function saveItem (challenge, retrying) {
-  return new Promise((resolve) => {
-    const newChallenge = new Challenge(_.omit(challenge, ['numOfSubmissions', 'numOfRegistrants']))
-    // logger.warn(`saving challenge ${challenge.id}`)
-    newChallenge.save(async (err) => {
-      if (err) {
-        logger.error('Challenge Dynamo Write Fail ' + JSON.stringify(err))
-        errorService.put({ challengeId: challenge.legacyId, type: 'dynamodb', message: err.message })
-      } else {
-        // logger.debug('success ' + challenge.id)
-        if (retrying) {
-          errorService.remove({ challengeId: challenge.legacyId })
+async function createChallenge (challenge) {
+  const newChallenge = new Challenge(_.omit(challenge, ['numOfSubmissions', 'numOfRegistrants']))
+  // logger.warn(`saving challenge ${challenge.id}`)
+  newChallenge.id = uuid()
+  const dynamoSaved = await newChallenge.save()
+  if (dynamoSaved) {
+    try {
+      await getESClient().create({
+        index: config.get('ES.CHALLENGE_ES_INDEX'),
+        type: config.get('ES.CHALLENGE_ES_TYPE'),
+        refresh: config.get('ES.ES_REFRESH'),
+        id: newChallenge.id,
+        body: {
+          ...challenge,
+          groups: _.filter(challenge.groups, g => _.toString(g).toLowerCase() !== 'null')
         }
-        try {
-          await getESClient().create({
-            index: config.get('ES.CHALLENGE_ES_INDEX'),
-            type: config.get('ES.CHALLENGE_ES_TYPE'),
-            refresh: config.get('ES.ES_REFRESH'),
-            id: challenge.id,
-            body: {
-              ...challenge,
-              groups: _.filter(challenge.groups, g => _.toString(g).toLowerCase() !== 'null')
-            }
-          })
-        } catch (err) {
-          logger.error('Challenge ES Write Fail ' + JSON.stringify(err.message))
-          errorService.put({ challengeId: challenge.legacyId, type: 'es', message: err.message })
-        }
-      }
-      resolve(challenge)
-    })
-  })
+      })
+      return newChallenge.id
+    } catch (err) {
+      logger.error('createChallenge ES Write Fail')
+    }
+  } else {
+    logger.error('Challenge Dynamo Write Fail ')
+  }
 }
 
 /**
@@ -463,57 +64,48 @@ function saveItem (challenge, retrying) {
  * @param {Object} challenge challenge data
  * @param {Boolean} retrying if user is retrying
  */
-function updateItem (challenge, retrying) {
-  return new Promise((resolve) => {
-    Challenge.update({ id: challenge.id }, challenge, async (err, item) => {
-      if (err) {
-        logger.debug('fail ' + util.inspect(err))
-        errorService.put({ challenidgeId: challenge.legacyId, type: 'dynamodb', message: err.message })
-      } else {
-        if (retrying) {
-          errorService.remove({ challengeId: challenge.legacyId })
-        }
-        try {
-          await getESClient().update({
-            index: config.get('ES.CHALLENGE_ES_INDEX'),
-            type: config.get('ES.CHALLENGE_ES_TYPE'),
-            refresh: config.get('ES.ES_REFRESH'),
-            id: item[0].id,
-            body: {
-              doc: {
-                ...challenge,
-                groups: _.filter(challenge.groups, g => _.toString(g).toLowerCase() !== 'null')
-              },
-              doc_as_upsert: true
-            }
-          })
-        } catch (err) {
-          errorService.put({ challengeId: challenge.legacyId, type: 'es', message: err.message })
-        }
+async function updateChallenge (challenge) {
+  const dynamoUpdated = await Challenge.update({ id: challenge.id }, challenge)
+  if (dynamoUpdated) {
+    const esUpdated = await getESClient().update({
+      index: config.get('ES.CHALLENGE_ES_INDEX'),
+      type: config.get('ES.CHALLENGE_ES_TYPE'),
+      refresh: config.get('ES.ES_REFRESH'),
+      id: challenge.id,
+      body: {
+        doc: {
+          ...challenge,
+          groups: _.filter(challenge.groups, g => _.toString(g).toLowerCase() !== 'null')
+        },
+        doc_as_upsert: true
       }
-      resolve(challenge)
     })
-  })
+    if (esUpdated) {
+      return challenge.id
+    } else {
+      logger.error('updateChallenge ES Write Fail ')
+    }
+  }
 }
 
-/**
- * Put all challenge data to new system
- *
- * @param {Object} challenges data
- * @param {String} errFilename error filename
- */
-async function save (challenges) {
-  await Promise.all(challenges.map(c => saveItem(c, process.env.IS_RETRYING)))
-}
+// /**
+//  * Put all challenge data to new system
+//  *
+//  * @param {Object} challenges data
+//  * @param {String} errFilename error filename
+//  */
+// async function save (challenges) {
+//   await Promise.all(challenges.map(c => saveItem(c, process.env.IS_RETRYING)))
+// }
 
-/**
- * Update all challenge data to new system
- *
- * @param {Object} challenges data
- */
-async function update (challenges) {
-  await Promise.all(challenges.map(c => updateItem(c, process.env.IS_RETRYING)))
-}
+// /**
+//  * Update all challenge data to new system
+//  *
+//  * @param {Object} challenges data
+//  */
+// async function update (challenges) {
+//   await Promise.all(challenges.map(c => updateItem(c, process.env.IS_RETRYING)))
+// }
 
 /**
  * Get existing challenges from ES using legacyId
@@ -608,62 +200,31 @@ async function getChallengeFromES (legacyId) {
 }
 
 /**
- * Execute query
- *
- * @param {Object} conn informix connection instance
- * @param {String} sql sql
- * @param {Array} ids Array of challenge to fetch
- * @param {String} order addition sql for ordering
- */
-async function execQuery (sql, ids, order) {
-  // if (!connection) {
-  //   connection = await getInformixConnection()
-  // }
-  let filter = ''
-
-  if (!_.isUndefined(ids) && _.isArray(ids)) {
-    filter = `and p.project_id in (${ids.join()})`
-  }
-  if (_.isUndefined(order)) {
-    order = ''
-  }
-  // console.log(`Query - Executing: ${sql} ${filter} ${order}`)
-  // const result = connection.query(`${sql} ${filter} ${order}`)
-  return executeQueryAsync('tcs_catalog', `${sql} ${filter} ${order}`)
-}
-
-/**
  * Put challenge type data to new system
  *
  * @param {Object} challengeType new challenge type data
- * @param {Boolean} retrying if user is retrying
  */
-function saveChallengeType (challengeType, retrying) {
-  return new Promise((resolve) => {
-    const newChallengeType = new ChallengeType(challengeType)
-    newChallengeType.save(async (err) => {
-      if (err) {
-        logger.debug('fail ' + util.inspect(err))
-        errorService.put({ challengeType: challengeType.name, type: 'dynamodb', message: err.message })
-      } else {
-        // logger.debug('success ' + challengeType.name)
-        if (retrying) {
-          errorService.remove({ challengeType: challengeType.name })
-        }
-        try {
-          await getESClient().create({
-            index: config.get('ES.CHALLENGE_TYPE_ES_INDEX'),
-            type: config.get('ES.CHALLENGE_TYPE_ES_TYPE'),
-            refresh: config.get('ES.ES_REFRESH'),
-            id: challengeType.id,
-            body: challengeType
-          })
-        } catch (err) {
-          errorService.put({ challengeType: challengeType.name, type: 'es', message: err.message })
-        }
+async function saveChallengeType (challengeType) {
+  const newChallengeType = new ChallengeType(challengeType)
+  await newChallengeType.save(async (err) => {
+    if (err) {
+      logger.debug('saveChallengeType fail ' + util.inspect(err))
+      // errorService.put({ challengeType: challengeType.name, type: 'dynamodb', message: err.message })
+    } else {
+      // logger.debug('success ' + challengeType.name)
+      try {
+        await getESClient().create({
+          index: config.get('ES.CHALLENGE_TYPE_ES_INDEX'),
+          type: config.get('ES.CHALLENGE_TYPE_ES_TYPE'),
+          refresh: config.get('ES.ES_REFRESH'),
+          id: challengeType.id,
+          body: challengeType
+        })
+      } catch (err) {
+        logger.error('Challenge ES Write Fail ' + JSON.stringify(err.message))
+        // errorService.put({ challengeType: challengeType.name, type: 'es', message: err.message })
       }
-      resolve(challengeType)
-    })
+    }
   })
 }
 
@@ -674,7 +235,7 @@ function saveChallengeType (challengeType, retrying) {
  * @returns {undefined}
  */
 async function saveChallengeTypes (challengeTypes) {
-  await Promise.all(challengeTypes.map(ct => saveChallengeType(ct, process.env.IS_RETRYING)))
+  await Promise.all(challengeTypes.map(ct => saveChallengeType(ct)))
 }
 
 /**
@@ -770,25 +331,28 @@ async function getChallengeTypesFromDynamo () {
 /**
  * Get challenge from informix
  *
- * @param {Object} conn informix connection instance
- * @param {Array} ids Array of challenge to fetch
- * @param {Number} skip Number ro row to be skipped
- * @param {Number} offset Number of row to fetch
  */
-async function getChallenges (ids, skip, offset, filter) {
-  const challenges = await getChallengesFromIfx(ids, skip, offset, filter)
-  if (!_.isArray(challenges) || challenges.length < 1) {
-    return { finish: true, challenges: [] }
-  }
+async function migrateChallenge (legacyId) {
+  // logger.warn(`Start Getting Challenge Data ${legacyId}`)
+  const challenges = await challengeInformixService.getChallengesFromIfx({ id: legacyId })
 
-  const challengeIds = _.map(challenges, 'id')
-  // logger.debug('Challenge IDs to fetch: ' + challengeIds)
+  const tasks = [
+    challengeInformixService.getPrizeFromIfx,
+    challengeInformixService.getTechnologyFromIfx,
+    challengeInformixService.getPlatformFromIfx,
+    challengeInformixService.getGroupFromIfx,
+    challengeInformixService.getWinnerFromIfx,
+    challengeInformixService.getPhaseFromIfx,
+    challengeInformixService.getMetadataFromIfx,
+    challengeInformixService.getTermsFromIfx,
+    challengeInformixService.getChallengeSubmissions,
+    challengeInformixService.getChallengeRegistrants,
+    challengeInformixService.getScorecardInformationFromIfx,
+    challengeInformixService.getEventMetadataFromIfx
+  ]
 
-  const tasks = [getPrizeFromIfx, getTechnologyFromIfx, getPlatformFromIfx,
-    getGroupFromIfx, getWinnerFromIfx, getPhaseFromIfx, getMetadataFromIfx, getTermsFromIfx,
-    getChallengeSubmissions, getChallengeRegistrants, getScorecardInformationFromIfx, getEventMetadataFromIfx]
-
-  const queryResults = await Promise.all(tasks.map(t => t(challengeIds)))
+  const queryResults = await Promise.all(tasks.map(t => t({ id: legacyId })))
+  // logger.warn(`End Getting Challenge Data ${legacyId}`)
   // construct challenge
   const allPrizes = queryResults[0]
   const allTechnologies = queryResults[1]
@@ -802,7 +366,6 @@ async function getChallenges (ids, skip, offset, filter) {
   const allRegistrants = queryResults[9]
   const allScorecards = queryResults[10]
   const allEvents = queryResults[11]
-  const results = []
 
   // get challenge types from dynamodb
   if (!challengeTypeMapping) {
@@ -819,186 +382,183 @@ async function getChallenges (ids, skip, offset, filter) {
   const allGroupUUIDs = await convertGroupIdsToV5UUIDs(allGroupsOldIds)
   // console.log('Completed Groups Array', allGroupUUIDs)
 
-  // TODO: Skip already migrated challenges
-  for (const c of challenges) {
-    // Trim properties that are used as a lookup
-    _.each(['track', 'review_type', 'status'], (key) => {
-      c[key] = _.trim(c[key])
-    })
-    c.track = _.trim(c.track)
-    logger.info(`Migrating Challenge ${c.id} Created Date ${new Date(Date.parse(c.created))}`)
-    let detailRequirement = ''
-    if (c.type_id === 37) {
-      detailRequirement = c.marathonmatch_detail_requirements || ''
-    } else if (c.track === 'DESIGN') {
-      detailRequirement = c.studio_detail_requirements || ''
-    } else {
-      detailRequirement = c.software_detail_requirements || ''
-    }
+  const challenge = challenges[0] // TODO maybe remove this
+  // for (const challenge of challenges) {
+  logger.info(`Migrating Challenge ${challenge.id} - Last Modified Date ${new Date(Date.parse(challenge.updated))}`)
+  _.each(['track', 'review_type', 'status'], (key) => {
+    challenge[key] = _.trim(challenge[key])
+  })
+  challenge.track = _.trim(challenge.track)
 
-    if (c.final_submission_guidelines && c.final_submission_guidelines.trim() !== '') {
-      detailRequirement += '<br /><br /><h2>Final Submission Guidelines</h2>' + c.final_submission_guidelines
-    }
-
-    let connectProjectId = null
-    if (c.project_id) {
-      // can't query v5 api for "undefined", so catch it here
-      connectProjectId = _.get((await getProjectFromV5(c.project_id)), 'id', null)
-    } else {
-      logger.warn(`Project has no directProjectId: ${c.id}`)
-    }
-
-    const newChallenge = {
-      id: uuid(),
-      legacyId: c.id,
-      typeId: challengeTypeMapping[c.type_id],
-      legacy: {
-        track: c.track,
-        forumId: c.forum_id,
-        confidentialityType: c.confidentiality_type,
-        directProjectId: c.project_id,
-        informixModified: new Date(Date.parse(c.updated)),
-        reviewType: c.review_type || 'COMMUNITY' // TODO: fix this
-      },
-      name: c.name,
-      description: detailRequirement && detailRequirement !== '' ? detailRequirement : 'N/A',
-      descriptionFormat: 'HTML',
-      projectId: connectProjectId,
-      status: c.status,
-      created: new Date(Date.parse(c.created)),
-      createdBy: c.created_by,
-      updated: new Date(Date.parse(c.updated)),
-      updateBy: c.updated_by,
-      timelineTemplateId: _.get(challengeTimelineMapping, `[${challengeTypeMapping[c.type_id]}].id`, 'N/A'), // TODO: fix this
-      phases: [],
-      terms: [],
-      startDate: new Date(),
-      numOfSubmissions: _.get(allSubmissions, 'length', 0),
-      numOfRegistrants: _.get(allRegistrants, 'length', 0)
-    }
-
-    const scorecard = _.find(allScorecards, s => s.legacyId === c.legacyId)
-    if (scorecard) {
-      if (scorecard.screeningscorecardid) newChallenge.legacy.screeningScorecardId = scorecard.screeningscorecardid
-      if (scorecard.reviewscorecardid) newChallenge.legacy.reviewScorecardId = scorecard.reviewscorecardid
-    }
-
-    const prizeSets = [_.assign({ type: 'Challenge Prize', description: 'Challenge Prize' },
-      {
-        prizes: _.map(_.filter(allPrizes, p => p.challenge_id === c.id),
-          p => _.omit(p, ['challenge_id']))
-      }
-    )]
-    const tags = _.concat(_.map(_.filter(allTechnologies, t => t.challenge_id === c.id), 'name'),
-      _.map(_.filter(allPlatforms, p => p.challenge_id === c.id), 'name')
-    )
-
-    const groups = _.map(_.filter((allGroupUUIDs), g => (g.group_id && g.challenge_id === c.id)), g => String(g.group_uuid))
-    if (groups.length > 0) logger.debug(`Groups for Challenge ${JSON.stringify(groups)}`)
-    const winners = _.map(_.filter(allWinners, w => w.challenge_id === c.id), w => {
-      return {
-        userId: w.userid,
-        handle: w.handle,
-        placement: w.placement
-      }
-    })
-
-    // get phases belong to this challenge
-    let phases = _.filter(allPhases, (p) => {
-      return p.challenge_id === c.id
-    })
-
-    // get terms belong to this challenge
-    const terms = _.filter(allTerms, (t) => {
-      return t.challenge_id === c.id
-    }).map((t) => {
-      return _.get(_.find(allV5Terms, v5Term => _.toString(v5Term.legacyId) === _.toString(t.terms_of_use_id)) || { id: t.terms_of_use_id }, 'id')
-    })
-    // get the registrationPhase of this challenge
-    const registrationPhase = _.filter(phases, (p) => {
-      return p.type_id === 1
-    })[0]
-    // new challenge startDate is registrationPhase scheduled_start_time
-    if (registrationPhase) {
-      newChallenge.startDate = new Date(Date.parse(registrationPhase.scheduled_start_time))
-    }
-    let challengeEndDate = newChallenge.startDate
-    phases = phases.map((phase) => {
-      // console.log(phase.scheduled_start_time, Date.parse(phase.scheduled_start_time), phase.duration, (phase.duration / 1000 / 60 / 60))
-      challengeEndDate = new Date(Date.parse(phase.scheduled_start_time) + (phase.duration))
-      phase.scheduledEndDate = new Date(Date.parse(phase.scheduled_start_time) + (phase.duration))
-      phase.id = uuid()
-      phase.name = config.get('PHASE_NAME_MAPPINGS')[phase.type_id].name
-      phase.phaseId = config.get('PHASE_NAME_MAPPINGS')[phase.type_id].phaseId
-      phase.duration = _.toInteger(Number(phase.duration) / 1000) // legacy uses milliseconds. V5 uses seconds
-      phase = _.mapKeys(phase, (v, k) => {
-        switch (k) {
-          case 'scheduled_start_time' :
-            return 'scheduledStartDate'
-          case 'actual_start_time' :
-            return 'actualStartDate'
-          case 'actual_end_time':
-            return 'actualEndDate'
-          default:
-            return k
-        }
-      })
-      newChallenge.endDate = challengeEndDate
-
-      if (phase.phase_status === 'Open') {
-        phase.isOpen = true
-      } else {
-        phase.isOpen = false
-      }
-
-      const keys = ['challenge_id', 'type_id', 'phase_status']
-      for (const key of keys) {
-        delete phase[key]
-      }
-      return phase
-    })
-
-    // logger.debug(`Challenge Start & End Date ${newChallenge.startDate} ${newChallenge.endDate}`)
-
-    const oneMetadata = _.omit(_.filter(allMetadata, s => s.challenge_id === c.id)[0], ['challenge_id'])
-
-    const metadata = []
-    Object.entries(oneMetadata).forEach(([key, value]) => {
-      let metadataValue
-      if (key === 'filetypes' && value.length <= 0) { return }; // skip empty filetypes arrays
-      if (!isNaN(parseFloat(value)) && isFinite(value)) {
-        metadataValue = +value
-      } else if (value === 'true' || value === 'false') {
-        metadataValue = value === 'true'
-      } else if (key === 'filetypes') {
-        metadataValue = value.split(',')
-      } else {
-        metadataValue = value
-      }
-      metadata.push({ type: _.camelCase(key), value: JSON.stringify(metadataValue) })
-    })
-
-    // console.log('All Events', allEvents)
-    const events = _.filter(allEvents, s => s.challenge_id === c.id)
-    if (events && events.length > 0) {
-      const eventArray = []
-      for (const event of events) {
-        eventArray.push({
-          id: event.id,
-          name: event.name,
-          key: event.key
-        })
-      }
-      metadata.push({ events: eventArray })
-    }
-
-    results.push(_.assign(newChallenge, { prizeSets, tags, groups, winners, phases, metadata, terms }))
+  let detailRequirement = ''
+  if (challenge.type_id === 37) {
+    detailRequirement = challenge.marathonmatch_detail_requirements || ''
+  } else if (challenge.track === 'DESIGN') {
+    detailRequirement = challenge.studio_detail_requirements || ''
+  } else {
+    detailRequirement = challenge.software_detail_requirements || ''
   }
 
-  return { challenges: results, skip: skip, finish: false }
+  if (challenge.final_submission_guidelines && challenge.final_submission_guidelines.trim() !== '') {
+    detailRequirement += '<br /><br /><h2>Final Submission Guidelines</h2>' + challenge.final_submission_guidelines
+  }
+
+  let connectProjectId = null
+  if (challenge.project_id) {
+    // can't query v5 api for "undefined", so catch it here
+    connectProjectId = _.get((await getProjectFromV5(challenge.project_id)), 'id', null)
+  } else {
+    logger.warn(`Project has no directProjectId: ${challenge.id}`)
+  }
+
+  const newChallenge = {
+    // id: uuid(), //this is removed from here and created in the save function
+    legacyId: challenge.id,
+    typeId: challengeTypeMapping[challenge.type_id],
+    legacy: {
+      track: challenge.track,
+      forumId: challenge.forum_id,
+      confidentialityType: challenge.confidentiality_type,
+      directProjectId: challenge.project_id,
+      informixModified: new Date(Date.parse(challenge.updated)),
+      reviewType: challenge.review_type || 'COMMUNITY' // TODO: fix this
+    },
+    name: challenge.name,
+    description: detailRequirement && detailRequirement !== '' ? detailRequirement : '',
+    descriptionFormat: 'HTML',
+    projectId: connectProjectId,
+    status: challenge.status,
+    created: new Date(Date.parse(challenge.created)),
+    createdBy: challenge.created_by,
+    updated: new Date(Date.parse(challenge.updated)),
+    updatedBy: challenge.updated_by,
+    timelineTemplateId: _.get(challengeTimelineMapping, `[${challengeTypeMapping[challenge.type_id]}].id`, null),
+    phases: [],
+    terms: [],
+    startDate: new Date(),
+    numOfSubmissions: _.get(allSubmissions, 'length', 0),
+    numOfRegistrants: _.get(allRegistrants, 'length', 0)
+  }
+
+  const scorecard = _.find(allScorecards, s => s.legacyId === challenge.legacyId)
+  if (scorecard) {
+    if (scorecard.screeningscorecardid) newChallenge.legacy.screeningScorecardId = scorecard.screeningscorecardid
+    if (scorecard.reviewscorecardid) newChallenge.legacy.reviewScorecardId = scorecard.reviewscorecardid
+  }
+
+  const prizeSets = [_.assign({ type: 'Challenge Prize', description: 'Challenge Prize' },
+    {
+      prizes: _.map(_.filter(allPrizes, p => p.challenge_id === challenge.id),
+        p => _.omit(p, ['challenge_id']))
+    }
+  )]
+  const tags = _.concat(_.map(_.filter(allTechnologies, t => t.challenge_id === challenge.id), 'name'),
+    _.map(_.filter(allPlatforms, p => p.challenge_id === challenge.id), 'name')
+  )
+
+  const groups = _.map(_.filter((allGroupUUIDs), g => (g.group_id && g.challenge_id === challenge.id)), g => String(g.group_uuid))
+  if (groups.length > 0) logger.debug(`Groups for Challenge ${JSON.stringify(groups)}`)
+  const winners = _.map(_.filter(allWinners, w => w.challenge_id === challenge.id), w => {
+    return {
+      userId: w.userid,
+      handle: w.handle,
+      placement: w.placement
+    }
+  })
+
+  // get phases belong to this challenge
+  let phases = _.filter(allPhases, (p) => {
+    return p.challenge_id === challenge.id
+  })
+
+  // get terms belong to this challenge
+  const terms = _.filter(allTerms, (t) => {
+    return t.challenge_id === challenge.id
+  }).map((t) => {
+    return _.get(_.find(allV5Terms, v5Term => _.toString(v5Term.legacyId) === _.toString(t.terms_of_use_id)) || { id: t.terms_of_use_id }, 'id')
+  })
+  // get the registrationPhase of this challenge
+  const registrationPhase = _.filter(phases, (p) => {
+    return p.type_id === 1
+  })[0]
+  // new challenge startDate is registrationPhase scheduled_start_time
+  if (registrationPhase) {
+    newChallenge.startDate = new Date(Date.parse(registrationPhase.scheduled_start_time))
+  }
+  let challengeEndDate = newChallenge.startDate
+  phases = phases.map((phase) => {
+    // console.log(phase.scheduled_start_time, Date.parse(phase.scheduled_start_time), phase.duration, (phase.duration / 1000 / 60 / 60))
+    challengeEndDate = new Date(Date.parse(phase.scheduled_start_time) + (phase.duration))
+    phase.scheduledEndDate = new Date(Date.parse(phase.scheduled_start_time) + (phase.duration))
+    phase.id = uuid()
+    phase.name = config.get('PHASE_NAME_MAPPINGS')[phase.type_id].name
+    phase.phaseId = config.get('PHASE_NAME_MAPPINGS')[phase.type_id].phaseId
+    phase.duration = _.toInteger(Number(phase.duration) / 1000) // legacy uses milliseconds. V5 uses seconds
+    phase = _.mapKeys(phase, (v, k) => {
+      switch (k) {
+        case 'scheduled_start_time' :
+          return 'scheduledStartDate'
+        case 'actual_start_time' :
+          return 'actualStartDate'
+        case 'actual_end_time':
+          return 'actualEndDate'
+        default:
+          return k
+      }
+    })
+    newChallenge.endDate = challengeEndDate
+
+    if (phase.phase_status === 'Open') {
+      phase.isOpen = true
+    } else {
+      phase.isOpen = false
+    }
+
+    const keys = ['challenge_id', 'type_id', 'phase_status']
+    for (const key of keys) {
+      delete phase[key]
+    }
+    return phase
+  })
+
+  // logger.debug(`Challenge Start & End Date ${newChallenge.startDate} ${newChallenge.endDate}`)
+
+  const oneMetadata = _.omit(_.filter(allMetadata, s => s.challenge_id === challenge.id)[0], ['challenge_id'])
+
+  const metadata = []
+  Object.entries(oneMetadata).forEach(([key, value]) => {
+    let metadataValue
+    if (key === 'filetypes' && value.length <= 0) { return }; // skip empty filetypes arrays
+    if (!isNaN(parseFloat(value)) && isFinite(value)) {
+      metadataValue = +value
+    } else if (value === 'true' || value === 'false') {
+      metadataValue = value === 'true'
+    } else if (key === 'filetypes') {
+      metadataValue = value.split(',')
+    } else {
+      metadataValue = value
+    }
+    metadata.push({ type: _.camelCase(key), value: JSON.stringify(metadataValue) })
+  })
+
+  const events = _.filter(allEvents, s => s.challenge_id === challenge.id)
+  if (events && events.length > 0) {
+    const eventArray = []
+    for (const event of events) {
+      eventArray.push({
+        id: event.id,
+        name: event.name,
+        key: event.key
+      })
+    }
+    metadata.push({ events: eventArray })
+  }
+
+  return save(_.assign(newChallenge, { prizeSets, tags, groups, winners, phases, metadata, terms }))
 }
 
 async function getAllV5Terms () {
+  logger.debug('Getting V5 Terms')
   const token = await helper.getM2MToken()
   let allTerms = []
   // get search is paginated, we need to get all pages' data
@@ -1049,18 +609,12 @@ async function convertGroupIdsToV5UUIDs (groupOldIdArray) {
 }
 
 module.exports = {
-  getChallenges,
   save,
-  update,
-  execQuery,
+  migrateChallenge,
   getChallengeFromES,
   getChallengesFromES,
   getChallengeTypes,
   saveChallengeTypes,
-  getMetadataFromIfx,
   createChallengeTimelineMapping,
-  getChallengeTypesFromDynamo,
-  getChallengesFromIfx,
-  getEventMetadataFromIfx,
-  getScorecardInformationFromIfx
+  getChallengeTypesFromDynamo
 }

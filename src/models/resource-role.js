@@ -20,6 +20,10 @@ const schema = new Schema({
     type: String,
     required: true
   },
+  legacyId: {
+    type: Number,
+    required: false
+  },
   isActive: {
     type: Boolean,
     required: true
