@@ -11,6 +11,7 @@ const m2m = m2mAuth(_.pick(config, ['AUTH0_URL', 'AUTH0_AUDIENCE', 'TOKEN_CACHE_
 
 // Elasticsearch client
 let esClient
+let v4esClient
 
 AWS.config.update({
   s3: config.AMAZON.S3_API_VERSION,
@@ -46,6 +47,37 @@ function getESClient () {
     })
   }
   return esClient
+}
+
+
+/**
+ * Get ES Client
+ * @return {Object} Elasticsearch Client Instance
+ */
+function getV4ESClient () {
+  if (v4esClient) {
+    return v4esClient
+  }
+  const esHost = config.get('V4_ES.HOST')
+  // AWS ES configuration is different from other providers
+  if (/.*amazonaws.*/.test(esHost)) {
+    v4esClient = elasticsearch.Client({
+      apiVersion: config.get('V4_ES.API_VERSION'),
+      hosts: esHost,
+      connectionClass: require('http-aws-es'), // eslint-disable-line global-require
+      amazonES: {
+        region: config.get('AMAZON.AWS_REGION'),
+        credentials: new AWS.EnvironmentCredentials('AWS')
+      }
+    })
+  } else {
+    v4esClient = new elasticsearch.Client({
+      apiVersion: config.get('V4_ES.API_VERSION'),
+      hosts: esHost
+    })
+  }
+  // console.log(v4esClient)
+  return v4esClient
 }
 
 /**
@@ -103,6 +135,7 @@ async function scanDynamoModelByProperty (model, property, value) {
 module.exports = {
   wrapRouter,
   getESClient,
+  getV4ESClient,
   scanDynamoModelByProperty,
   generateInformxDate,
   getM2MToken

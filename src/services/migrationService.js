@@ -20,7 +20,13 @@ async function processChallenge (legacyId, forceMigrate = false) {
     }
   }
 
-  const v5ChallengeId = await challengeService.migrateChallenge(legacyId)
+  let v5ChallengeId = null
+  try {
+    v5ChallengeId = await challengeService.migrateChallenge(legacyId)
+  } catch (e) {
+    console.log(e)
+  }
+
   if (v5ChallengeId) {
     return resourceService.migrateResourcesForChallenge(legacyId, v5ChallengeId)
   } else {

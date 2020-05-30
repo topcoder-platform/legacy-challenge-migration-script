@@ -2,30 +2,24 @@ const config = require('config')
 const logger = require('./util/logger')
 const challengeMigrationHistoryService = require('./services/challengeMigrationHistoryService')
 const challengeMigrationStatusService = require('./services/challengeMigrationStatusService')
-const challengeInformixService = require('./services/challengeInformixService')
+const challengeService = require('./services/challengeService')
 const migrationService = require('./services/migrationService')
 
 async function migrateAll (req, res) {
   await migrationService.processChallengeTypes()
-  await migrationService.processChallengeTimelineTemplates()
+  // await migrationService.processChallengeTimelineTemplates()
   await migrationService.processResourceRoles()
 
-  const startDate = req.query.startDate || await challengeMigrationHistoryService.getLatestDate() || config.CREATED_DATE_BEGIN
+  const startDate = req.query.startDate || await challengeMigrationHistoryService.getLatestDate() || config.CREATED_DATE_BEGIN || null
   const endDate = req.query.endDate || null
 
-  // logger.info('Migrate All')
-
-  const challengeIdFilter = {}
-  if (startDate) challengeIdFilter.modifiedDateStart = startDate
-  if (endDate) challengeIdFilter.modifiedDateEnd = endDate
-
-  logger.debug(`Migration Filter ${JSON.stringify(challengeIdFilter)}`)
+  logger.debug(`Migration Filter ${startDate} ${endDate}`)
   const perPage = config.BATCH_SIZE || 0
   let currentRow = 0
   let running = true
   while (running) {
     // get all challenge ids that meet criterfia
-    const challengeIds = await challengeInformixService.getChallengeIdsFromIfx(challengeIdFilter, currentRow, perPage)
+    const challengeIds = await challengeService.getChallengeIDsFromV4(startDate, endDate, perPage, currentRow)
     if (challengeIds.length <= 0) {
       running = false
       break
@@ -40,9 +34,9 @@ async function migrateAll (req, res) {
 }
 
 async function migrateOne (req, res) {
-  await migrationService.processChallengeTypes()
-  await migrationService.processChallengeTimelineTemplates()
-  await migrationService.processResourceRoles()
+  // await migrationService.processChallengeTypes()
+  // await migrationService.processChallengeTimelineTemplates()
+  // await migrationService.processResourceRoles()
 
   const legacyId = req.params.challengeId
   const forceMigrate = req.query.force === 'true'

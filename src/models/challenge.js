@@ -30,7 +30,7 @@ const schema = new Schema({
   },
   description: {
     type: String,
-    required: true
+    required: false
   },
   descriptionFormat: {
     type: String,
@@ -47,7 +47,7 @@ const schema = new Schema({
   },
   timelineTemplateId: {
     type: String,
-    required: true
+    required: false
   },
   phases: {
     type: Array,
@@ -82,10 +82,6 @@ const schema = new Schema({
     required: false
   },
   groups: {
-    type: Array,
-    required: false
-  },
-  gitRepoURLs: {
     type: Array,
     required: false
   },

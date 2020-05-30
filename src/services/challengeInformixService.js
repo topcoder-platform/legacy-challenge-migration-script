@@ -102,6 +102,27 @@ async function getChallengeLastModifiedDateFromIfx (legacyId) {
   return result[0].updated
 }
 
+function getChallengeInfo (legacyId) {
+  const sql = `
+      SELECT  LIMIT 1
+      p.project_id AS id,
+      u2.handle as created_by,
+      u3.handle as updated_by,
+      pcl.project_category_id AS type_id
+      FROM
+      project p
+      INNER JOIN project_category_lu pcl ON pcl.project_category_id = p.project_category_id
+      , user u2
+      , user u3
+      WHERE 1=1
+        AND p.project_id = ${legacyId}
+        AND p.create_user = u2.user_id
+        AND p.modify_user = u3.user_id
+  `
+  // console.log('Query', sql)
+  return execQuery(sql)
+}
+
 /**
  * Get challenge from informix
  *
@@ -194,7 +215,7 @@ function getPrizeFromIfx (filter) {
           when prize.place = 1 then 'First Placement'
           when prize.place = 2 then 'Second Placement'
           when prize.place = 3 then 'Third Placement'
-          when prize.place = 4 then 'Forth Placement'
+          when prize.place = 4 then 'Fourth Placement'
           when prize.place = 5 then 'Fifth Placement'
       end as type,
       prize.prize_amount as value,
@@ -584,6 +605,7 @@ async function execQuery (sql) {
 }
 
 module.exports = {
+  getChallengeInfo,
   getMetadataFromIfx,
   getChallengesFromIfx,
   getChallengeIdsFromIfx,

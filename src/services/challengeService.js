@@ -3,10 +3,10 @@ const uuid = require('uuid/v4')
 const config = require('config')
 const request = require('superagent')
 const _ = require('lodash')
-const { Challenge, ChallengeType } = require('../models')
+const { Challenge, ChallengeType, ChallengeTypeTimelineTemplate } = require('../models')
 const logger = require('../util/logger')
 const helper = require('../util/helper')
-const { getESClient } = require('../util/helper')
+const { getESClient, getV4ESClient } = require('../util/helper')
 const util = require('util')
 // const getErrorService = require('./errorService')
 // const errorService = getErrorService()
@@ -15,7 +15,6 @@ const challengeInformixService = require('./challengeInformixService')
 
 let allV5Terms
 let challengeTypeMapping
-
 let challengeTimelineMapping
 
 const groupsUUIDCache = new HashMap()
@@ -36,7 +35,14 @@ async function createChallenge (challenge) {
   const newChallenge = new Challenge(_.omit(challenge, ['numOfSubmissions', 'numOfRegistrants']))
   // logger.warn(`saving challenge ${challenge.id}`)
   newChallenge.id = uuid()
-  const dynamoSaved = await newChallenge.save()
+  let dynamoSaved = null
+  try {
+    dynamoSaved = await newChallenge.save()
+  } catch (e) {
+    logger.warn(`Challenge Dynamo Write Fail ${JSON.stringify(newChallenge)}`)
+    logger.error(`${JSON.stringify(e)}`)
+  }
+
   if (dynamoSaved) {
     try {
       await getESClient().create({
@@ -51,10 +57,8 @@ async function createChallenge (challenge) {
       })
       return newChallenge.id
     } catch (err) {
-      logger.error('createChallenge ES Write Fail')
+      logger.error(`createChallenge ES Write Fail: ${JSON.stringify(newChallenge)}`)
     }
-  } else {
-    logger.error('Challenge Dynamo Write Fail ')
   }
 }
 
@@ -283,13 +287,13 @@ async function getChallengeTypes () {
  * @param {String} typeId challenge type id
  * @returns {Object} the challenge timeline
  */
-async function getChallengeTimeline (typeId) {
-  const url = `${config.CHALLENGE_TIMELINE_API_URL}?typeId=${typeId}`
-  const res = await request.get(url)
-  const timelineTemplate = _.get(res, 'body[0]', 'N/A')
+// async function getChallengeTimeline (typeId) {
+//   const url = `${config.CHALLENGE_TIMELINE_API_URL}?typeId=${typeId}`
+//   const res = await request.get(url)
+//   const timelineTemplate = _.get(res, 'body[0]', 'N/A')
 
-  return timelineTemplate
-}
+//   return timelineTemplate
+// }
 
 /**
  * Get project from v5 API.
@@ -308,14 +312,17 @@ async function getProjectFromV5 (directProjectId) {
  * Create challenge timeline mapping from challenge types.
  * @param {Array} typeIds challenge types id
  */
-async function createChallengeTimelineMapping (typeIds) {
+function createChallengeTimelineMapping (challengeTimelines, types) {
   const mapping = {}
 
-  for (const typeId of typeIds) {
-    mapping[typeId] = await getChallengeTimeline(typeId)
+  for (const type of types) {
+    const template = _.find(challengeTimelines, { typeId: type.id })
+    if (template && type.legacyId) {
+      mapping[type.legacyId] = template.timelineTemplateId
+      // console.log('Timeline Found', type.id, template.timelineTemplateId)
+    }
   }
-
-  challengeTimelineMapping = mapping
+  return mapping
 }
 
 /**
@@ -329,52 +336,160 @@ async function getChallengeTypesFromDynamo () {
 }
 
 /**
+ * Get challenge timelines from dynamo DB.
+ *
+ * @returns {Array} the challenge timelines
+ */
+async function getChallengeTimelinesFromDynamo () {
+  const result = await ChallengeTypeTimelineTemplate.scan().exec()
+  // console.log('getChallengeTimelinesFromDynamo Result', result)
+  return result
+}
+
+async function getChallengeIDsFromV4 (startDate, endDate, perPage = 1, offset = 0) {
+
+  const range = {}
+  if (startDate) range.updatedAt = { gte: startDate }
+  if (endDate) range.updatedAt = { lte: endDate }
+
+  const esQuery = {
+    index: 'challengeslisting',
+    type: 'challenges',
+    size: perPage,
+    from: perPage * offset,
+    _source: ['id'],
+    body: {
+      query: {
+        range
+      }
+    }
+  }
+  // Search with constructed query
+  let docs
+  // console.log('es query', JSON.stringify(esQuery))
+  try {
+    docs = await getV4ESClient().search(esQuery)
+  } catch (e) {
+    // Catch error when the ES is fresh and has no data
+    logger.error(e)
+    docs = {
+      hits: {
+        total: 0,
+        hits: []
+      }
+    }
+  }
+  // Extract data from hits
+  return _.map(docs.hits.hits, hit => hit._source.id)
+}
+
+async function getChallengeListingFromV4ES (legacyId) {
+  const esQuery = {
+    index: 'challengeslisting',
+    type: 'challenges',
+    size: 1,
+    from: 0, // Es Index starts from 0
+    // id: legacyId
+    body: {
+      query: {
+        match: {
+          id: legacyId
+        }
+      }
+    }
+  }
+  // Search with constructed query
+  let docs
+  // console.log('es query', JSON.stringify(esQuery))
+  try {
+    docs = await getV4ESClient().search(esQuery)
+  } catch (e) {
+    // Catch error when the ES is fresh and has no data
+    logger.error(e)
+    docs = {
+      hits: {
+        total: 0,
+        hits: []
+      }
+    }
+  }
+  // Extract data from hits
+  return docs.hits.hits[0]._source
+}
+
+async function getChallengeDetailFromV4ES (legacyId) {
+  const esQuery = {
+    index: 'challengesdetail',
+    type: 'challenges',
+    size: 1,
+    from: 0, // Es Index starts from 0
+    // id: legacyId
+    body: {
+      query: {
+        match: {
+          id: legacyId
+        }
+      }
+    }
+  }
+  // Search with constructed query
+  let docs
+  // console.log('es query', JSON.stringify(esQuery))
+  try {
+    docs = await getV4ESClient().search(esQuery)
+  } catch (e) {
+    // Catch error when the ES is fresh and has no data
+    logger.error(e)
+    docs = {
+      hits: {
+        total: 0,
+        hits: []
+      }
+    }
+  }
+  // Extract data from hits
+  if (docs.hits.hits && docs.hits.hits[0]) {
+    return docs.hits.hits[0]._source || {}
+  }
+  return {}
+}
+/**
  * Get challenge from informix
  *
  */
 async function migrateChallenge (legacyId) {
   // logger.warn(`Start Getting Challenge Data ${legacyId}`)
-  const challenges = await challengeInformixService.getChallengesFromIfx({ id: legacyId })
+  const challengeListing = await getChallengeListingFromV4ES(legacyId)
+  const challengeDetails = await getChallengeDetailFromV4ES(legacyId)
+  // console.log(challengeListing)
+  // console.log(challengeDetails)
 
-  const tasks = [
-    challengeInformixService.getPrizeFromIfx,
-    challengeInformixService.getTechnologyFromIfx,
-    challengeInformixService.getPlatformFromIfx,
-    challengeInformixService.getGroupFromIfx,
-    challengeInformixService.getWinnerFromIfx,
-    challengeInformixService.getPhaseFromIfx,
-    challengeInformixService.getMetadataFromIfx,
-    challengeInformixService.getTermsFromIfx,
-    challengeInformixService.getChallengeSubmissions,
-    challengeInformixService.getChallengeRegistrants,
-    challengeInformixService.getScorecardInformationFromIfx,
-    challengeInformixService.getEventMetadataFromIfx
-  ]
-
-  const queryResults = await Promise.all(tasks.map(t => t({ id: legacyId })))
-  // logger.warn(`End Getting Challenge Data ${legacyId}`)
   // construct challenge
-  const allPrizes = queryResults[0]
-  const allTechnologies = queryResults[1]
-  const allPlatforms = queryResults[2]
-  const allGroups = queryResults[3]
-  const allWinners = queryResults[4]
-  const allPhases = queryResults[5]
-  const allMetadata = queryResults[6]
-  const allTerms = queryResults[7]
-  const allSubmissions = queryResults[8]
-  const allRegistrants = queryResults[9]
-  const allScorecards = queryResults[10]
-  const allEvents = queryResults[11]
+  // const allPrizes = challengeListing.prize
+  // const allTechnologies = challengeListing.technologies
+  // const allPlatforms = challengeListing.platforms
+  const allGroups = challengeListing.groupIds
+  // const allWinners = challengeListing.winners
+  // const allPhases = challengeListing.phases
+  // const allMetadata = queryResults[6]
+  // const allTerms = challengeDetails.terms
+  // const allSubmissions = challengeListing.numberOfSubmissions
+  // const allRegistrants = challengeListing.numberOfRegistrants
+  // const allScorecards = queryResults[10]
+  // const allEvents = challengeDetails.events
 
   // get challenge types from dynamodb
   if (!challengeTypeMapping) {
     const challengeTypes = await getChallengeTypesFromDynamo()
     challengeTypeMapping = createChallengeTypeMapping(challengeTypes)
+    const challengeTimelines = await getChallengeTimelinesFromDynamo()
+    challengeTimelineMapping = createChallengeTimelineMapping(challengeTimelines, challengeTypes)
   }
+  // console.log('Challenge Type Mapping', challengeTypeMapping)
+  // console.log('Challenge Timeline Mapping', challengeTimelineMapping)
 
   if (!allV5Terms) {
-    allV5Terms = (await getAllV5Terms()).map(t => _.omit(t, ['text']))
+    allV5Terms = await getAllV5Terms()
   }
 
   const allGroupsOldIds = _.filter((allGroups), g => (g.group_id))
@@ -382,177 +497,138 @@ async function migrateChallenge (legacyId) {
   const allGroupUUIDs = await convertGroupIdsToV5UUIDs(allGroupsOldIds)
   // console.log('Completed Groups Array', allGroupUUIDs)
 
-  const challenge = challenges[0] // TODO maybe remove this
   // for (const challenge of challenges) {
-  logger.info(`Migrating Challenge ${challenge.id} - Last Modified Date ${new Date(Date.parse(challenge.updated))}`)
-  _.each(['track', 'review_type', 'status'], (key) => {
-    challenge[key] = _.trim(challenge[key])
-  })
-  challenge.track = _.trim(challenge.track)
+  logger.info(`Migrating Challenge ${challengeListing.id} - Last Modified Date ${new Date(Date.parse(challengeListing.updatedAt))}`)
 
-  let detailRequirement = ''
-  if (challenge.type_id === 37) {
-    detailRequirement = challenge.marathonmatch_detail_requirements || ''
-  } else if (challenge.track === 'DESIGN') {
-    detailRequirement = challenge.studio_detail_requirements || ''
-  } else {
-    detailRequirement = challenge.software_detail_requirements || ''
-  }
-
-  if (challenge.final_submission_guidelines && challenge.final_submission_guidelines.trim() !== '') {
-    detailRequirement += '<br /><br /><h2>Final Submission Guidelines</h2>' + challenge.final_submission_guidelines
+  let detailRequirement = challengeDetails.detailRequirements || ''
+  if (challengeDetails.finalSubmissionGuidelines && challengeDetails.finalSubmissionGuidelines.trim() !== '') {
+    detailRequirement += '<br /><br /><h2>Final Submission Guidelines</h2>' + challengeDetails.finalSubmissionGuidelines
   }
 
   let connectProjectId = null
-  if (challenge.project_id) {
+  if (challengeListing.projectId) {
     // can't query v5 api for "undefined", so catch it here
-    connectProjectId = _.get((await getProjectFromV5(challenge.project_id)), 'id', null)
+    connectProjectId = _.get((await getProjectFromV5(challengeListing.projectId)), 'id', null)
   } else {
-    logger.warn(`Project has no directProjectId: ${challenge.id}`)
+    logger.warn(`Project has no directProjectId: ${challengeListing.id}`)
   }
 
+  const [challengeInfoFromIfx] = await challengeInformixService.getChallengeInfo(legacyId)
   const newChallenge = {
     // id: uuid(), //this is removed from here and created in the save function
-    legacyId: challenge.id,
-    typeId: challengeTypeMapping[challenge.type_id],
+    legacyId: challengeListing.id,
+    typeId: challengeTypeMapping[challengeInfoFromIfx.type_id],
     legacy: {
-      track: challenge.track,
-      forumId: challenge.forum_id,
-      confidentialityType: challenge.confidentiality_type,
-      directProjectId: challenge.project_id,
-      informixModified: new Date(Date.parse(challenge.updated)),
-      reviewType: challenge.review_type || 'COMMUNITY' // TODO: fix this
+      track: challengeListing.track,
+      forumId: challengeListing.forumId,
+      // confidentialityType: challenge.confidentiality_type,
+      directProjectId: challengeListing.projectId,
+      informixModified: new Date(Date.parse(challengeListing.updatedAt)),
+      reviewType: challengeListing.reviewType || 'COMMUNITY',
+      screeningScorecardId: challengeListing.screeningScorecardId,
+      reviewScorecardId: challengeListing.reviewScorecardId
     },
-    name: challenge.name,
-    description: detailRequirement && detailRequirement !== '' ? detailRequirement : '',
+    name: challengeListing.challengeTitle,
+    description: detailRequirement || '',
     descriptionFormat: 'HTML',
     projectId: connectProjectId,
-    status: challenge.status,
-    created: new Date(Date.parse(challenge.created)),
-    createdBy: challenge.created_by,
-    updated: new Date(Date.parse(challenge.updated)),
-    updatedBy: challenge.updated_by,
-    timelineTemplateId: _.get(challengeTimelineMapping, `[${challengeTypeMapping[challenge.type_id]}].id`, null),
+    status: challengeListing.status,
+    created: new Date(Date.parse(challengeListing.createdAt)),
+    createdBy: challengeInfoFromIfx.created_by,
+    updated: new Date(Date.parse(challengeListing.updatedAt)),
+    updatedBy: challengeInfoFromIfx.updated_by,
+    timelineTemplateId: _.get(challengeTimelineMapping, challengeInfoFromIfx.type_id, null), // _.get(challengeTimelineMapping, `[${challengeTypeMapping[challengeInfoFromIfx.type_id]}].id`, null),
     phases: [],
     terms: [],
     startDate: new Date(),
-    numOfSubmissions: _.get(allSubmissions, 'length', 0),
-    numOfRegistrants: _.get(allRegistrants, 'length', 0)
+    numOfSubmissions: challengeListing.numberOfSubmissions,
+    numOfRegistrants: challengeListing.numberOfRegistrants
   }
 
-  const scorecard = _.find(allScorecards, s => s.legacyId === challenge.legacyId)
-  if (scorecard) {
-    if (scorecard.screeningscorecardid) newChallenge.legacy.screeningScorecardId = scorecard.screeningscorecardid
-    if (scorecard.reviewscorecardid) newChallenge.legacy.reviewScorecardId = scorecard.reviewscorecardid
-  }
+  // console.log('CHALLENGE DESCRIPTION', newChallenge.description)
 
-  const prizeSets = [_.assign({ type: 'Challenge Prize', description: 'Challenge Prize' },
-    {
-      prizes: _.map(_.filter(allPrizes, p => p.challenge_id === challenge.id),
-        p => _.omit(p, ['challenge_id']))
-    }
-  )]
-  const tags = _.concat(_.map(_.filter(allTechnologies, t => t.challenge_id === challenge.id), 'name'),
-    _.map(_.filter(allPlatforms, p => p.challenge_id === challenge.id), 'name')
-  )
+  const prizeSet = { type: 'Challenge Prize', description: 'Challenge Prize' }
+  prizeSet.prizes = _.map(challengeListing.prize, e => ({ value: e, type: 'USD' }))
+  const prizeSets = [prizeSet]
 
-  const groups = _.map(_.filter((allGroupUUIDs), g => (g.group_id && g.challenge_id === challenge.id)), g => String(g.group_uuid))
+  const tags = _.compact(_.concat(challengeListing.technologies, challengeListing.platforms))
+
+  const groups = allGroupUUIDs
   if (groups.length > 0) logger.debug(`Groups for Challenge ${JSON.stringify(groups)}`)
-  const winners = _.map(_.filter(allWinners, w => w.challenge_id === challenge.id), w => {
-    return {
-      userId: w.userid,
-      handle: w.handle,
-      placement: w.placement
-    }
-  })
 
-  // get phases belong to this challenge
-  let phases = _.filter(allPhases, (p) => {
-    return p.challenge_id === challenge.id
+  const winners = _.map(challengeListing.winners, w => {
+    return {
+      // userId: w.submitter, // TODO - look up handle?
+      handle: w.submitter,
+      placement: w.rank
+    }
   })
 
   // get terms belong to this challenge
-  const terms = _.filter(allTerms, (t) => {
-    return t.challenge_id === challenge.id
-  }).map((t) => {
-    return _.get(_.find(allV5Terms, v5Term => _.toString(v5Term.legacyId) === _.toString(t.terms_of_use_id)) || { id: t.terms_of_use_id }, 'id')
-  })
-  // get the registrationPhase of this challenge
-  const registrationPhase = _.filter(phases, (p) => {
-    return p.type_id === 1
-  })[0]
-  // new challenge startDate is registrationPhase scheduled_start_time
-  if (registrationPhase) {
-    newChallenge.startDate = new Date(Date.parse(registrationPhase.scheduled_start_time))
-  }
-  let challengeEndDate = newChallenge.startDate
-  phases = phases.map((phase) => {
-    // console.log(phase.scheduled_start_time, Date.parse(phase.scheduled_start_time), phase.duration, (phase.duration / 1000 / 60 / 60))
-    challengeEndDate = new Date(Date.parse(phase.scheduled_start_time) + (phase.duration))
-    phase.scheduledEndDate = new Date(Date.parse(phase.scheduled_start_time) + (phase.duration))
-    phase.id = uuid()
-    phase.name = config.get('PHASE_NAME_MAPPINGS')[phase.type_id].name
-    phase.phaseId = config.get('PHASE_NAME_MAPPINGS')[phase.type_id].phaseId
-    phase.duration = _.toInteger(Number(phase.duration) / 1000) // legacy uses milliseconds. V5 uses seconds
-    phase = _.mapKeys(phase, (v, k) => {
-      switch (k) {
-        case 'scheduled_start_time' :
-          return 'scheduledStartDate'
-        case 'actual_start_time' :
-          return 'actualStartDate'
-        case 'actual_end_time':
-          return 'actualEndDate'
-        default:
-          return k
+  const terms = []
+  if (challengeDetails && challengeDetails.terms) {
+    _.map(challengeDetails.terms, term => {
+      // console.log('Term', term)
+      const v5Term = _.find(allV5Terms, v5Term => v5Term.legacyId === term.termsOfUseId)
+      if (v5Term) {
+        // logger.info(`V5 Term Found for ${term.termsOfUseId} - ${v5Term.id}`)
+        terms.push(v5Term.id)
+      } else {
+        logger.error(`V5 Term Not Found for ${term.termsOfUseId}`)
       }
     })
+  }
+
+  newChallenge.startDate = challengeListing.registrationStartDate
+  let challengeEndDate = newChallenge.startDate
+  const phases = _.map(challengeListing.phases, phase => {
+    // console.log(phase.scheduled_start_time, Date.parse(phase.scheduled_start_time), phase.duration, (phase.duration / 1000 / 60 / 60))
+    const v5duration = _.toInteger(Number(phase.duration) / 1000)
+    const newPhase = {
+      id: uuid(),
+      name: phase.type,
+      phaseId: _.get(_.find(config.get('PHASE_NAME_MAPPINGS'), { name: phase.type }), 'phaseId'),
+      duration: v5duration,
+      scheduledStartDate: phase.scheduledStartTime,
+      scheduledEndDate: phase.scheduledEndTime,
+      actualStartDate: phase.actualStartTime,
+      actualEndDate: phase.actualEndTime
+    }
+
+    challengeEndDate = new Date(Date.parse(phase.scheduledStartTime) + (phase.duration))
     newChallenge.endDate = challengeEndDate
 
-    if (phase.phase_status === 'Open') {
-      phase.isOpen = true
+    if (phase.status === 'Open') {
+      newPhase.isOpen = true
     } else {
-      phase.isOpen = false
+      newPhase.isOpen = false
     }
-
-    const keys = ['challenge_id', 'type_id', 'phase_status']
-    for (const key of keys) {
-      delete phase[key]
-    }
-    return phase
+    return newPhase
   })
-
-  // logger.debug(`Challenge Start & End Date ${newChallenge.startDate} ${newChallenge.endDate}`)
-
-  const oneMetadata = _.omit(_.filter(allMetadata, s => s.challenge_id === challenge.id)[0], ['challenge_id'])
 
   const metadata = []
-  Object.entries(oneMetadata).forEach(([key, value]) => {
-    let metadataValue
-    if (key === 'filetypes' && value.length <= 0) { return }; // skip empty filetypes arrays
-    if (!isNaN(parseFloat(value)) && isFinite(value)) {
-      metadataValue = +value
-    } else if (value === 'true' || value === 'false') {
-      metadataValue = value === 'true'
-    } else if (key === 'filetypes') {
-      metadataValue = value.split(',')
-    } else {
-      metadataValue = value
-    }
-    metadata.push({ type: _.camelCase(key), value: JSON.stringify(metadataValue) })
-  })
-
-  const events = _.filter(allEvents, s => s.challenge_id === challenge.id)
-  if (events && events.length > 0) {
-    const eventArray = []
-    for (const event of events) {
-      eventArray.push({
-        id: event.id,
-        name: event.name,
-        key: event.key
-      })
-    }
-    metadata.push({ events: eventArray })
+  if (challengeListing.fileTypes && challengeListing.fileTypes.length > 0) {
+    const fileTypes = _.map(challengeListing.fileTypes, fileType => fileType.description)
+    // console.log(fileTypes)
+    metadata.push({ type: 'fileTypes', value: fileTypes })
   }
+
+  const metadataList = ['allowStockArt', 'drPoints', 'submissionViewable', 'submissionLimit', 'codeRepo', 'environment']
+  const allMetadata = _.map(metadataList, item => {
+    if (challengeListing[item]) return { type: item, value: challengeListing[item] }
+  })
+  metadata.push(..._.compact(allMetadata))
+
+  if (challengeListing.events && challengeListing.events.length > 0) {
+    const events = _.map(challengeListing.events, event => ({
+      id: event.id,
+      name: event.eventDescription,
+      key: event.eventShortDesc
+    }))
+    metadata.push({ events })
+  }
+
+  // console.log(JSON.stringify(metadata))
 
   return save(_.assign(newChallenge, { prizeSets, tags, groups, winners, phases, metadata, terms }))
 }
@@ -613,6 +689,7 @@ module.exports = {
   migrateChallenge,
   getChallengeFromES,
   getChallengesFromES,
+  getChallengeIDsFromV4,
   getChallengeTypes,
   saveChallengeTypes,
   createChallengeTimelineMapping,
