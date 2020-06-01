@@ -7,6 +7,7 @@ async function queueForMigration (req, res) {
   const startDate = req.query.startDate || null
   const endDate = req.query.endDate || null
   const legacyId = req.query.legacyId || null
+  logger.debug(`API Query Values ${JSON.stringify({ startDate, endDate, legacyId })}`)
 
   // get legacy ids
   let count = 0
@@ -14,7 +15,7 @@ async function queueForMigration (req, res) {
   let loop = true
   while (loop) {
     const legacyIds = await challengeService.getChallengeIDsFromV4({ startDate, endDate, legacyId }, 1000, page)
-    // logger.info(`Request IDs ${JSON.stringify(legacyIds)}`)
+    logger.debug(`Request IDs ${JSON.stringify(legacyIds)}`)
     if (legacyIds.length > 0) {
       for (let i = 0; i < legacyIds.length; i += 1) {
         const result = await migrateChallenge(legacyIds[i])
@@ -41,7 +42,7 @@ async function getMigrationStatus (req, res) {
 
 async function migrateChallenge (legacyId, forceMigrate = false) {
   const [legacyIdProgress] = await challengeMigrationStatusService.getMigrationProgress({ legacyId })
-  // logger.warn(`migrateChallenge ${legacyIdProgress}`)
+  logger.debug(`migrateChallenge Record ${legacyIdProgress}`)
   if (legacyIdProgress) {
     if (legacyIdProgress.status === config.MIGRATION_PROGRESS_STATUSES.IN_PROGRESS) {
       logger.info(`Challenge ${legacyId} in progress...`)
