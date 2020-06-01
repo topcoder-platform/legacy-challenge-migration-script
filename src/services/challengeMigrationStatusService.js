@@ -102,8 +102,8 @@ async function queueForMigration (legacyId) {
 async function startMigration (legacyId, challengeModifiedDate) {
   const migrationRecord = {
     legacyId,
-    status: config.MIGRATION_PROGRESS_STATUSES.IN_PROGRESS, 
-    informixModified: challengeModifiedDate,
+    status: config.MIGRATION_PROGRESS_STATUSES.IN_PROGRESS,
+    informixModified: moment(challengeModifiedDate).utc().format(),
     migrationStarted: moment().utc().format()
   }
   return updateProgressRecord(legacyId, migrationRecord)

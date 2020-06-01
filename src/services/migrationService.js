@@ -1,5 +1,6 @@
 const { get, map } = require('lodash')
 const config = require('config')
+const moment = require('moment')
 const logger = require('../util/logger')
 const challengeService = require('./challengeService')
 const challengeInformixService = require('./challengeInformixService')
@@ -12,11 +13,11 @@ async function processChallenge (legacyId, forceMigrate = false) {
   const [existingV5Challenge] = await challengeService.getChallengeFromES(legacyId)
   // TODO - move this check to the v4 ES
   const legacyChallengeLastModified = await challengeInformixService.getChallengeLastModifiedDateFromIfx(legacyId)
-  const v5informixModifiedDate = Date.parse(get(existingV5Challenge, 'legacy.informixModified'))
+  const v5informixModifiedDate = moment(get(existingV5Challenge, 'legacy.informixModified'))
 
   if (existingV5Challenge) {
-    const legacyModifiedDate = Date.parse(legacyChallengeLastModified)
-    // logger.info(`v5 Modified Date: ${v5informixModifiedDate} legacyModifiedDate ${legacyModifiedDate}`)
+    const legacyModifiedDate = moment(legacyChallengeLastModified)
+    logger.info(`v5 Modified Date: ${v5informixModifiedDate} legacyModifiedDate ${legacyModifiedDate}`)
     if (v5informixModifiedDate >= legacyModifiedDate && !forceMigrate) {
       logger.info(`Challenge ${legacyId} was migrated and the dates were equal`)
       return false

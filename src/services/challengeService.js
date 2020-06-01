@@ -33,16 +33,10 @@ async function save (challenge) {
  * @param {Boolean} retrying if user is retrying
  */
 async function createChallenge (challenge) {
-  const newChallenge = new Challenge(_.omit(challenge, ['numOfSubmissions', 'numOfRegistrants']))
-  // logger.warn(`saving challenge ${challenge.id}`)
-  newChallenge.id = uuid()
+  challenge.id = uuid()
+  const dynamoChallenge = new Challenge(_.omit(challenge, ['numOfSubmissions', 'numOfRegistrants']))
   let dynamoSaved = null
-  // try {
-  dynamoSaved = await newChallenge.save()
-  // } catch (e) {
-  //   logger.warn(`Challenge Dynamo Write Fail ${JSON.stringify(newChallenge)}`)
-  //   logger.error(`${JSON.stringify(e)}`)
-  // }
+  dynamoSaved = await dynamoChallenge.save()
 
   if (dynamoSaved) {
     // try {
@@ -50,16 +44,13 @@ async function createChallenge (challenge) {
       index: config.get('ES.CHALLENGE_ES_INDEX'),
       type: config.get('ES.CHALLENGE_ES_TYPE'),
       refresh: config.get('ES.ES_REFRESH'),
-      id: newChallenge.id,
+      id: challenge.id,
       body: {
         ...challenge,
         groups: _.filter(challenge.groups, g => _.toString(g).toLowerCase() !== 'null')
       }
     })
-    return newChallenge.id
-    // } catch (err) {
-    //   logger.error(`createChallenge ES Write Fail: ${JSON.stringify(newChallenge)} ${err}`)
-    // }
+    return challenge.id
   }
 }
 
@@ -477,14 +468,14 @@ async function migrateChallenge (legacyId) {
   const challengeListing = await getChallengeListingFromV4ES(legacyId)
   const challengeDetails = await getChallengeDetailFromV4ES(legacyId)
   const allGroups = challengeListing.groupIds
-  
+
   if (!allV5Terms) {
     allV5Terms = await getAllV5Terms()
   }
 
   const allGroupsOldIds = _.filter((allGroups), g => (g.group_id))
   const allGroupUUIDs = await convertGroupIdsToV5UUIDs(allGroupsOldIds)
-  
+
   // for (const challenge of challenges) {
   logger.info(`Migrating Challenge ${challengeListing.id} - Last Modified Date ${moment(challengeListing.updatedAt).utc().format()}`)
 
