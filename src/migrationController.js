@@ -24,10 +24,10 @@ async function migrate () {
       // logger.warn(`queuedChallenges ${JSON.stringify(queuedChallenges)}`)
       if (queuedChallenges.length <= 0) {
         running = false
-        logger.debug(`0 Challenges with status of ${config.MIGRATION_PROGRESS_STATUSES.QUEUED}`)
+        logger.info(`0 Challenges with status of ${config.MIGRATION_PROGRESS_STATUSES.QUEUED}`)
         // break
       } else {
-        logger.info(`Migrating [${queuedChallenges.length}] Challenges`)
+        logger.debug(`Migrating [${queuedChallenges.length}] Challenges`)
         for (let i = 0; i < queuedChallenges.length; i += 1) {
           const legacyId = queuedChallenges[i].legacyId
           // await migrateChallenge(legacyId)

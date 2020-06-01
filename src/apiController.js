@@ -42,7 +42,7 @@ async function getMigrationStatus (req, res) {
 
 async function migrateChallenge (legacyId, forceMigrate = false) {
   const [legacyIdProgress] = await challengeMigrationStatusService.getMigrationProgress({ legacyId })
-  logger.debug(`migrateChallenge Record ${legacyIdProgress}`)
+  // logger.debug(`migrateChallenge Record ${legacyIdProgress}`)
   if (legacyIdProgress) {
     if (legacyIdProgress.status === config.MIGRATION_PROGRESS_STATUSES.IN_PROGRESS) {
       logger.info(`Challenge ${legacyId} in progress...`)

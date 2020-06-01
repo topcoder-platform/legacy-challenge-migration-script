@@ -49,7 +49,7 @@ async function processChallenge (legacyId, forceMigrate = false) {
 }
 
 async function processChallengeTypes () {
-  logger.info('Loading challenge types')
+  logger.debug('Loading challenge types')
   const challengeTypes = await challengeService.getChallengeTypes()
   if (challengeTypes.length > 0) {
     return challengeService.saveChallengeTypes(challengeTypes)
@@ -61,7 +61,7 @@ async function processChallengeTypes () {
  * Migrate challenge timeline templates
  */
 async function processChallengeTimelineTemplates () {
-  logger.info('Loading challenge timelines')
+  logger.debug('Loading challenge timelines')
   const challengeTypesFromDynamo = await challengeService.getChallengeTypesFromDynamo()
   const typeIds = map(challengeTypesFromDynamo, 'id')
   return challengeService.createChallengeTimelineMapping(typeIds)
@@ -71,7 +71,7 @@ async function processChallengeTimelineTemplates () {
  * Migrate resource roles
  */
 async function processResourceRoles () {
-  logger.info('Loading resource roles')
+  logger.debug('Loading resource roles')
   const result = await resourceService.createMissingResourceRoles(config.get('RESOURCE_ROLE'))
   return resourceService.saveResourceRoles(result.resourceRoles)
 }
