@@ -2,7 +2,7 @@ module.exports = {
   PORT: process.env.PORT || 3001,
   MIGRATION_CRON_ENABLED: process.env.MIGRATION_CRON_ENABLED || true,
   API_VERSION: process.env.API_VERSION || 'v5',
-  SCHEDULE_INTERVAL: process.env.SCHEDULE_INTERVAL ? Number(process.env.SCHEDULE_INTERVAL) : 0.5, // minutes
+  SCHEDULE_INTERVAL: process.env.SCHEDULE_INTERVAL ? Number(process.env.SCHEDULE_INTERVAL) : 1, // minutes
 
   // used to get M2M token
   AUTH0_URL: process.env.AUTH0_URL,
@@ -39,10 +39,10 @@ module.exports = {
 
   AMAZON: {
     // Uncomment for local deployment
-    AWS_ACCESS_KEY_ID: process.env.AWS_FAKE_ID,
-    AWS_SECRET_ACCESS_KEY: process.env.AWS_FAKE_KEY,
+    // AWS_ACCESS_KEY_ID: process.env.AWS_FAKE_ID,
+    // AWS_SECRET_ACCESS_KEY: process.env.AWS_FAKE_KEY,
     AWS_REGION: process.env.AWS_REGION || 'ap-northeast-1', // aws region
-    IS_LOCAL_DB: process.env.IS_LOCAL_DB ? process.env.IS_LOCAL_DB === 'true' : true, // true or uninitialize if we use local instance
+    IS_LOCAL_DB: process.env.IS_LOCAL_DB ? process.env.IS_LOCAL_DB === 'true' : false, // true or uninitialize if we use local instance
     DYNAMODB_URL: process.env.DYNAMODB_URL || 'http://localhost:8000', // just for local development
     S3_API_VERSION: process.env.S3_API_VERSION || '2006-03-01'
   },
