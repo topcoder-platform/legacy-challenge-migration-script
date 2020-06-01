@@ -2,6 +2,7 @@
 const uuid = require('uuid/v4')
 const config = require('config')
 const request = require('superagent')
+const moment = require('moment')
 const _ = require('lodash')
 const { Challenge, ChallengeType, ChallengeTypeTimelineTemplate } = require('../models')
 const logger = require('../util/logger')
@@ -36,29 +37,29 @@ async function createChallenge (challenge) {
   // logger.warn(`saving challenge ${challenge.id}`)
   newChallenge.id = uuid()
   let dynamoSaved = null
-  try {
-    dynamoSaved = await newChallenge.save()
-  } catch (e) {
-    logger.warn(`Challenge Dynamo Write Fail ${JSON.stringify(newChallenge)}`)
-    logger.error(`${JSON.stringify(e)}`)
-  }
+  // try {
+  dynamoSaved = await newChallenge.save()
+  // } catch (e) {
+  //   logger.warn(`Challenge Dynamo Write Fail ${JSON.stringify(newChallenge)}`)
+  //   logger.error(`${JSON.stringify(e)}`)
+  // }
 
   if (dynamoSaved) {
-    try {
-      await getESClient().create({
-        index: config.get('ES.CHALLENGE_ES_INDEX'),
-        type: config.get('ES.CHALLENGE_ES_TYPE'),
-        refresh: config.get('ES.ES_REFRESH'),
-        id: newChallenge.id,
-        body: {
-          ...challenge,
-          groups: _.filter(challenge.groups, g => _.toString(g).toLowerCase() !== 'null')
-        }
-      })
-      return newChallenge.id
-    } catch (err) {
-      logger.error(`createChallenge ES Write Fail: ${JSON.stringify(newChallenge)}`)
-    }
+    // try {
+    await getESClient().create({
+      index: config.get('ES.CHALLENGE_ES_INDEX'),
+      type: config.get('ES.CHALLENGE_ES_TYPE'),
+      refresh: config.get('ES.ES_REFRESH'),
+      id: newChallenge.id,
+      body: {
+        ...challenge,
+        groups: _.filter(challenge.groups, g => _.toString(g).toLowerCase() !== 'null')
+      }
+    })
+    return newChallenge.id
+    // } catch (err) {
+    //   logger.error(`createChallenge ES Write Fail: ${JSON.stringify(newChallenge)} ${err}`)
+    // }
   }
 }
 
@@ -91,25 +92,6 @@ async function updateChallenge (challenge) {
     }
   }
 }
-
-// /**
-//  * Put all challenge data to new system
-//  *
-//  * @param {Object} challenges data
-//  * @param {String} errFilename error filename
-//  */
-// async function save (challenges) {
-//   await Promise.all(challenges.map(c => saveItem(c, process.env.IS_RETRYING)))
-// }
-
-// /**
-//  * Update all challenge data to new system
-//  *
-//  * @param {Object} challenges data
-//  */
-// async function update (challenges) {
-//   await Promise.all(challenges.map(c => updateItem(c, process.env.IS_RETRYING)))
-// }
 
 /**
  * Get existing challenges from ES using legacyId
@@ -346,11 +328,35 @@ async function getChallengeTimelinesFromDynamo () {
   return result
 }
 
-async function getChallengeIDsFromV4 (startDate, endDate, perPage = 1, offset = 0) {
+async function cacheTypesAndTimelines () {
+  const challengeTypes = await getChallengeTypesFromDynamo()
+  challengeTypeMapping = createChallengeTypeMapping(challengeTypes)
+  const challengeTimelines = await getChallengeTimelinesFromDynamo()
+  challengeTimelineMapping = createChallengeTimelineMapping(challengeTimelines, challengeTypes)
+}
 
-  const range = {}
-  if (startDate) range.updatedAt = { gte: startDate }
-  if (endDate) range.updatedAt = { lte: endDate }
+async function getChallengeIDsFromV4 (filter, perPage, offset) {
+  const boolQuery = []
+  const mustQuery = []
+  if (filter.startDate) {
+    boolQuery.push({ range: { updatedAt: { gte: filter.startDate } } })
+  }
+  if (filter.endDate) {
+    boolQuery.push({ range: { updatedAt: { lt: filter.endDate } } })
+  }
+  if (filter.legacyId) {
+    const filter = { match_phrase: {} }
+    filter.match_phrase.legacyId = filter.legacyId
+    boolQuery.push(filter)
+  }
+
+  if (boolQuery.length > 0) {
+    mustQuery.push({
+      bool: {
+        filter: boolQuery
+      }
+    })
+  }
 
   const esQuery = {
     index: 'challengeslisting',
@@ -359,9 +365,17 @@ async function getChallengeIDsFromV4 (startDate, endDate, perPage = 1, offset = 
     from: perPage * offset,
     _source: ['id'],
     body: {
-      query: {
-        range
-      }
+      query: mustQuery.length > 0 ? {
+        bool: {
+          must: mustQuery
+          // must_not: mustNotQuery
+        }
+      } : {
+        match_all: {}
+      },
+      sort: [
+        { updatedAt: 'desc' }
+      ]
     }
   }
   // Search with constructed query
@@ -379,6 +393,7 @@ async function getChallengeIDsFromV4 (startDate, endDate, perPage = 1, offset = 
       }
     }
   }
+  // logger.warn(JSON.stringify(docs))
   // Extract data from hits
   return _.map(docs.hits.hits, hit => hit._source.id)
 }
@@ -461,44 +476,17 @@ async function migrateChallenge (legacyId) {
   // logger.warn(`Start Getting Challenge Data ${legacyId}`)
   const challengeListing = await getChallengeListingFromV4ES(legacyId)
   const challengeDetails = await getChallengeDetailFromV4ES(legacyId)
-  // console.log(challengeListing)
-  // console.log(challengeDetails)
-
-  // construct challenge
-  // const allPrizes = challengeListing.prize
-  // const allTechnologies = challengeListing.technologies
-  // const allPlatforms = challengeListing.platforms
   const allGroups = challengeListing.groupIds
-  // const allWinners = challengeListing.winners
-  // const allPhases = challengeListing.phases
-  // const allMetadata = queryResults[6]
-  // const allTerms = challengeDetails.terms
-  // const allSubmissions = challengeListing.numberOfSubmissions
-  // const allRegistrants = challengeListing.numberOfRegistrants
-  // const allScorecards = queryResults[10]
-  // const allEvents = challengeDetails.events
-
-  // get challenge types from dynamodb
-  if (!challengeTypeMapping) {
-    const challengeTypes = await getChallengeTypesFromDynamo()
-    challengeTypeMapping = createChallengeTypeMapping(challengeTypes)
-    const challengeTimelines = await getChallengeTimelinesFromDynamo()
-    challengeTimelineMapping = createChallengeTimelineMapping(challengeTimelines, challengeTypes)
-  }
-  // console.log('Challenge Type Mapping', challengeTypeMapping)
-  // console.log('Challenge Timeline Mapping', challengeTimelineMapping)
-
+  
   if (!allV5Terms) {
     allV5Terms = await getAllV5Terms()
   }
 
   const allGroupsOldIds = _.filter((allGroups), g => (g.group_id))
-  // console.log('Initial Groups Array', allGroupsOldIds)
   const allGroupUUIDs = await convertGroupIdsToV5UUIDs(allGroupsOldIds)
-  // console.log('Completed Groups Array', allGroupUUIDs)
-
+  
   // for (const challenge of challenges) {
-  logger.info(`Migrating Challenge ${challengeListing.id} - Last Modified Date ${new Date(Date.parse(challengeListing.updatedAt))}`)
+  logger.info(`Migrating Challenge ${challengeListing.id} - Last Modified Date ${moment(challengeListing.updatedAt).utc().format()}`)
 
   let detailRequirement = challengeDetails.detailRequirements || ''
   if (challengeDetails.finalSubmissionGuidelines && challengeDetails.finalSubmissionGuidelines.trim() !== '') {
@@ -523,7 +511,7 @@ async function migrateChallenge (legacyId) {
       forumId: challengeListing.forumId,
       // confidentialityType: challenge.confidentiality_type,
       directProjectId: challengeListing.projectId,
-      informixModified: new Date(Date.parse(challengeListing.updatedAt)),
+      informixModified: moment(challengeListing.updatedAt).utc().format(),
       reviewType: challengeListing.reviewType || 'COMMUNITY',
       screeningScorecardId: challengeListing.screeningScorecardId,
       reviewScorecardId: challengeListing.reviewScorecardId
@@ -533,14 +521,14 @@ async function migrateChallenge (legacyId) {
     descriptionFormat: 'HTML',
     projectId: connectProjectId,
     status: challengeListing.status,
-    created: new Date(Date.parse(challengeListing.createdAt)),
+    created: moment(challengeListing.createdAt).utc().format(),
     createdBy: challengeInfoFromIfx.created_by,
-    updated: new Date(Date.parse(challengeListing.updatedAt)),
+    updated: moment(challengeListing.updatedAt).utc().format(),
     updatedBy: challengeInfoFromIfx.updated_by,
     timelineTemplateId: _.get(challengeTimelineMapping, challengeInfoFromIfx.type_id, null), // _.get(challengeTimelineMapping, `[${challengeTypeMapping[challengeInfoFromIfx.type_id]}].id`, null),
     phases: [],
     terms: [],
-    startDate: new Date(),
+    startDate: moment().utc().format(),
     numOfSubmissions: challengeListing.numberOfSubmissions,
     numOfRegistrants: challengeListing.numberOfRegistrants
   }
@@ -594,8 +582,10 @@ async function migrateChallenge (legacyId) {
       actualStartDate: phase.actualStartTime,
       actualEndDate: phase.actualEndTime
     }
+    // logger.warn(`Original Date: ${phase.scheduledStartTime}`)
+    // logger.warn(`Parsed UTC Formatted Date: ${moment(phase.scheduledStartTime).utc().format()}`)
 
-    challengeEndDate = new Date(Date.parse(phase.scheduledStartTime) + (phase.duration))
+    challengeEndDate = moment(phase.scheduledStartTime).utc().add(phase.duration, 'seconds').format()
     newChallenge.endDate = challengeEndDate
 
     if (phase.status === 'Open') {
@@ -687,6 +677,7 @@ async function convertGroupIdsToV5UUIDs (groupOldIdArray) {
 module.exports = {
   save,
   migrateChallenge,
+  cacheTypesAndTimelines,
   getChallengeFromES,
   getChallengesFromES,
   getChallengeIDsFromV4,

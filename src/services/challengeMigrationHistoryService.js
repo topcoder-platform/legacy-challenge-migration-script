@@ -1,6 +1,7 @@
 // challenge service
 const config = require('config')
 const uuid = require('uuid/v4')
+const moment = require('moment')
 // const { map } = require('lodash')
 const { getESClient } = require('../util/helper')
 // const getErrorService = require('./errorService')
@@ -21,7 +22,7 @@ async function createHistoryRecord (challengesAdded, resourcesAdded) {
       refresh: config.get('ES.ES_REFRESH'),
       id: uuid(),
       body: {
-        date: new Date(),
+        date: moment().utc().format(),
         challengesAdded,
         resourcesAdded
       }

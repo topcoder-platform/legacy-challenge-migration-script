@@ -1,8 +1,9 @@
 // challenge service
 const config = require('config')
-// const { map, get } = require('lodash')
+const { map } = require('lodash')
 const { getESClient } = require('../util/helper')
 const logger = require('../util/logger')
+const moment = require('moment')
 // const getErrorService = require('./errorService')
 // const errorService = getErrorService()
 
@@ -13,23 +14,19 @@ const logger = require('../util/logger')
  * @param {Number} legacyId
  * @param {String} status [success, failed, inProgress]
  */
-async function createProgressRecord (challengeId, legacyId, status, informixModified) {
+async function createProgressRecord (legacyId, migrationRecord) {
   try {
     await getESClient().create({
       index: config.get('ES.MIGRATION_ES_INDEX'),
       type: config.get('ES.MIGRATION_ES_TYPE'),
       refresh: config.get('ES.ES_REFRESH'),
       id: legacyId,
-      body: {
-        challengeId,
-        status,
-        informixModified,
-        dateMigrated: new Date()
-      }
+      body: migrationRecord
     })
+    return true
   } catch (err) {
-    // errorService.put({ challengeId: legacyId, type: 'es', message: err.message })
-    logger.error(`createProgressRecord failed ${err}`)
+    logger.error(`createProgressRecord failed ${migrationRecord} ${err}`)
+    return false
   }
 }
 
@@ -39,7 +36,7 @@ async function createProgressRecord (challengeId, legacyId, status, informixModi
  * @param {Object} challenge challenge data
  * @param {Boolean} retrying if user is retrying
  */
-async function updateProgressRecord (challengeId, legacyId, status, informixModified) {
+async function updateProgressRecord (legacyId, migrationRecord) {
   try {
     await getESClient().update({
       index: config.get('ES.MIGRATION_ES_INDEX'),
@@ -47,38 +44,31 @@ async function updateProgressRecord (challengeId, legacyId, status, informixModi
       refresh: config.get('ES.ES_REFRESH'),
       id: legacyId,
       body: {
-        doc: {
-          challengeId,
-          status,
-          informixModified,
-          dateMigrated: new Date()
-        },
+        doc: migrationRecord,
         doc_as_upsert: true
       }
     })
   } catch (err) {
-    logger.error(`createProgressRecord failed ${err}`)
+    logger.error(`updateProgressRecord failed ${migrationRecord} ${err}`)
   }
 }
 
-async function getProgressByChallengeId (challengeId) {
+async function getMigrationProgress (filter, perPage, page) {
   const esQuery = {
     index: config.get('ES.MIGRATION_ES_INDEX'),
     type: config.get('ES.MIGRATION_ES_TYPE'),
-    size: 1,
-    from: 0, // Es Index starts from 0
+    size: perPage,
+    from: perPage * page, // Es Index starts from 0
     body: {
       query: {
-        bool: {
-          should: {
-            match: {
-              challengeId
-            }
-          }
-        }
+        match: {}
       }
     }
   }
+
+  if (filter.legacyId) esQuery.body.query.match = { _id: filter.legacyId }
+  if (filter.challengeId) esQuery.body.query.match = { challengeId: filter.challengeId }
+  if (filter.status) esQuery.body.query.match = { status: filter.status }
   // Search with constructed query
   let docs
   try {
@@ -92,61 +82,47 @@ async function getProgressByChallengeId (challengeId) {
       }
     }
   }
-  const item = docs.hits.hits[0]
-  if (item) {
-    return {
-      challengeId: item._source.challengeId,
-      status: item._source.status,
-      informixModified: item._source.informixModified,
-      dateMigrated: item._source.dateMigrated
-    }
-  }
+  // logger.info(`Migration Progress Query  ${JSON.stringify(esQuery)}`)
+  // logger.info(`Migration Progress Record ${JSON.stringify(docs)}`)
+  return map(docs.hits.hits, item => ({
+    legacyId: item._id,
+    challengeId: item._source.challengeId,
+    status: item._source.status,
+    informixModified: item._source.informixModified,
+    migrationStarted: item._source.migrationStarted,
+    migrationEnded: item._source.migrationEnded,
+    errorMessage: item._source.errorMessage
+  }))
 }
 
-async function getProgressByLegacyId (legacyId) {
-  const esQuery = {
-    index: config.get('ES.MIGRATION_ES_INDEX'),
-    type: config.get('ES.MIGRATION_ES_TYPE'),
-    size: 1,
-    from: 0, // Es Index starts from 0
-    body: {
-      query: {
-        terms: {
-          _id: [legacyId]
-        }
-      }
-    }
-  }
-  // Search with constructed query
-  let docs
-  try {
-    docs = await getESClient().search(esQuery)
-  } catch (e) {
-    // Catch error when the ES is fresh and has no data
-    docs = {
-      hits: {
-        total: 0,
-        hits: []
-      }
-    }
-  }
-  // Extract data from hits
-  const item = docs.hits.hits[0]
-  if (item) {
-    return {
-      challengeId: item._source.challengeId,
-      status: item._source.status,
-      informixModified: item._source.informixModified,
-      dateMigrated: item._source.dateMigrated
-    }
-  }
+async function queueForMigration (legacyId) {
+  return createProgressRecord(legacyId, { status: config.MIGRATION_PROGRESS_STATUSES.QUEUED })
+}
 
-  return false
+async function startMigration (legacyId, challengeModifiedDate) {
+  const migrationRecord = {
+    legacyId,
+    status: config.MIGRATION_PROGRESS_STATUSES.IN_PROGRESS, 
+    informixModified: challengeModifiedDate,
+    migrationStarted: moment().utc().format()
+  }
+  return updateProgressRecord(legacyId, migrationRecord)
+}
+
+async function endMigration (legacyId, challengeId, status = config.MIGRATION_PROGRESS_STATUSES.SUCCESS, errorMessage) {
+  const migrationRecord = {
+    legacyId,
+    challengeId,
+    status: status,
+    migrationEnded: moment().utc().format(),
+    errorMessage
+  }
+  return updateProgressRecord(legacyId, migrationRecord)
 }
 
 module.exports = {
-  getProgressByChallengeId,
-  getProgressByLegacyId,
-  createProgressRecord,
-  updateProgressRecord
+  getMigrationProgress,
+  queueForMigration,
+  startMigration,
+  endMigration
 }

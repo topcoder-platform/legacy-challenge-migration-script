@@ -1,8 +1,8 @@
 module.exports = {
   PORT: process.env.PORT || 3001,
-  MIGRATION_CRON_ENABLED: process.env.MIGRATION_CRON_ENABLED || false,
+  MIGRATION_CRON_ENABLED: process.env.MIGRATION_CRON_ENABLED || true,
   API_VERSION: process.env.API_VERSION || 'v5',
-  SCHEDULE_INTERVAL: process.env.SCHEDULE_INTERVAL ? Number(process.env.SCHEDULE_INTERVAL) : 5, // minutes
+  SCHEDULE_INTERVAL: process.env.SCHEDULE_INTERVAL ? Number(process.env.SCHEDULE_INTERVAL) : 0.5, // minutes
 
   // used to get M2M token
   AUTH0_URL: process.env.AUTH0_URL,
@@ -173,10 +173,11 @@ module.exports = {
   ],
   BATCH_SIZE: 10, // max challenges will be load from informix on 1 query
   MIGRATION_SCRIPT_BATCH_SIZE: 40, // max challenges will be load from informix on 1 query when running a migration script
-  ERROR_LOG_FILENAME: './error.json', // filename of error log for challenge that fail to migrate
-  LOG_FILENAME: './app.log', // log file
+  // ERROR_LOG_FILENAME: './error.json', // filename of error log for challenge that fail to migrate
+  // LOG_FILENAME: './app.log', // log file
 
   MIGRATION_PROGRESS_STATUSES: {
+    QUEUED: 'Queued',
     IN_PROGRESS: 'In progress',
     FAILED: 'Failed',
     SUCCESS: 'Success'

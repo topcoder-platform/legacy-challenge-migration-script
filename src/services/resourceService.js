@@ -1,6 +1,6 @@
 const uuid = require('uuid/v4')
 const _ = require('lodash')
-// const moment = require('moment')
+const moment = require('moment')
 const config = require('config')
 const { Resource, ResourceRole } = require('../models')
 const logger = require('../util/logger')
@@ -25,7 +25,7 @@ async function createMissingResourceRoles (names) {
 
   _.forEach(resourceRoles, rr => {
     if (existingResourceRoleLegacyIds && existingResourceRoleLegacyIds.includes(rr.resource_role_id)) {
-      logger.debug(`Skipping Already Created ${rr.resource_role_id}`)
+      // logger.debug(`Skipping Already Created ${rr.resource_role_id}`)
     } else {
       const newResourceRole = {
         id: uuid(),
@@ -115,9 +115,9 @@ async function migrateResourcesForChallenge (legacyChallengeId, v5ChallengeId) {
       const newResource = {
         // id: uuid(),
         legacyId: resource.id,
-        created: new Date(Date.parse(resource.created)),
+        created: moment(resource.created).utc().format(),
         createdBy: resource.created_by,
-        updated: new Date(Date.parse(resource.updated)),
+        updated: moment(resource.updated).utc().format(),
         updatedBy: resource.updated_by,
         memberId: resource.member_id,
         memberHandle: resource.member_handle,

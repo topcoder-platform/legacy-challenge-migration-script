@@ -3,15 +3,18 @@ const config = require('config')
 const logger = require('../util/logger')
 const challengeService = require('./challengeService')
 const challengeInformixService = require('./challengeInformixService')
+const challengeMigrationStatusService = require('./challengeMigrationStatusService')
 // const resourceInformixService = require('./resourceInformixService')
 const resourceService = require('./resourceService')
 
 async function processChallenge (legacyId, forceMigrate = false) {
   // logger.debug(`Loading challenge ${legacyId}`)
   const [existingV5Challenge] = await challengeService.getChallengeFromES(legacyId)
+  // TODO - move this check to the v4 ES
+  const legacyChallengeLastModified = await challengeInformixService.getChallengeLastModifiedDateFromIfx(legacyId)
+  const v5informixModifiedDate = Date.parse(get(existingV5Challenge, 'legacy.informixModified'))
+
   if (existingV5Challenge) {
-    const legacyChallengeLastModified = await challengeInformixService.getChallengeLastModifiedDateFromIfx(legacyId)
-    const v5informixModifiedDate = Date.parse(get(existingV5Challenge, 'legacy.informixModified'))
     const legacyModifiedDate = Date.parse(legacyChallengeLastModified)
     // logger.info(`v5 Modified Date: ${v5informixModifiedDate} legacyModifiedDate ${legacyModifiedDate}`)
     if (v5informixModifiedDate >= legacyModifiedDate && !forceMigrate) {
@@ -21,17 +24,27 @@ async function processChallenge (legacyId, forceMigrate = false) {
   }
 
   let v5ChallengeId = null
+  await challengeMigrationStatusService.startMigration(legacyId, legacyChallengeLastModified)
   try {
     v5ChallengeId = await challengeService.migrateChallenge(legacyId)
   } catch (e) {
-    console.log(e)
+    logger.error(`Challenge Migration Failed ${JSON.stringify(e)}`)
+    await challengeMigrationStatusService.endMigration(legacyId, v5ChallengeId, config.MIGRATION_PROGRESS_STATUSES.FAILED, e)
   }
 
   if (v5ChallengeId) {
-    return resourceService.migrateResourcesForChallenge(legacyId, v5ChallengeId)
+    let resourcesMigrated = 0
+    try {
+      resourcesMigrated = await resourceService.migrateResourcesForChallenge(legacyId, v5ChallengeId)
+    } catch (e) {
+      logger.error(`Resources Migration Failed ${JSON.stringify(e)}`)
+      await challengeMigrationStatusService.endMigration(legacyId, v5ChallengeId, config.MIGRATION_PROGRESS_STATUSES.FAILED, e)
+    }
   } else {
     logger.error('No v5 Challenge ID returned from migrateChallenge')
   }
+  await challengeMigrationStatusService.endMigration(legacyId, v5ChallengeId)
+  return v5ChallengeId
 }
 
 async function processChallengeTypes () {
