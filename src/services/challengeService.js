@@ -333,7 +333,7 @@ async function getChallengeIDsFromV4 (filter, perPage, offset) {
     boolQuery.push({ range: { updatedAt: { gte: filter.startDate } } })
   }
   if (filter.endDate) {
-    boolQuery.push({ range: { updatedAt: { lt: filter.endDate } } })
+    boolQuery.push({ range: { updatedAt: { lte: filter.endDate } } })
   }
   if (filter.legacyId) {
     const filter = { match_phrase: {} }
@@ -576,9 +576,7 @@ async function migrateChallenge (legacyId) {
     // logger.warn(`Original Date: ${phase.scheduledStartTime}`)
     // logger.warn(`Parsed UTC Formatted Date: ${moment(phase.scheduledStartTime).utc().format()}`)
 
-    challengeEndDate = moment(phase.scheduledStartTime).utc().add(phase.duration, 'seconds').format()
-    newChallenge.endDate = challengeEndDate
-
+    challengeEndDate = moment(phase.scheduledEndTime).utc().format()
     if (phase.status === 'Open') {
       newPhase.isOpen = true
     } else {
@@ -586,6 +584,7 @@ async function migrateChallenge (legacyId) {
     }
     return newPhase
   })
+  newChallenge.endDate = challengeEndDate
 
   const metadata = []
   if (challengeListing.fileTypes && challengeListing.fileTypes.length > 0) {

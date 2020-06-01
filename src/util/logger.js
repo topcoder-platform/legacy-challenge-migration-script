@@ -12,7 +12,7 @@ const logger = createLogger({
     new transports.Console({
       format: format.combine(
         format.colorize(),
-        format.timestamp(),
+        // format.timestamp(),
         format.align(),
         format.simple()
       )
