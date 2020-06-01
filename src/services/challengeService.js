@@ -336,9 +336,7 @@ async function getChallengeIDsFromV4 (filter, perPage, offset) {
     boolQuery.push({ range: { updatedAt: { lte: filter.endDate } } })
   }
   if (filter.legacyId) {
-    const filter = { match_phrase: {} }
-    filter.match_phrase.legacyId = filter.legacyId
-    boolQuery.push(filter)
+    boolQuery.push({ match: { _id: filter.legacyId } })
   }
 
   if (boolQuery.length > 0) {
@@ -473,8 +471,10 @@ async function migrateChallenge (legacyId) {
     allV5Terms = await getAllV5Terms()
   }
 
-  const allGroupsOldIds = _.filter((allGroups), g => (g.group_id))
-  const allGroupUUIDs = await convertGroupIdsToV5UUIDs(allGroupsOldIds)
+  if (allGroups) logger.warn(`Old Group Ids ${allGroups}`)
+  // const allGroupsOldIds = _.map((allGroups), g => (g.group_id))
+  const allGroupUUIDs = await convertGroupIdsToV5UUIDs(allGroups)
+  if (allGroupUUIDs) logger.warn(`New Group Ids ${allGroupUUIDs}`)
 
   // for (const challenge of challenges) {
   logger.info(`Migrating Challenge ${challengeListing.id} - Last Modified Date ${moment(challengeListing.updatedAt).utc().format()}`)
@@ -526,9 +526,19 @@ async function migrateChallenge (legacyId) {
 
   // console.log('CHALLENGE DESCRIPTION', newChallenge.description)
 
-  const prizeSet = { type: 'Challenge Prize', description: 'Challenge Prize' }
+  const prizeSet = { type: 'placement', description: 'Challenge Prizes' }
   prizeSet.prizes = _.map(challengeListing.prize, e => ({ value: e, type: 'USD' }))
   const prizeSets = [prizeSet]
+
+  // review this
+  if (challengeListing.numberOfCheckpointPrizes > 0) {
+    const prizeSet = { type: 'checkpoint', description: 'Checkpoint Prizes' }
+    prizeSet.prizes = []
+    for (let i = 0; i < challengeListing.numberOfCheckpointPrizes; i += 1) {
+      prizeSet.prizes.push({ value: challengeListing.topCheckPointPrize, type: 'USD' })
+    }
+    prizeSets.push(prizeSet)
+  }
 
   const tags = _.compact(_.concat(challengeListing.technologies, challengeListing.platforms))
 
@@ -595,7 +605,7 @@ async function migrateChallenge (legacyId) {
 
   const metadataList = ['allowStockArt', 'drPoints', 'submissionViewable', 'submissionLimit', 'codeRepo', 'environment']
   const allMetadata = _.map(metadataList, item => {
-    if (challengeListing[item]) return { type: item, value: challengeListing[item] }
+    if (challengeListing[item]) return { type: item, value: _.toString(challengeListing[item]) }
   })
   metadata.push(..._.compact(allMetadata))
 
@@ -636,29 +646,25 @@ async function getAllV5Terms () {
   return allTerms
 }
 
-async function convertGroupIdsToV5UUIDs (groupOldIdArray) {
+async function convertGroupIdsToV5UUIDs (oldId) {
   // console.log('Convert to UUIDs', groupOldIdArray)
   // format groupOldIdArray[{ challenge_id, group_id }]
   let token = null
   const groups = []
 
-  for (let i = 0; i < groupOldIdArray.length; i++) {
-    const groupObj = groupOldIdArray[i]
-    const oldId = groupObj.group_id
-    if (groupsUUIDCache.get(oldId)) {
-      logger.debug(`Group Found in Cache! ${oldId} - ${groupsUUIDCache.get(oldId)}`)
-      groups.push({ challenge_id: groupObj.challenge_id, group_id: groupObj.group_id, group_uuid: groupsUUIDCache.get(oldId) })
+  if (groupsUUIDCache.get(oldId)) {
+    logger.debug(`Group Found in Cache! ${oldId} - ${groupsUUIDCache.get(oldId)}`)
+    groups.push(groupsUUIDCache.get(oldId))
+  } else {
+    if (!token) token = await helper.getM2MToken()
+    logger.debug(`Calling v5 Groups API - ${config.GROUPS_API_URL}?oldId=${oldId}`)
+    const result = await request.get(`${config.GROUPS_API_URL}?oldId=${oldId}`).set({ Authorization: `Bearer ${token}` })
+    const resultObj = JSON.parse(result.text)
+    if (resultObj && resultObj[0]) {
+      groupsUUIDCache.set(oldId, resultObj[0].id)
+      groups.push(groupsUUIDCache.get(oldId))
     } else {
-      if (!token) token = await helper.getM2MToken()
-      logger.debug(`Calling v5 Groups API - ${config.GROUPS_API_URL}?oldId=${oldId}`)
-      const result = await request.get(`${config.GROUPS_API_URL}?oldId=${oldId}`).set({ Authorization: `Bearer ${token}` })
-      const resultObj = JSON.parse(result.text)
-      if (resultObj && resultObj[0]) {
-        groupsUUIDCache.set(oldId, resultObj[0].id)
-        groups.push({ challenge_id: groupObj.challenge_id, group_id: groupObj.group_id, group_uuid: groupsUUIDCache.get(oldId) })
-      } else {
-        logger.error('Group not Found in API', oldId)
-      }
+      logger.error('Group not Found in API', oldId)
     }
   }
   return groups

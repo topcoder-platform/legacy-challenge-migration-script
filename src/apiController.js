@@ -11,6 +11,7 @@ async function queueForMigration (req, res) {
 
   // get legacy ids
   let count = 0
+  let skipped = 0
   let page = 0
   let loop = true
   while (loop) {
@@ -19,7 +20,8 @@ async function queueForMigration (req, res) {
     if (legacyIds.length > 0) {
       for (let i = 0; i < legacyIds.length; i += 1) {
         const result = await migrateChallenge(legacyIds[i])
-        if (result) count += 1
+        if (result === true) count += 1
+        if (result === false) skipped += 1
       }
     } else {
       loop = false
@@ -27,7 +29,7 @@ async function queueForMigration (req, res) {
     page += 1
   }
   // create records
-  res.json({ queuedChallenges: count })
+  res.json({ queuedChallenges: count, skippedChallenges: skipped })
 }
 
 async function getMigrationStatus (req, res) {
@@ -42,7 +44,7 @@ async function getMigrationStatus (req, res) {
 
 async function migrateChallenge (legacyId, forceMigrate = false) {
   const [legacyIdProgress] = await challengeMigrationStatusService.getMigrationProgress({ legacyId })
-  // logger.debug(`migrateChallenge Record ${legacyIdProgress}`)
+  // logger.debug(`migrateChallenge Record ${JSON.stringify(legacyIdProgress)}`)
   if (legacyIdProgress) {
     if (legacyIdProgress.status === config.MIGRATION_PROGRESS_STATUSES.IN_PROGRESS) {
       logger.info(`Challenge ${legacyId} in progress...`)
@@ -57,6 +59,7 @@ async function migrateChallenge (legacyId, forceMigrate = false) {
       if (!forceMigrate) return false
     }
   }
+  // logger.debug(`Queueing for Migration ${legacyId}`)
   return challengeMigrationStatusService.queueForMigration(legacyId)
 }
 

@@ -11,7 +11,7 @@ const resourceService = require('./resourceService')
 async function processChallenge (legacyId, forceMigrate = false) {
   // logger.debug(`Loading challenge ${legacyId}`)
   const [existingV5Challenge] = await challengeService.getChallengeFromES(legacyId)
-  // TODO - move this check to the v4 ES
+
   const legacyChallengeLastModified = await challengeInformixService.getChallengeLastModifiedDateFromIfx(legacyId)
   const v5informixModifiedDate = moment(get(existingV5Challenge, 'legacy.informixModified'))
 

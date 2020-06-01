@@ -10,9 +10,9 @@ const moment = require('moment')
 /**
  * Put progress into
  *
- * @param {UUID} challengeId new challenge id
  * @param {Number} legacyId
- * @param {String} status [success, failed, inProgress]
+ * @param {Object} {status, challengeId, informixModified, migrationStarted, migrationEnded, errorMessage}
+ * }
  */
 async function createProgressRecord (legacyId, migrationRecord) {
   try {
@@ -33,8 +33,8 @@ async function createProgressRecord (legacyId, migrationRecord) {
 /**
  * Update challenge data to new system
  *
- * @param {Object} challenge challenge data
- * @param {Boolean} retrying if user is retrying
+ * @param {Number} legacyId challenge data
+ * @param {Object} {status, challengeId, informixModified, migrationStarted, migrationEnded, errorMessage}
  */
 async function updateProgressRecord (legacyId, migrationRecord) {
   try {
@@ -53,7 +53,14 @@ async function updateProgressRecord (legacyId, migrationRecord) {
   }
 }
 
-async function getMigrationProgress (filter, perPage, page) {
+/**
+ * Update challenge data to new system
+ *
+ * @param {Object} filter {legacyId, challengeId, status}
+ * @param {Number} perPage
+ * @param {Number} page
+ */
+async function getMigrationProgress (filter, perPage = 100, page = 0) {
   const esQuery = {
     index: config.get('ES.MIGRATION_ES_INDEX'),
     type: config.get('ES.MIGRATION_ES_TYPE'),
@@ -66,7 +73,10 @@ async function getMigrationProgress (filter, perPage, page) {
     }
   }
 
-  if (filter.legacyId) esQuery.body.query.match = { _id: filter.legacyId }
+  if (filter.legacyId) {
+    // logger.info(`filter by legacyId ${filter.legacyId}`)
+    esQuery.body.query.match = { _id: filter.legacyId }
+  }
   if (filter.challengeId) esQuery.body.query.match = { challengeId: filter.challengeId }
   if (filter.status) esQuery.body.query.match = { status: filter.status }
   // Search with constructed query
@@ -109,11 +119,11 @@ async function startMigration (legacyId, challengeModifiedDate) {
   return updateProgressRecord(legacyId, migrationRecord)
 }
 
-async function endMigration (legacyId, challengeId, status = config.MIGRATION_PROGRESS_STATUSES.SUCCESS, errorMessage) {
+async function endMigration (legacyId, challengeId, status, errorMessage) {
   const migrationRecord = {
     legacyId,
     challengeId,
-    status: status,
+    status,
     migrationEnded: moment().utc().format(),
     errorMessage
   }
