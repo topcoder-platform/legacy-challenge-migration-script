@@ -22,14 +22,14 @@ async function migrate () {
       // get all challenge ids that meet criteria
       const queuedChallenges = await challengeMigrationStatusService.getMigrationProgress({ status: config.MIGRATION_PROGRESS_STATUSES.QUEUED }, 50, page)
       // logger.warn(`queuedChallenges ${JSON.stringify(queuedChallenges)}`)
-      if (queuedChallenges.length <= 0) {
+      if (queuedChallenges.items.length <= 0) {
         running = false
         logger.info(`0 Challenges with status of ${config.MIGRATION_PROGRESS_STATUSES.QUEUED}`)
         // break
       } else {
-        logger.debug(`Migrating [${queuedChallenges.length}] Challenges`)
-        for (let i = 0; i < queuedChallenges.length; i += 1) {
-          const legacyId = queuedChallenges[i].legacyId
+        logger.debug(`Migrating [${queuedChallenges.items.length}] Challenges`)
+        for (let i = 0; i < queuedChallenges.items.length; i += 1) {
+          const legacyId = queuedChallenges.items[i].legacyId
           // await migrateChallenge(legacyId)
           await migrationService.processChallenge(legacyId)
         }

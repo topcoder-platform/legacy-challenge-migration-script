@@ -2,6 +2,7 @@
  * helper methods
  */
 const _ = require('lodash')
+const querystring = require('querystring')
 const config = require('config')
 const elasticsearch = require('elasticsearch')
 const moment = require('moment-timezone')
@@ -48,7 +49,6 @@ function getESClient () {
   }
   return esClient
 }
-
 
 /**
  * Get ES Client
@@ -132,11 +132,54 @@ async function scanDynamoModelByProperty (model, property, value) {
   })
 }
 
+/**
+ * Get link for a given page.
+ * @param {Object} req the HTTP request
+ * @param {Number} page the page number
+ * @returns {String} link for the page
+ */
+function getPageLink (req, page) {
+  const q = _.assignIn({}, req.query, { page })
+  return `${config.API_BASE_URL}/${req.path}?${querystring.stringify(q)}`
+}
+
+/**
+ * Set HTTP response headers from result.
+ * @param {Object} req the HTTP request
+ * @param {Object} res the HTTP response
+ * @param {Object} result the operation result
+ */
+function setResHeaders (req, res, result) {
+  const totalPages = Math.ceil(result.total / result.perPage)
+  if (result.page > 1) {
+    res.set('X-Prev-Page', result.page - 1)
+  }
+  if (result.page < totalPages) {
+    res.set('X-Next-Page', result.page + 1)
+  }
+  res.set('X-Page', result.page)
+  res.set('X-Per-Page', result.perPage)
+  res.set('X-Total', result.total)
+  res.set('X-Total-Pages', totalPages)
+  // set Link header
+  if (totalPages > 0) {
+    let link = `<${getPageLink(req, 1)}>; rel="first", <${getPageLink(req, totalPages)}>; rel="last"`
+    if (result.page > 1) {
+      link += `, <${getPageLink(req, result.page - 1)}>; rel="prev"`
+    }
+    if (result.page < totalPages) {
+      link += `, <${getPageLink(req, result.page + 1)}>; rel="next"`
+    }
+    res.set('Link', link)
+  }
+}
+
 module.exports = {
   wrapRouter,
   getESClient,
   getV4ESClient,
   scanDynamoModelByProperty,
   generateInformxDate,
-  getM2MToken
+  getM2MToken,
+  setResHeaders
 }

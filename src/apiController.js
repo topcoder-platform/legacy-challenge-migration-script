@@ -1,5 +1,6 @@
 const config = require('config')
 const logger = require('./util/logger')
+const helper = require('./util/helper')
 const challengeService = require('./services/challengeService')
 const challengeMigrationStatusService = require('./services/challengeMigrationStatusService')
 
@@ -36,16 +37,21 @@ async function getMigrationStatus (req, res) {
   logger.error(`GET STATUS ${JSON.stringify(req.query)}`)
   const legacyId = req.query.legacyId || null
   const challengeId = req.query.challengeId || null
-  const progress = await challengeMigrationStatusService.getMigrationProgress({ legacyId, challengeId })
-  if (progress) {
-    return res.json(progress)
+  const status = req.query.status || null
+  const page = (req.query.page - 1) || 0
+  const perPage = req.query.perPage || 50
+  const result = await challengeMigrationStatusService.getMigrationProgress({ legacyId, challengeId, status }, perPage, page)
+  if (result) {
+    helper.setResHeaders(req, res, { total: result.total, page, perPage })
+    return res.json(result.items)
   }
   return res.status(404).json({ message: 'Progress Not found' })
 }
 
 async function migrateChallenge (legacyId) {
   const forceMigrate = false // temporary
-  const [legacyIdProgress] = await challengeMigrationStatusService.getMigrationProgress({ legacyId })
+  const legacyIdProgressObj = await challengeMigrationStatusService.getMigrationProgress({ legacyId })
+  const legacyIdProgress = legacyIdProgressObj.items[0]
   // logger.debug(`migrateChallenge Record ${JSON.stringify(legacyIdProgress)}`)
   if (legacyIdProgress) {
     if (legacyIdProgress.status === config.MIGRATION_PROGRESS_STATUSES.IN_PROGRESS) {

@@ -61,24 +61,36 @@ async function updateProgressRecord (legacyId, migrationRecord) {
  * @param {Number} page
  */
 async function getMigrationProgress (filter, perPage = 100, page = 0) {
+  const boolQuery = []
+  const mustQuery = []
+  if (filter.challengeId) boolQuery.push({ match: { challengeId: filter.challengeId } })
+  if (filter.legacyId) boolQuery.push({ match: { _id: filter.legacyId } })
+  if (filter.status) boolQuery.push({ match: { status: filter.status } })
+  if (boolQuery.length > 0) {
+    mustQuery.push({
+      bool: {
+        filter: boolQuery
+      }
+    })
+  }
+
   const esQuery = {
     index: config.get('ES.MIGRATION_ES_INDEX'),
     type: config.get('ES.MIGRATION_ES_TYPE'),
     size: perPage,
     from: perPage * page, // Es Index starts from 0
     body: {
-      query: {
-        match: {}
+      query: mustQuery.length > 0 ? {
+        bool: {
+          must: mustQuery
+          // must_not: mustNotQuery
+        }
+      } : {
+        match_all: {}
       }
     }
   }
 
-  if (filter.legacyId) {
-    // logger.info(`filter by legacyId ${filter.legacyId}`)
-    esQuery.body.query.match = { _id: filter.legacyId }
-  }
-  if (filter.challengeId) esQuery.body.query.match = { challengeId: filter.challengeId }
-  if (filter.status) esQuery.body.query.match = { status: filter.status }
   // Search with constructed query
   let docs
   try {
@@ -94,15 +106,19 @@ async function getMigrationProgress (filter, perPage = 100, page = 0) {
   }
   // logger.info(`Migration Progress Query  ${JSON.stringify(esQuery)}`)
   // logger.info(`Migration Progress Record ${JSON.stringify(docs)}`)
-  return map(docs.hits.hits, item => ({
-    legacyId: item._id,
-    challengeId: item._source.challengeId,
-    status: item._source.status,
-    informixModified: item._source.informixModified,
-    migrationStarted: item._source.migrationStarted,
-    migrationEnded: item._source.migrationEnded,
-    errorMessage: item._source.errorMessage
-  }))
+  return {
+    total: docs.hits.total,
+    items: map(docs.hits.hits, item => ({
+      legacyId: item._id,
+      challengeId: item._source.challengeId,
+      status: item._source.status,
+      informixModified: item._source.informixModified,
+      migrationStarted: item._source.migrationStarted,
+      migrationEnded: item._source.migrationEnded,
+      migrationDurationSeconds: (moment(item._source.migrationEnded).format('x') - moment(item._source.migrationStarted).format('x')),
+      errorMessage: item._source.errorMessage
+    }))
+  }
 }
 
 async function queueForMigration (legacyId) {
