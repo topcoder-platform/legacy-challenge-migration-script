@@ -7,32 +7,12 @@ const schedule = require('node-schedule')
 const express = require('express')
 const cors = require('cors')
 const logger = require('./util/logger')
-// const controller = require('./controller')
 const migrationController = require('./migrationController')
 const apiController = require('./apiController')
-// const { migration } = require('./migrationInstance')
 
-// let migrationIdle = true
-// setup schedule
 const rule = new schedule.RecurrenceRule()
 rule.minute = new schedule.Range(0, 59, config.SCHEDULE_INTERVAL)
 schedule.scheduleJob(rule, migrationController.migrate)
-// schedule.scheduleJob(rule, async () => {
-//   logger.info(`migration.run() enabled: ${config.MIGRATION_CRON_ENABLED}`)
-//   if (config.MIGRATION_CRON_ENABLED) {
-//     logger.info(`Auto-Migration Check ${migrationIdle}`)
-//     if (migrationIdle) {
-//       logger.info(`Auto-Migration Start ${migrationIdle}`)
-//       migrationIdle = false
-//       migrationIdle = await migrationController.migrate()
-//       logger.info(`Auto-Migration Complete ${migrationIdle}`)
-//     } else {
-//       logger.info('Auto-Migration Cant Start, Already Running')
-//     }
-//   } else {
-//     logger.info('Auto-Migration Disabled')
-//   }
-// })
 logger.info(`The migration is scheduled to be executed every ${config.SCHEDULE_INTERVAL} minutes`)
 migrationController.migrate()
 

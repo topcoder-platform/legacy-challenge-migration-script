@@ -1,6 +1,6 @@
 module.exports = {
   PORT: process.env.PORT || 3001,
-  MIGRATION_CRON_ENABLED: process.env.MIGRATION_CRON_ENABLED || true,
+  // MIGRATION_CRON_ENABLED: process.env.MIGRATION_CRON_ENABLED || true,
   API_VERSION: process.env.API_VERSION || 'v5',
   SCHEDULE_INTERVAL: process.env.SCHEDULE_INTERVAL ? Number(process.env.SCHEDULE_INTERVAL) : 1, // minutes
 
