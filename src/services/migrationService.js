@@ -44,7 +44,7 @@ async function processChallenge (legacyId, forceMigrate = false) {
   } else {
     logger.error('No v5 Challenge ID returned from migrateChallenge')
   }
-  await challengeMigrationStatusService.endMigration(legacyId, v5ChallengeId)
+  await challengeMigrationStatusService.endMigration(legacyId, v5ChallengeId, config.MIGRATION_PROGRESS_STATUSES.SUCCESS)
   return v5ChallengeId
 }
 
