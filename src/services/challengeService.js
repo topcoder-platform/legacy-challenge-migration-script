@@ -473,7 +473,7 @@ async function migrateChallenge (legacyId) {
 
   let groups = []
   if (allGroups) {
-    logger.warn(`Old Group Ids ${JSON.stringify(allGroups)}`)
+    // logger.warn(`Old Group Ids ${JSON.stringify(allGroups)}`)
     groups = await convertGroupIdsToV5UUIDs(allGroups)
   }
 
@@ -541,7 +541,7 @@ async function migrateChallenge (legacyId) {
     prizeSets.push(prizeSet)
   }
 
-  const tags = _.compact(_.concat(challengeListing.technologies, challengeListing.platforms))
+  const tags = _.uniq(_.compact(_.concat(challengeListing.technologies, challengeListing.platforms)))
 
   const winners = _.map(challengeListing.winners, w => {
     return {
@@ -651,7 +651,7 @@ async function convertGroupIdsToV5UUIDs (oldIds) {
   const groups = []
   for (const oldId of oldIds) {
     if (groupsUUIDCache.get(oldId)) {
-      logger.debug(`Group Found in Cache! ${oldId} - ${groupsUUIDCache.get(oldId)}`)
+      // logger.debug(`Group Found in Cache! ${oldId} - ${groupsUUIDCache.get(oldId)}`)
       groups.push(groupsUUIDCache.get(oldId))
     } else {
       if (!token) token = await helper.getM2MToken()
