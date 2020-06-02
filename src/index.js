@@ -5,6 +5,7 @@ global.Promise = require('bluebird')
 const config = require('config')
 const schedule = require('node-schedule')
 const express = require('express')
+const cors = require('cors')
 const logger = require('./util/logger')
 // const controller = require('./controller')
 const migrationController = require('./migrationController')
@@ -41,8 +42,20 @@ migrationController.migrate()
 //   `esHost: ${config.ES.HOST}`,
 //   `dynamoHost: ${config.AMAZON.DYNAMODB_URL}`])
 
-// setup express app
 const app = express()
+app.use(cors({
+  exposedHeaders: [
+    'X-Prev-Page',
+    'X-Next-Page',
+    'X-Page',
+    'X-Per-Page',
+    'X-Total',
+    'X-Total-Pages',
+    'Link'
+  ]
+}))
+
+// setup express app
 app.set('port', config.PORT)
 
 app.post(`/${config.API_VERSION}/challenge-migration`, apiController.queueForMigration)

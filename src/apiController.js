@@ -33,6 +33,7 @@ async function queueForMigration (req, res) {
 }
 
 async function getMigrationStatus (req, res) {
+  logger.error(`GET STATUS ${JSON.stringify(req.query)}`)
   const legacyId = req.query.legacyId || null
   const challengeId = req.query.challengeId || null
   const progress = await challengeMigrationStatusService.getMigrationProgress({ legacyId, challengeId })
@@ -42,7 +43,8 @@ async function getMigrationStatus (req, res) {
   return res.status(404).json({ message: 'Progress Not found' })
 }
 
-async function migrateChallenge (legacyId, forceMigrate = false) {
+async function migrateChallenge (legacyId) {
+  const forceMigrate = false // temporary
   const [legacyIdProgress] = await challengeMigrationStatusService.getMigrationProgress({ legacyId })
   // logger.debug(`migrateChallenge Record ${JSON.stringify(legacyIdProgress)}`)
   if (legacyIdProgress) {
@@ -52,11 +54,12 @@ async function migrateChallenge (legacyId, forceMigrate = false) {
     }
     if (legacyIdProgress.status === config.MIGRATION_PROGRESS_STATUSES.SUCCESS) {
       logger.info(`Challenge ${legacyId} migrated previously.`)
-      if (!forceMigrate) return false
+      if (forceMigrate !== true) return false
+      // logger.debug('Migrated Previously, but still continuing?')
     }
     if (legacyIdProgress.status === config.MIGRATION_PROGRESS_STATUSES.FAILED) {
       logger.error(`Challenge ${legacyId} Failed Previously!`)
-      if (!forceMigrate) return false
+      if (forceMigrate !== true) return false
     }
   }
   // logger.debug(`Queueing for Migration ${legacyId}`)

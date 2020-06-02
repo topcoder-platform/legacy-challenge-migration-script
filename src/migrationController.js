@@ -43,28 +43,6 @@ async function migrate () {
   }
 }
 
-// async function migrateChallenge (legacyId, forceMigrate = false) {
-//   const legacyIdProgress = await challengeMigrationStatusService.getProgressByLegacyId(legacyId)
-//   if (legacyIdProgress) {
-//     if (legacyIdProgress.status === config.MIGRATION_PROGRESS_STATUSES.IN_PROGRESS) {
-//       logger.info(`Challenge ${legacyId} in progress...`)
-//       return false
-//     }
-//     if (legacyIdProgress.status === config.MIGRATION_PROGRESS_STATUSES.SUCCESS) {
-//       logger.info(`Challenge ${legacyId} migrated previously.`)
-//       if (!forceMigrate) return false
-//     }
-//     if (legacyIdProgress.status === config.MIGRATION_PROGRESS_STATUSES.FAILED) {
-//       logger.error(`Challenge ${legacyId} Failed!`)
-//       if (!forceMigrate) return false
-//     }
-//   }
-//   logger.debug(`+++ Challenge ${legacyId} Migration Started`)
-//   const result = await migrationService.processChallenge(legacyId, forceMigrate)
-//   logger.debug(`--- Challenge ${legacyId} Migration Finished`)
-//   return result
-// }
-
 module.exports = {
   migrate
 }

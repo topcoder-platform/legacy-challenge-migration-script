@@ -7,6 +7,7 @@
     "aws-sdk": "^2.466.0",
     "bluebird": "^3.5.5",
     "config": "^3.1.0",
+    "cors": "^2.8.5",
     "dynamoose": "^1.11.1",
     "elasticsearch": "^16.1.1",
     "express": "^4.17.1",
