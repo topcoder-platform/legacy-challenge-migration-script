@@ -471,10 +471,11 @@ async function migrateChallenge (legacyId) {
     allV5Terms = await getAllV5Terms()
   }
 
-  if (allGroups) logger.warn(`Old Group Ids ${allGroups}`)
-  // const allGroupsOldIds = _.map((allGroups), g => (g.group_id))
-  const allGroupUUIDs = await convertGroupIdsToV5UUIDs(allGroups)
-  if (allGroupUUIDs) logger.warn(`New Group Ids ${allGroupUUIDs}`)
+  let groups = []
+  if (allGroups) {
+    logger.warn(`Old Group Ids ${JSON.stringify(allGroups)}`)
+    groups = await convertGroupIdsToV5UUIDs(allGroups)
+  }
 
   // for (const challenge of challenges) {
   logger.info(`Migrating Challenge ${challengeListing.id} - Last Modified Date ${moment(challengeListing.updatedAt).utc().format()}`)
@@ -541,9 +542,6 @@ async function migrateChallenge (legacyId) {
   }
 
   const tags = _.compact(_.concat(challengeListing.technologies, challengeListing.platforms))
-
-  const groups = allGroupUUIDs
-  if (groups.length > 0) logger.debug(`Groups for Challenge ${JSON.stringify(groups)}`)
 
   const winners = _.map(challengeListing.winners, w => {
     return {
@@ -646,25 +644,26 @@ async function getAllV5Terms () {
   return allTerms
 }
 
-async function convertGroupIdsToV5UUIDs (oldId) {
+async function convertGroupIdsToV5UUIDs (oldIds) {
   // console.log('Convert to UUIDs', groupOldIdArray)
   // format groupOldIdArray[{ challenge_id, group_id }]
   let token = null
   const groups = []
-
-  if (groupsUUIDCache.get(oldId)) {
-    logger.debug(`Group Found in Cache! ${oldId} - ${groupsUUIDCache.get(oldId)}`)
-    groups.push(groupsUUIDCache.get(oldId))
-  } else {
-    if (!token) token = await helper.getM2MToken()
-    logger.debug(`Calling v5 Groups API - ${config.GROUPS_API_URL}?oldId=${oldId}`)
-    const result = await request.get(`${config.GROUPS_API_URL}?oldId=${oldId}`).set({ Authorization: `Bearer ${token}` })
-    const resultObj = JSON.parse(result.text)
-    if (resultObj && resultObj[0]) {
-      groupsUUIDCache.set(oldId, resultObj[0].id)
+  for (const oldId of oldIds) {
+    if (groupsUUIDCache.get(oldId)) {
+      logger.debug(`Group Found in Cache! ${oldId} - ${groupsUUIDCache.get(oldId)}`)
       groups.push(groupsUUIDCache.get(oldId))
     } else {
-      logger.error('Group not Found in API', oldId)
+      if (!token) token = await helper.getM2MToken()
+      logger.debug(`Calling v5 Groups API - ${config.GROUPS_API_URL}?oldId=${oldId}`)
+      const result = await request.get(`${config.GROUPS_API_URL}?oldId=${oldId}`).set({ Authorization: `Bearer ${token}` })
+      const resultObj = JSON.parse(result.text)
+      if (resultObj && resultObj[0]) {
+        groupsUUIDCache.set(oldId, resultObj[0].id)
+        groups.push(groupsUUIDCache.get(oldId))
+      } else {
+        logger.error('Group not Found in API', oldId)
+      }
     }
   }
   return groups

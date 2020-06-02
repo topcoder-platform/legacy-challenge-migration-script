@@ -55,7 +55,7 @@ async function migrateChallenge (legacyId, forceMigrate = false) {
       if (!forceMigrate) return false
     }
     if (legacyIdProgress.status === config.MIGRATION_PROGRESS_STATUSES.FAILED) {
-      logger.error(`Challenge ${legacyId} Failed!`)
+      logger.error(`Challenge ${legacyId} Failed Previously!`)
       if (!forceMigrate) return false
     }
   }
