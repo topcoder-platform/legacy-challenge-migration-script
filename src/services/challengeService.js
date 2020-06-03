@@ -473,7 +473,7 @@ async function migrateChallenge (legacyId) {
 
   let groups = []
   if (allGroups && allGroups.length > 0) {
-    logger.warn(`Old Group Ids ${JSON.stringify(allGroups)}`)
+    // logger.warn(`Old Group Ids ${JSON.stringify(allGroups)}`)
     groups = await convertGroupIdsToV5UUIDs(allGroups)
   }
 
