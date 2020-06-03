@@ -472,8 +472,8 @@ async function migrateChallenge (legacyId) {
   }
 
   let groups = []
-  if (allGroups) {
-    // logger.warn(`Old Group Ids ${JSON.stringify(allGroups)}`)
+  if (allGroups && allGroups.length > 0) {
+    logger.warn(`Old Group Ids ${JSON.stringify(allGroups)}`)
     groups = await convertGroupIdsToV5UUIDs(allGroups)
   }
 
@@ -494,6 +494,12 @@ async function migrateChallenge (legacyId) {
   }
 
   const [challengeInfoFromIfx] = await challengeInformixService.getChallengeInfo(legacyId)
+
+  if (!challengeTypeMapping[challengeInfoFromIfx.type_id]) {
+    // logger.error('Throwing Error')
+    throw Error(`Challenge Type ID ${challengeInfoFromIfx.type_id} not found`)
+  }
+
   const newChallenge = {
     // id: uuid(), //this is removed from here and created in the save function
     legacyId: challengeListing.id,
@@ -662,7 +668,8 @@ async function convertGroupIdsToV5UUIDs (oldIds) {
         groupsUUIDCache.set(oldId, resultObj[0].id)
         groups.push(groupsUUIDCache.get(oldId))
       } else {
-        logger.error('Group not Found in API', oldId)
+        // logger.error('Group not Found in API', oldId)
+        throw new Error(`Legacy Group ID ${oldId} not found in v5 Groups API`)
       }
     }
   }

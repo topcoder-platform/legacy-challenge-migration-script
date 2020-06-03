@@ -30,7 +30,7 @@ async function processChallenge (legacyId, forceMigrate = false) {
     v5ChallengeId = await challengeService.migrateChallenge(legacyId)
   } catch (e) {
     logger.error(`Challenge Migration Failed ${JSON.stringify(e)}`)
-    await challengeMigrationStatusService.endMigration(legacyId, v5ChallengeId, config.MIGRATION_PROGRESS_STATUSES.FAILED, e)
+    return challengeMigrationStatusService.endMigration(legacyId, v5ChallengeId, config.MIGRATION_PROGRESS_STATUSES.FAILED, e)
   }
 
   if (v5ChallengeId) {
@@ -39,7 +39,7 @@ async function processChallenge (legacyId, forceMigrate = false) {
       resourcesMigrated = await resourceService.migrateResourcesForChallenge(legacyId, v5ChallengeId)
     } catch (e) {
       logger.error(`Resources Migration Failed ${JSON.stringify(e)}`)
-      await challengeMigrationStatusService.endMigration(legacyId, v5ChallengeId, config.MIGRATION_PROGRESS_STATUSES.FAILED, e)
+      return challengeMigrationStatusService.endMigration(legacyId, v5ChallengeId, config.MIGRATION_PROGRESS_STATUSES.FAILED, e)
     }
   } else {
     logger.error('No v5 Challenge ID returned from migrateChallenge')

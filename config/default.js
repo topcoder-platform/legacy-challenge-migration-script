@@ -88,6 +88,10 @@ module.exports = {
       phaseId: '6950164f-3c5e-4bdc-abc8-22aaf5a1bd49'
     },
     {
+      name: 'Screening',
+      phaseId: '2d7d3d85-0b29-4989-b3b4-be7f2b1d0aa6'
+    },
+    {
       name: 'Review',
       phaseId: 'aa5a3f78-79e0-4bf7-93ff-b11e8f5b398b'
     },
@@ -109,7 +113,7 @@ module.exports = {
     },
     {
       name: 'Final Fix',
-      phaseId: '20036dd3-3d67-4c81-8085-a4cb785c313b'
+      phaseId: '3e2afca6-9542-4763-a135-96b33f12c082'
     },
     {
       name: 'Final Review',

@@ -130,17 +130,20 @@ async function startMigration (legacyId, challengeModifiedDate) {
     legacyId,
     status: config.MIGRATION_PROGRESS_STATUSES.IN_PROGRESS,
     informixModified: moment(challengeModifiedDate).utc().format(),
-    migrationStarted: moment().utc().format()
+    migrationStarted: moment()
   }
   return updateProgressRecord(legacyId, migrationRecord)
 }
 
 async function endMigration (legacyId, challengeId, status, errorMessage) {
+  if (status === config.MIGRATION_PROGRESS_STATUSES.FAILED) {
+    logger.debug(`Logging Challenge As Failed ${errorMessage}`)
+  }
   const migrationRecord = {
     legacyId,
     challengeId,
     status,
-    migrationEnded: moment().utc().format(),
+    migrationEnded: moment(),
     errorMessage
   }
   return updateProgressRecord(legacyId, migrationRecord)

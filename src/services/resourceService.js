@@ -99,6 +99,9 @@ async function saveResourceRoles (resourceRoles) {
  * @param {Object} filter {id, ids}
  */
 async function migrateResourcesForChallenge (legacyChallengeId, v5ChallengeId) {
+  if (!v5ChallengeId) {
+    throw Error('No v5 Challenge ID Passed')
+  }
   const resources = await resourceInformixService.getResourcesForChallengeFromIfx(legacyChallengeId)
   logger.info(`Migrating ${resources.length} Resources for ${legacyChallengeId} - ${v5ChallengeId}`)
   if (!_.isArray(resources) || resources.length < 1) {
