@@ -35,11 +35,9 @@ async function save (challenge) {
 async function createChallenge (challenge) {
   challenge.id = uuid()
   const dynamoChallenge = new Challenge(_.omit(challenge, ['numOfSubmissions', 'numOfRegistrants']))
-  let dynamoSaved = null
-  dynamoSaved = await dynamoChallenge.save()
 
-  if (dynamoSaved) {
-    // try {
+  try {
+    await dynamoChallenge.save()
     await getESClient().create({
       index: config.get('ES.CHALLENGE_ES_INDEX'),
       type: config.get('ES.CHALLENGE_ES_TYPE'),
@@ -51,6 +49,8 @@ async function createChallenge (challenge) {
       }
     })
     return challenge.id
+  } catch (e) {
+    throw Error(`createChallenge Failed ${e}`)
   }
 }
 
@@ -61,9 +61,9 @@ async function createChallenge (challenge) {
  * @param {Boolean} retrying if user is retrying
  */
 async function updateChallenge (challenge) {
-  const dynamoUpdated = await Challenge.update({ id: challenge.id }, challenge)
-  if (dynamoUpdated) {
-    const esUpdated = await getESClient().update({
+  try {
+    await Challenge.update({ id: challenge.id }, challenge)
+    await getESClient().update({
       index: config.get('ES.CHALLENGE_ES_INDEX'),
       type: config.get('ES.CHALLENGE_ES_TYPE'),
       refresh: config.get('ES.ES_REFRESH'),
@@ -76,11 +76,9 @@ async function updateChallenge (challenge) {
         doc_as_upsert: true
       }
     })
-    if (esUpdated) {
-      return challenge.id
-    } else {
-      logger.error('updateChallenge ES Write Fail ')
-    }
+    return challenge.id
+  } catch (e) {
+    throw Error(`updateChallenge Failed ${e}`)
   }
 }
 

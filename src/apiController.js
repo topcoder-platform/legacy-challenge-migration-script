@@ -34,7 +34,7 @@ async function queueForMigration (req, res) {
 }
 
 async function getMigrationStatus (req, res) {
-  logger.error(`GET STATUS ${JSON.stringify(req.query)}`)
+  // logger.error(`GET STATUS ${JSON.stringify(req.query)}`)
   const legacyId = req.query.legacyId || null
   const challengeId = req.query.challengeId || null
   const status = req.query.status || null

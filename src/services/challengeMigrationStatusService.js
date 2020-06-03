@@ -1,6 +1,6 @@
 // challenge service
 const config = require('config')
-const { map } = require('lodash')
+const { map, toString } = require('lodash')
 const { getESClient } = require('../util/helper')
 const logger = require('../util/logger')
 const moment = require('moment')
@@ -25,8 +25,8 @@ async function createProgressRecord (legacyId, migrationRecord) {
     })
     return true
   } catch (err) {
-    logger.error(`createProgressRecord failed ${migrationRecord} ${err}`)
-    return false
+    throw Error(`createProgressRecord failed ${migrationRecord} ${err}`)
+    // return false
   }
 }
 
@@ -49,7 +49,8 @@ async function updateProgressRecord (legacyId, migrationRecord) {
       }
     })
   } catch (err) {
-    logger.error(`updateProgressRecord failed ${migrationRecord} ${err}`)
+    throw Error(`updateProgressRecord failed ${migrationRecord} ${err}`)
+    // logger.error(`updateProgressRecord failed ${migrationRecord} ${err}`)
   }
 }
 
@@ -144,7 +145,7 @@ async function endMigration (legacyId, challengeId, status, errorMessage) {
     challengeId,
     status,
     migrationEnded: moment(),
-    errorMessage
+    errorMessage: toString(errorMessage)
   }
   return updateProgressRecord(legacyId, migrationRecord)
 }

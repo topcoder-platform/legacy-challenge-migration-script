@@ -52,7 +52,8 @@ async function getExistingResourceRoleIds (names) {
 }
 
 async function getRoleUUIDForResourceRoleId (resourceRoleId) {
-  // console.log('roleMapping', resourceRoleUUIDRoleIdCache)
+  // throw Error(`TEST v5 ResourceRole not found for ${resourceRoleId}`)
+
   if (resourceRoleUUIDRoleIdCache.get(resourceRoleId)) return resourceRoleUUIDRoleIdCache.get(resourceRoleId)
   const result = await ResourceRole.scan('legacyId').eq(resourceRoleId).exec()
   if (result) {
@@ -60,7 +61,7 @@ async function getRoleUUIDForResourceRoleId (resourceRoleId) {
     // console.log('Role Found', resourceRoleUUIDRoleIdCache)
     return result[0].id
   } else {
-    logger.error(`getRoleUUIDForResourceRoleId failed for ${resourceRoleId}`)
+    throw Error(`v5 ResourceRole UUID not found for resourceRoleId ${resourceRoleId}`)
   }
 }
 
@@ -106,7 +107,7 @@ async function migrateResourcesForChallenge (legacyChallengeId, v5ChallengeId) {
   logger.info(`Migrating ${resources.length} Resources for ${legacyChallengeId} - ${v5ChallengeId}`)
   if (!_.isArray(resources) || resources.length < 1) {
     logger.error(`No Resources found for LegacyID ${legacyChallengeId}`)
-    return false
+    return true
   }
 
   for (let i = 0; i < resources.length; i += 1) {
@@ -146,7 +147,8 @@ async function saveResource (resource) {
   const newResource = new Resource(resource)
   return newResource.save(async (err) => {
     if (err) {
-      logger.error(`saveResource dynamo save failed ${err}`)
+      // logger.error(`saveResource dynamo save failed ${err}`)
+      throw Error(`Could not save resource (Dynamo) ${err} - ${resource}`)
     } else {
       try {
         return getESClient().create({
@@ -158,7 +160,8 @@ async function saveResource (resource) {
         })
       } catch (err) {
         // errorService.put({ resourceId: resource.legacyId, type: 'es', message: err.message })
-        logger.error(`saveResource ES save failed ${err}`)
+        // logger.error(`saveResource ES save failed ${err}`)
+        throw Error(`Could not save resource (ElasticSearch) ${err} - ${resource}`)
       }
     }
   })
