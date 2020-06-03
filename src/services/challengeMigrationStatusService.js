@@ -115,7 +115,7 @@ async function getMigrationProgress (filter, perPage = 100, page = 0) {
       informixModified: item._source.informixModified,
       migrationStarted: item._source.migrationStarted,
       migrationEnded: item._source.migrationEnded,
-      migrationDurationSeconds: (moment(item._source.migrationEnded).format('x') - moment(item._source.migrationStarted).format('x')),
+      migrationDuration: (moment(item._source.migrationEnded).format('x') - moment(item._source.migrationStarted).format('x')),
       errorMessage: item._source.errorMessage
     }))
   }
