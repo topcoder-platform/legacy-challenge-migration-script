@@ -497,7 +497,7 @@ async function migrateChallenge (legacyId) {
 
   if (!challengeTypeMapping[challengeInfoFromIfx.type_id]) {
     // logger.error('Throwing Error')
-    throw Error(`Challenge Type ID ${challengeInfoFromIfx.type_id} not found`)
+    throw Error(`Challenge Type ID ${challengeInfoFromIfx.type_id} not found for legacyId ${legacyId}`)
   }
 
   const newChallenge = {
@@ -564,10 +564,10 @@ async function migrateChallenge (legacyId) {
       // console.log('Term', term)
       const v5Term = _.find(allV5Terms, v5Term => v5Term.legacyId === term.termsOfUseId)
       if (v5Term) {
-        // logger.info(`V5 Term Found for ${term.termsOfUseId} - ${v5Term.id}`)
         terms.push(v5Term.id)
       } else {
-        logger.error(`V5 Term Not Found for ${term.termsOfUseId}`)
+        // logger.error(`V5 Term Not Found for ${term.termsOfUseId}`)
+        throw Error(`V5 Term ${term.termsOfUseId} not found for legacyId ${legacyId}`)
       }
     })
   }
