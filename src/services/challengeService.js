@@ -644,13 +644,19 @@ async function migrateChallenge (legacyId) {
   })
   metadata.push(..._.compact(allMetadata))
 
-  let events = []
+  const events = []
   if (challengeListing.events && challengeListing.events.length > 0) {
-    events = _.map(challengeListing.events, event => ({
-      id: event.id,
-      name: event.eventDescription,
-      key: event.eventShortDesc
-    }))
+    for (const event of challengeListing.events) {
+      if (!_.find(events, { id: event.id })) {
+        events.push({
+          id: event.id,
+          name: event.eventDescription,
+          key: event.eventShortDesc
+        })
+      } else {
+        logger.debug(`Duplicate event ${JSON.stringify(event)}`)
+      }
+    }
   }
 
   // console.log(JSON.stringify(metadata))
