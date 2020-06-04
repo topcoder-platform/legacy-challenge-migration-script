@@ -67,7 +67,7 @@ async function getRoleUUIDForResourceRoleId (resourceRoleId) {
 async function getRoleUUIDForResourceRoleName (name) {
   if (resourceRoleUUIDRoleNameCache.get(name)) return resourceRoleUUIDRoleNameCache.get(name)
   const result = await ResourceRole.scan('name').eq(name).exec()
-  if (result) {
+  if (result && result[0]) {
     resourceRoleUUIDRoleNameCache.set(name, result[0].id)
     // console.log('Role Found', resourceRoleUUIDRoleIdCache)
     return result[0].id
