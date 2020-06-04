@@ -503,6 +503,9 @@ async function migrateChallenge (legacyId) {
   logger.info(`Migrating Challenge ${challengeListing.id} - Last Modified Date ${moment(challengeListing.updatedAt).utc().format()}`)
 
   let detailRequirement = challengeDetails.detailRequirements || ''
+  if (challengeDetails.introduction && challengeDetails.introduction.trim() !== '') {
+    detailRequirement = challengeDetails.introduction + '<br />' + detailRequirement
+  }
   if (challengeDetails.finalSubmissionGuidelines && challengeDetails.finalSubmissionGuidelines.trim() !== '') {
     detailRequirement += '<br /><br /><h2>Final Submission Guidelines</h2>' + challengeDetails.finalSubmissionGuidelines
   }
@@ -586,7 +589,13 @@ async function migrateChallenge (legacyId) {
       // console.log('Term', term)
       const v5Term = _.find(allV5Terms, v5Term => v5Term.legacyId === term.termsOfUseId)
       if (v5Term) {
-        terms.push({ id: v5Term.id, roleId: await resourceService.getRoleUUIDForResourceRoleName(term.role) })
+        let roleId = null
+        try {
+          roleId = await resourceService.getRoleUUIDForResourceRoleName(term.role)
+          terms.push({ id: v5Term.id, roleId })
+        } catch (e) {
+          logger.warn(`Term Role ${term.role} not found - not creating association`)
+        }
       } else {
         // logger.error(`V5 Term Not Found for ${term.termsOfUseId}`)
         throw Error(`V5 Term ${term.termsOfUseId} not found for legacyId ${legacyId}`)

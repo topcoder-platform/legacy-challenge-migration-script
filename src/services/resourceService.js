@@ -72,6 +72,7 @@ async function getRoleUUIDForResourceRoleName (name) {
     // console.log('Role Found', resourceRoleUUIDRoleIdCache)
     return result[0].id
   } else {
+    resourceRoleUUIDRoleNameCache.set(name, null)
     throw Error(`v5 ResourceRole UUID not found for resourceRoleName ${name}`)
   }
 }
