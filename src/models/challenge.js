@@ -1,5 +1,5 @@
 /**
- * Challenge model.
+ * This defines Challenge model.
  */
 
 const dynamoose = require('dynamoose')
@@ -16,19 +16,23 @@ const schema = new Schema({
     type: Number,
     required: false
   },
+  typeId: {
+    type: String,
+    required: false
+  },
   legacy: {
     type: Object,
     required: false
-  },
-  typeId: {
-    type: String,
-    required: true
   },
   name: {
     type: String,
     required: true
   },
   description: {
+    type: String,
+    required: false
+  },
+  privateDescription: {
     type: String,
     required: false
   },
@@ -41,25 +45,30 @@ const schema = new Schema({
     type: [Object],
     required: false
   },
-  terms: {
-    type: Array,
-    required: false
-  },
   timelineTemplateId: {
     type: String,
     required: false
   },
   phases: {
     type: Array,
-    required: true
+    required: false
+  },
+  events: {
+    type: [Object],
+    required: false
+  },
+  terms: {
+    type: Array,
+    required: false
   },
   prizeSets: {
     type: [Object],
-    required: true
+    required: false
   },
+  // tag names
   tags: {
     type: Array,
-    required: true
+    required: false
   },
   projectId: {
     type: Number,
@@ -67,7 +76,7 @@ const schema = new Schema({
   },
   startDate: {
     type: Date,
-    required: true
+    required: false
   },
   endDate: {
     type: Date,
@@ -81,10 +90,12 @@ const schema = new Schema({
     type: Array,
     required: false
   },
+  // group names
   groups: {
     type: Array,
     required: false
   },
+  // winners
   winners: {
     type: Array,
     required: false
@@ -107,7 +118,10 @@ const schema = new Schema({
   }
 },
 {
-  throughput: { read: 4, write: 2 }
-})
+  // throughput: { read: 4, write: 2 },
+  throughput: 'ON_DEMAND',
+  useDocumentTypes: true
+}
+)
 
 module.exports = schema

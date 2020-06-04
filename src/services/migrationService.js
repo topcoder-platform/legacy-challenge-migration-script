@@ -28,9 +28,9 @@ async function processChallenge (legacyId, forceMigrate = false) {
   try {
     await challengeMigrationStatusService.startMigration(legacyId, legacyChallengeLastModified)
     v5ChallengeId = await challengeService.migrateChallenge(legacyId)
-    await resourceService.migrateResourcesForChallenge(legacyId, v5ChallengeId)
+    const resourcesMigrated = resourceService.migrateResourcesForChallenge(legacyId, v5ChallengeId)
     await challengeMigrationStatusService.endMigration(legacyId, v5ChallengeId, config.MIGRATION_PROGRESS_STATUSES.SUCCESS)
-    return v5ChallengeId
+    return { challengeId: v5ChallengeId, resourcesMigrated: resourcesMigrated }
   } catch (e) {
     logger.error(`Migration Failed for ${legacyId} ${e}`)
 

@@ -12,6 +12,7 @@ const resourceInformixService = require('./resourceInformixService')
 // const resourceRolesFromDynamo = []
 // const challengeIdtoUUIDmap = {}
 const resourceRoleUUIDRoleIdCache = new HashMap()
+const resourceRoleUUIDRoleNameCache = new HashMap()
 
 /**
  * Get resource roles from informix
@@ -52,8 +53,6 @@ async function getExistingResourceRoleIds (names) {
 }
 
 async function getRoleUUIDForResourceRoleId (resourceRoleId) {
-  // throw Error(`TEST v5 ResourceRole not found for ${resourceRoleId}`)
-
   if (resourceRoleUUIDRoleIdCache.get(resourceRoleId)) return resourceRoleUUIDRoleIdCache.get(resourceRoleId)
   const result = await ResourceRole.scan('legacyId').eq(resourceRoleId).exec()
   if (result) {
@@ -62,6 +61,18 @@ async function getRoleUUIDForResourceRoleId (resourceRoleId) {
     return result[0].id
   } else {
     throw Error(`v5 ResourceRole UUID not found for resourceRoleId ${resourceRoleId}`)
+  }
+}
+
+async function getRoleUUIDForResourceRoleName (name) {
+  if (resourceRoleUUIDRoleNameCache.get(name)) return resourceRoleUUIDRoleNameCache.get(name)
+  const result = await ResourceRole.scan('name').eq(name).exec()
+  if (result) {
+    resourceRoleUUIDRoleNameCache.set(name, result[0].id)
+    // console.log('Role Found', resourceRoleUUIDRoleIdCache)
+    return result[0].id
+  } else {
+    throw Error(`v5 ResourceRole UUID not found for resourceRoleName ${name}`)
   }
 }
 
@@ -145,26 +156,56 @@ async function migrateResourcesForChallenge (legacyChallengeId, v5ChallengeId) {
 async function saveResource (resource) {
   resource.id = uuid()
   const newResource = new Resource(resource)
-  return newResource.save(async (err) => {
-    if (err) {
-      // logger.error(`saveResource dynamo save failed ${err}`)
-      throw Error(`Could not save resource (Dynamo) ${err} - ${resource}`)
-    } else {
-      try {
-        return getESClient().create({
-          index: config.get('ES.RESOURCE_ES_INDEX'),
-          type: config.get('ES.RESOURCE_ES_TYPE'),
-          refresh: config.get('ES.ES_REFRESH'),
-          id: resource.id,
-          body: resource
-        })
-      } catch (err) {
-        // errorService.put({ resourceId: resource.legacyId, type: 'es', message: err.message })
-        // logger.error(`saveResource ES save failed ${err}`)
-        throw Error(`Could not save resource (ElasticSearch) ${err} - ${resource}`)
+  try {
+    await newResource.save()
+    return getESClient().create({
+      index: config.get('ES.RESOURCE_ES_INDEX'),
+      type: config.get('ES.RESOURCE_ES_TYPE'),
+      refresh: config.get('ES.ES_REFRESH'),
+      id: resource.id,
+      body: resource
+    })
+  } catch (err) {
+    throw Error(`Could not save resource ${err} - ${resource}`)
+  }
+}
+
+async function deleteResourcesForChallenge (challengeId) {
+  const esQuery = {
+    index: config.get('ES.RESOURCE_ES_INDEX'),
+    type: config.get('ES.RESOURCE_ES_TYPE'),
+    size: 100,
+    from: 0, // Es Index starts from 0
+    body: {
+      query: {
+        bool: {
+          should: {
+            match: {
+              challengeId
+            }
+          }
+        }
       }
     }
-  })
+  }
+  
+  logger.warn(`GET Challenge Resources from ES ${JSON.stringify(esQuery)}`)
+  const resources = await getESClient().query(esQuery)
+  // const resources = []
+  logger.warn(`Resources ${JSON.stringify(resources)}`)
+  const ids = _.map(resources, r => r.id)
+  logger.warn(`IDs ${JSON.stringify(ids)}`)
+  for (let i = 0; i < ids.length; i += 1) {
+    const resource = await Resource.get(ids[i])
+    logger.warn(`Deleting ${JSON.stringify(resource)}`)
+    await resource.delete()
+  }
+  logger.warn('DELETE Challenge Resources from ES')
+  try {
+    return getESClient().deleteByQuery(esQuery)
+  } catch (err) {
+    throw Error(`Could not delete resources for ${challengeId} - ${esQuery}`)
+  }
 }
 
 /**
@@ -179,6 +220,8 @@ async function saveResource (resource) {
 module.exports = {
   createMissingResourceRoles,
   migrateResourcesForChallenge,
+  deleteResourcesForChallenge,
+  getRoleUUIDForResourceRoleName,
   saveResourceRoles,
   saveResource
 }

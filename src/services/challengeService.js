@@ -13,6 +13,7 @@ const util = require('util')
 // const errorService = getErrorService()
 const HashMap = require('hashmap')
 const challengeInformixService = require('./challengeInformixService')
+const resourceService = require('./resourceService')
 
 let allV5Terms
 let challengeTypeMapping
@@ -28,9 +29,7 @@ async function save (challenge) {
 }
 /**
  * Put challenge data to new system
- *
  * @param {Object} challenge new challenge data
- * @param {Boolean} retrying if user is retrying
  */
 async function createChallenge (challenge) {
   challenge.id = uuid()
@@ -56,9 +55,7 @@ async function createChallenge (challenge) {
 
 /**
  * Update challenge data to new system
- *
  * @param {Object} challenge challenge data
- * @param {Boolean} retrying if user is retrying
  */
 async function updateChallenge (challenge) {
   try {
@@ -77,6 +74,33 @@ async function updateChallenge (challenge) {
       }
     })
     return challenge.id
+  } catch (e) {
+    throw Error(`updateChallenge Failed ${e}`)
+  }
+}
+
+/**
+ * Delete Challenge Data
+ * @param {Object} challenge challenge data
+ */
+async function deleteChallenge (challengeId) {
+  try {
+    logger.warn('Delete Challenge From Dynamo')
+    await Challenge.delete({ id: challengeId })
+    logger.warn('Delete Challenge From ES')
+    await getESClient().deleteByQuery({
+      index: config.get('ES.CHALLENGE_ES_INDEX'),
+      type: config.get('ES.CHALLENGE_ES_TYPE'),
+      body: {
+        query: {
+          match: {
+            id: challengeId
+          }
+        }
+      }
+    })
+    logger.warn('Delete Challenge Resources')
+    return resourceService.deleteResourcesForChallenge(challengeId)
   } catch (e) {
     throw Error(`updateChallenge Failed ${e}`)
   }
@@ -558,11 +582,11 @@ async function migrateChallenge (legacyId) {
   // get terms belong to this challenge
   const terms = []
   if (challengeDetails && challengeDetails.terms) {
-    _.map(challengeDetails.terms, term => {
+    _.map(challengeDetails.terms, async term => {
       // console.log('Term', term)
       const v5Term = _.find(allV5Terms, v5Term => v5Term.legacyId === term.termsOfUseId)
       if (v5Term) {
-        terms.push(v5Term.id)
+        terms.push({ id: v5Term.id, roleId: await resourceService.getRoleUUIDForResourceRoleName(term.role) })
       } else {
         // logger.error(`V5 Term Not Found for ${term.termsOfUseId}`)
         throw Error(`V5 Term ${term.termsOfUseId} not found for legacyId ${legacyId}`)
@@ -602,27 +626,27 @@ async function migrateChallenge (legacyId) {
   if (challengeListing.fileTypes && challengeListing.fileTypes.length > 0) {
     const fileTypes = _.map(challengeListing.fileTypes, fileType => fileType.description)
     // console.log(fileTypes)
-    metadata.push({ type: 'fileTypes', value: fileTypes })
+    metadata.push({ name: 'fileTypes', value: JSON.stringify(fileTypes) })
   }
 
   const metadataList = ['allowStockArt', 'drPoints', 'submissionViewable', 'submissionLimit', 'codeRepo', 'environment']
   const allMetadata = _.map(metadataList, item => {
-    if (challengeListing[item]) return { type: item, value: _.toString(challengeListing[item]) }
+    if (challengeListing[item]) return { name: item, value: _.toString(challengeListing[item]) }
   })
   metadata.push(..._.compact(allMetadata))
 
+  let events = []
   if (challengeListing.events && challengeListing.events.length > 0) {
-    const events = _.map(challengeListing.events, event => ({
+    events = _.map(challengeListing.events, event => ({
       id: event.id,
       name: event.eventDescription,
       key: event.eventShortDesc
     }))
-    metadata.push({ events })
   }
 
   // console.log(JSON.stringify(metadata))
 
-  return save(_.assign(newChallenge, { prizeSets, tags, groups, winners, phases, metadata, terms }))
+  return save(_.assign(newChallenge, { prizeSets, tags, groups, winners, phases, metadata, terms, events }))
 }
 
 async function getAllV5Terms () {
@@ -683,6 +707,7 @@ module.exports = {
   getChallengeIDsFromV4,
   getChallengeTypes,
   saveChallengeTypes,
+  deleteChallenge,
   createChallengeTimelineMapping,
   getChallengeTypesFromDynamo
 }
