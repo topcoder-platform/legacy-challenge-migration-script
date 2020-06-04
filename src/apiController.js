@@ -72,7 +72,25 @@ async function migrateChallenge (legacyId) {
   return challengeMigrationStatusService.queueForMigration(legacyId)
 }
 
+async function deleteMigration (req, res) {
+  const legacyId = req.params.legacyId || null
+  logger.debug(`DELETE API Query Values ${JSON.stringify({ legacyId })}`)
+  const legacyIdProgressObj = await challengeMigrationStatusService.getMigrationProgress({ legacyId })
+  const legacyIdProgress = legacyIdProgressObj.items[0]
+  const v5ChallengeId = legacyIdProgress.challengeId
+  logger.debug(v5ChallengeId)
+  try {
+    // await challengeMigrationStatusService.deleteMigrationStatus(legacyId)
+    await challengeService.deleteChallenge(v5ChallengeId)
+    return res.json(true)
+  } catch (e) {
+    res.status(500).json({ message: e })
+  }
+  // create records
+}
+
 module.exports = {
   queueForMigration,
-  getMigrationStatus
+  getMigrationStatus,
+  deleteMigration
 }

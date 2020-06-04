@@ -40,6 +40,7 @@ app.set('port', config.PORT)
 
 app.post(`/${config.API_VERSION}/challenge-migration`, apiController.queueForMigration)
 app.get(`/${config.API_VERSION}/challenge-migration`, apiController.getMigrationStatus)
+app.delete(`/${config.API_VERSION}/challenge-migration/:legacyId`, apiController.deleteMigration)
 // app.get(`/${config.API_VERSION}/challenge-migration`, controller.checkStatus)
 
 // the topcoder-healthcheck-dropin library returns checksRun count,

@@ -32,6 +32,7 @@ async function migrate () {
           const legacyId = queuedChallenges.items[i].legacyId
           // await migrateChallenge(legacyId)
           await migrationService.processChallenge(legacyId)
+          // totalResourcesMigrated += resourcesMigrated || 0
         }
         page += 1
       }

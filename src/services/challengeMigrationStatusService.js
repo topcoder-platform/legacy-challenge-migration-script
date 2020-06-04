@@ -55,6 +55,31 @@ async function updateProgressRecord (legacyId, migrationRecord) {
 }
 
 /**
+ * Delete challenge data
+ *
+ * @param {Number} legacyId
+ */
+async function deleteMigrationStatus (legacyId) {
+  const esQuery = {
+    index: config.get('ES.MIGRATION_ES_INDEX'),
+    type: config.get('ES.MIGRATION_ES_TYPE'),
+    body: {
+      query: {
+        match: {
+          legacyId
+        }
+      }
+    }
+  }
+  logger.error(`deleteMigration ${legacyId} ${JSON.stringify(esQuery)}`)
+  try {
+    await getESClient().deleteByQuery(esQuery)
+  } catch (err) {
+    throw Error(`deleteProgressRecord failed ${legacyId} ${err}`)
+  }
+}
+
+/**
  * Update challenge data to new system
  *
  * @param {Object} filter {legacyId, challengeId, status}
@@ -154,5 +179,6 @@ module.exports = {
   getMigrationProgress,
   queueForMigration,
   startMigration,
-  endMigration
+  endMigration,
+  deleteMigrationStatus
 }
