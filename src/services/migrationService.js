@@ -19,7 +19,8 @@ async function processChallenge (legacyId, forceMigrate = false) {
     const legacyModifiedDate = moment(legacyChallengeLastModified)
     logger.info(`v5 Modified Date: ${v5informixModifiedDate} legacyModifiedDate ${legacyModifiedDate}`)
     if (v5informixModifiedDate >= legacyModifiedDate && !forceMigrate) {
-      logger.info(`Challenge ${legacyId} was migrated and the dates were equal`)
+      const e = `Challenge ${legacyId} was migrated and the dates were equal`
+      await challengeMigrationStatusService.endMigration(legacyId, existingV5Challenge.id, config.MIGRATION_PROGRESS_STATUSES.SUCCESS, e)
       return false
     }
   }
