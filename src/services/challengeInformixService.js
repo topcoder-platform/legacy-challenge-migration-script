@@ -99,7 +99,7 @@ async function getChallengeLastModifiedDateFromIfx (legacyId) {
   sql += ` AND p.project_id = ${legacyId}`
 
   const result = await execQuery(sql)
-  if (result) return result[0].updated
+  if (result && result[0]) return result[0].updated
   logger.warn(`Got a null updated date for ${legacyId}`)
   return null
 }
