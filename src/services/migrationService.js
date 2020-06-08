@@ -15,7 +15,7 @@ async function processChallenge (legacyId, forceMigrate = false) {
   const legacyChallengeLastModified = await challengeInformixService.getChallengeLastModifiedDateFromIfx(legacyId)
   const v5informixModifiedDate = moment(get(existingV5Challenge, 'legacy.informixModified'))
 
-  if (existingV5Challenge) {
+  if (existingV5Challenge && legacyChallengeLastModified) {
     const legacyModifiedDate = moment(legacyChallengeLastModified)
     logger.info(`v5 Modified Date: ${v5informixModifiedDate} legacyModifiedDate ${legacyModifiedDate}`)
     if (v5informixModifiedDate >= legacyModifiedDate && !forceMigrate) {
