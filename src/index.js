@@ -6,15 +6,32 @@ const config = require('config')
 const schedule = require('node-schedule')
 const express = require('express')
 const cors = require('cors')
+const _ = require('lodash')
 const logger = require('./util/logger')
 const migrationController = require('./migrationController')
+// const syncService = require('./services/syncService')
 const apiController = require('./apiController')
+const syncController = require('./syncController')
 
 const rule = new schedule.RecurrenceRule()
 rule.minute = new schedule.Range(0, 59, config.SCHEDULE_INTERVAL)
-schedule.scheduleJob(rule, migrationController.migrate)
+// schedule.scheduleJob(rule, migrationController.migrate)
 logger.info(`The migration is scheduled to be executed every ${config.SCHEDULE_INTERVAL} minutes`)
-migrationController.migrate()
+// migrationController.migrate()
+
+// exists in v4 and not in v5, add to db
+// -- Add { memberId: 4, roleId: 3 }
+// exists in v5 and not in v4, remove from db
+// -- Remove { memberId: 2, roleId: 3 }
+
+/**
+ * store the last modified date
+ * pull the one from the config to "start" from
+ * queueChallengesFromLastModified
+ * sync
+ */
+// syncController.queueChallengesFromLastModified()
+syncController.sync()
 
 // logger.debug([
 //   `migrationInterval: ${config.SCHEDULE_INTERVAL}`,

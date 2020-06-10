@@ -23,6 +23,7 @@ const groupsUUIDCache = new HashMap()
 
 async function save (challenge) {
   if (challenge.id) {
+    logger.warn(`Updating Challenge ${JSON.stringify(challenge)}`)
     return updateChallenge(challenge)
   }
   return createChallenge(challenge)
@@ -69,8 +70,7 @@ async function updateChallenge (challenge) {
         doc: {
           ...challenge,
           groups: _.filter(challenge.groups, g => _.toString(g).toLowerCase() !== 'null')
-        },
-        doc_as_upsert: true
+        }
       }
     })
     return challenge.id
@@ -480,10 +480,11 @@ async function getChallengeDetailFromV4ES (legacyId) {
   return {}
 }
 /**
- * Get challenge from informix
- *
+ * Builds a V5 Challenge from V4 ES & Informix
+ * @param {Number} legacyId
+ * @returns {Object} v5ChallengeObject
  */
-async function migrateChallenge (legacyId) {
+async function buildV5Challenge (legacyId) {
   // logger.warn(`Start Getting Challenge Data ${legacyId}`)
   const challengeListing = await getChallengeListingFromV4ES(legacyId)
   const challengeDetails = await getChallengeDetailFromV4ES(legacyId)
@@ -661,9 +662,17 @@ async function migrateChallenge (legacyId) {
 
   // console.log(JSON.stringify(metadata))
 
-  return save(_.assign(newChallenge, { prizeSets, tags, groups, winners, phases, metadata, terms, events }))
+  return _.assign(newChallenge, { prizeSets, tags, groups, winners, phases, metadata, terms, events })
 }
 
+/**
+ * Builds & Saves a v5 Challenge
+ * @param {Number} legacyId
+ * @returns V5 Challenge UUID
+ */
+async function migrateChallenge (legacyId) {
+  return save(await buildV5Challenge(legacyId))
+}
 async function getAllV5Terms () {
   logger.debug('Getting V5 Terms')
   const token = await helper.getM2MToken()
@@ -715,11 +724,13 @@ async function convertGroupIdsToV5UUIDs (oldIds) {
 
 module.exports = {
   save,
+  buildV5Challenge,
   migrateChallenge,
   cacheTypesAndTimelines,
   getChallengeFromES,
   getChallengesFromES,
   getChallengeIDsFromV4,
+  getChallengeListingFromV4ES,
   getChallengeTypes,
   saveChallengeTypes,
   deleteChallenge,

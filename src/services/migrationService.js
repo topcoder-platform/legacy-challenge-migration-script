@@ -3,7 +3,7 @@ const config = require('config')
 const moment = require('moment')
 const logger = require('../util/logger')
 const challengeService = require('./challengeService')
-const challengeInformixService = require('./challengeInformixService')
+// const challengeInformixService = require('./challengeInformixService')
 const challengeMigrationStatusService = require('./challengeMigrationStatusService')
 // const resourceInformixService = require('./resourceInformixService')
 const resourceService = require('./resourceService')
@@ -11,18 +11,23 @@ const resourceService = require('./resourceService')
 async function processChallenge (legacyId, forceMigrate = false) {
   // logger.debug(`Loading challenge ${legacyId}`)
   const [existingV5Challenge] = await challengeService.getChallengeFromES(legacyId)
-
-  const legacyChallengeLastModified = await challengeInformixService.getChallengeLastModifiedDateFromIfx(legacyId)
   const v5informixModifiedDate = moment(get(existingV5Challenge, 'legacy.informixModified'))
 
-  if (existingV5Challenge && legacyChallengeLastModified) {
+  const legacyChallengeDetailFromV4 = await challengeService.getChallengeListingFromV4ES(legacyId)
+
+  let legacyChallengeLastModified = null
+
+  if (existingV5Challenge && legacyChallengeDetailFromV4) {
+    legacyChallengeLastModified = legacyChallengeDetailFromV4.updatedAt || null
     const legacyModifiedDate = moment(legacyChallengeLastModified)
-    logger.info(`v5 Modified Date: ${v5informixModifiedDate} legacyModifiedDate ${legacyModifiedDate}`)
+
     if (v5informixModifiedDate >= legacyModifiedDate && !forceMigrate) {
       const e = `Challenge ${legacyId} was migrated and the dates were equal`
       await challengeMigrationStatusService.endMigration(legacyId, existingV5Challenge.id, config.MIGRATION_PROGRESS_STATUSES.SUCCESS, e)
       return false
     }
+  } else {
+    logger.debug(`v5 Challenge is : ${existingV5Challenge} v4 Challenge is: ${legacyChallengeDetailFromV4}`)
   }
 
   let v5ChallengeId = null
@@ -70,9 +75,34 @@ async function processResourceRoles () {
   return resourceService.saveResourceRoles(result.resourceRoles)
 }
 
+async function queueForMigration (legacyId) {
+  const forceMigrate = false // temporary
+  const legacyIdProgressObj = await challengeMigrationStatusService.getMigrationProgress({ legacyId })
+  const legacyIdProgress = legacyIdProgressObj.items[0]
+  // logger.debug(`migrateChallenge Record ${JSON.stringify(legacyIdProgress)}`)
+  if (legacyIdProgress) {
+    if (legacyIdProgress.status === config.MIGRATION_PROGRESS_STATUSES.IN_PROGRESS) {
+      logger.info(`Challenge ${legacyId} in progress...`)
+      return false
+    }
+    if (legacyIdProgress.status === config.MIGRATION_PROGRESS_STATUSES.SUCCESS) {
+      logger.info(`Challenge ${legacyId} migrated previously.`)
+      if (forceMigrate !== true) return false
+      // logger.debug('Migrated Previously, but still continuing?')
+    }
+    if (legacyIdProgress.status === config.MIGRATION_PROGRESS_STATUSES.FAILED) {
+      logger.error(`Challenge ${legacyId} Failed Previously!`)
+      if (forceMigrate !== true) return false
+    }
+  }
+  // logger.debug(`Queueing for Migration ${legacyId}`)
+  return challengeMigrationStatusService.queueForMigration(legacyId)
+}
+
 module.exports = {
   processChallenge,
   processChallengeTypes,
   processChallengeTimelineTemplates,
-  processResourceRoles
+  processResourceRoles,
+  queueForMigration
 }

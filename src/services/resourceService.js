@@ -111,7 +111,7 @@ async function saveResourceRoles (resourceRoles) {
  *
  * @param {Object} filter {id, ids}
  */
-async function migrateResourcesForChallenge (legacyChallengeId, v5ChallengeId) {
+async function getResourcesForChallenge (legacyChallengeId, v5ChallengeId) {
   if (!v5ChallengeId) {
     throw Error('No v5 Challenge ID Passed')
   }
@@ -122,6 +122,7 @@ async function migrateResourcesForChallenge (legacyChallengeId, v5ChallengeId) {
     return true
   }
 
+  const results = []
   for (let i = 0; i < resources.length; i += 1) {
     const resource = resources[i]
     const roleId = await getRoleUUIDForResourceRoleId(resource.resource_role_id)
@@ -140,12 +141,19 @@ async function migrateResourcesForChallenge (legacyChallengeId, v5ChallengeId) {
         challengeId: v5ChallengeId,
         roleId: roleId
       }
-      await saveResource(newResource)
-      // results.push(newResource)
+      // await saveResource(newResource)
+      results.push(newResource)
     } else {
       logger.debug(`Will skip resource ${resource.id}. Challenge ID: ${v5ChallengeId}. Role ID: ${roleId}. Role name: ${resource.resource_role_name}`)
     }
   }
+  // return resources.length
+  return results
+}
+
+async function migrateResourcesForChallenge (legacyId) {
+  const resources = await getResourcesForChallenge(legacyId)
+  await Promise.all(resources.map(r => saveResource(r)))
   return resources.length
 }
 
@@ -171,43 +179,63 @@ async function saveResource (resource) {
   }
 }
 
-async function deleteResourcesForChallenge (challengeId) {
+async function deleteResource (resourceId) {
   const esQuery = {
     index: config.get('ES.RESOURCE_ES_INDEX'),
     type: config.get('ES.RESOURCE_ES_TYPE'),
     size: 100,
     from: 0, // Es Index starts from 0
     body: {
-      query: {
-        bool: {
-          should: {
-            match: {
-              challengeId
-            }
-          }
-        }
+      match: {
+        id: resourceId
       }
     }
   }
-  
-  logger.warn(`GET Challenge Resources from ES ${JSON.stringify(esQuery)}`)
-  const resources = await getESClient().query(esQuery)
-  // const resources = []
-  logger.warn(`Resources ${JSON.stringify(resources)}`)
-  const ids = _.map(resources, r => r.id)
-  logger.warn(`IDs ${JSON.stringify(ids)}`)
-  for (let i = 0; i < ids.length; i += 1) {
-    const resource = await Resource.get(ids[i])
-    logger.warn(`Deleting ${JSON.stringify(resource)}`)
-    await resource.delete()
-  }
-  logger.warn('DELETE Challenge Resources from ES')
+
   try {
-    return getESClient().deleteByQuery(esQuery)
-  } catch (err) {
-    throw Error(`Could not delete resources for ${challengeId} - ${esQuery}`)
+    await getESClient().delete(esQuery)
+    await Resource.delete({ id: resourceId })
+  } catch (e) {
+    throw Error(`Delete of Resource Failed ${JSON.stringify(e)}`)
   }
 }
+// async function deleteResourcesForChallenge (challengeId) {
+//   const esQuery = {
+//     index: config.get('ES.RESOURCE_ES_INDEX'),
+//     type: config.get('ES.RESOURCE_ES_TYPE'),
+//     size: 100,
+//     from: 0, // Es Index starts from 0
+//     body: {
+//       query: {
+//         bool: {
+//           should: {
+//             match: {
+//               challengeId
+//             }
+//           }
+//         }
+//       }
+//     }
+//   }
+  
+//   logger.warn(`GET Challenge Resources from ES ${JSON.stringify(esQuery)}`)
+//   const resources = await getESClient().query(esQuery)
+//   // const resources = []
+//   logger.warn(`Resources ${JSON.stringify(resources)}`)
+//   const ids = _.map(resources, r => r.id)
+//   logger.warn(`IDs ${JSON.stringify(ids)}`)
+//   for (let i = 0; i < ids.length; i += 1) {
+//     const resource = await Resource.get(ids[i])
+//     logger.warn(`Deleting ${JSON.stringify(resource)}`)
+//     await resource.delete()
+//   }
+//   logger.warn('DELETE Challenge Resources from ES')
+//   try {
+//     return getESClient().deleteByQuery(esQuery)
+//   } catch (err) {
+//     throw Error(`Could not delete resources for ${challengeId} - ${esQuery}`)
+//   }
+// }
 
 /**
    * Put all resource data to new system
@@ -221,7 +249,7 @@ async function deleteResourcesForChallenge (challengeId) {
 module.exports = {
   createMissingResourceRoles,
   migrateResourcesForChallenge,
-  deleteResourcesForChallenge,
+  deleteResource,
   getRoleUUIDForResourceRoleName,
   saveResourceRoles,
   saveResource

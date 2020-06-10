@@ -17,6 +17,7 @@ module.exports = {
   PROJECTS_API_URL: process.env.PROJECTS_API_URL || 'https://api.topcoder-dev.com/v5/projects',
   CHALLENGE_TYPE_API_URL: process.env.CHALLENGE_TYPE_API_URL || 'https://api.topcoder-dev.com/v4/challenge-types',
   CHALLENGE_TIMELINE_API_URL: process.env.CHALLENGE_TIMELINE_API_URL || 'https://api.topcoder-dev.com/v5/challenge-timelines',
+  CHALLENGE_API_URL: process.env.CHALLENGE_API_URL || 'https://api.topcoder-dev.com/v5/challenges',
   GROUPS_API_URL: process.env.GROUPS_API_URL || 'https://api.topcoder-dev.com/v5/groups',
   TERMS_API_URL: process.env.TERMS_API_URL || 'https://api.topcoder-dev.com/v5/terms',
   CREATED_DATE_BEGIN: process.env.CREATED_DATE_BEGIN,
@@ -63,6 +64,8 @@ module.exports = {
 
     MIGRATION_ES_INDEX: process.env.MIGRATION_ES_INDEX || 'challenge_migration',
     MIGRATION_ES_TYPE: process.env.MIGRATION_ES_TYPE || '_doc',
+    SYNC_ES_INDEX: process.env.SYNC_ES_INDEX || 'challenge_sync',
+    SYNC_ES_TYPE: process.env.SYNC_ES_TYPE || '_doc',
     HISTORY_ES_INDEX: process.env.HISTORY_ES_INDEX || 'challenge_history',
     HISTORY_ES_TYPE: process.env.HISTORY_ES_TYPE || '_doc',
     ES_REFRESH: process.env.ES_REFRESH || 'true'

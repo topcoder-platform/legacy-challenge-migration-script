@@ -1,7 +1,8 @@
-const config = require('config')
+// const config = require('config')
 const logger = require('./util/logger')
 const helper = require('./util/helper')
 const challengeService = require('./services/challengeService')
+const migrationService = require('./services/migrationService')
 const challengeMigrationStatusService = require('./services/challengeMigrationStatusService')
 
 async function queueForMigration (req, res) {
@@ -20,7 +21,7 @@ async function queueForMigration (req, res) {
     logger.debug(`Request IDs ${JSON.stringify(legacyIds)}`)
     if (legacyIds.length > 0) {
       for (let i = 0; i < legacyIds.length; i += 1) {
-        const result = await migrateChallenge(legacyIds[i])
+        const result = await migrationService.queueForMigration(legacyIds[i])
         if (result === true) count += 1
         if (result === false) skipped += 1
       }
@@ -46,30 +47,6 @@ async function getMigrationStatus (req, res) {
     return res.json(result.items)
   }
   return res.status(404).json({ message: 'Progress Not found' })
-}
-
-async function migrateChallenge (legacyId) {
-  const forceMigrate = false // temporary
-  const legacyIdProgressObj = await challengeMigrationStatusService.getMigrationProgress({ legacyId })
-  const legacyIdProgress = legacyIdProgressObj.items[0]
-  // logger.debug(`migrateChallenge Record ${JSON.stringify(legacyIdProgress)}`)
-  if (legacyIdProgress) {
-    if (legacyIdProgress.status === config.MIGRATION_PROGRESS_STATUSES.IN_PROGRESS) {
-      logger.info(`Challenge ${legacyId} in progress...`)
-      return false
-    }
-    if (legacyIdProgress.status === config.MIGRATION_PROGRESS_STATUSES.SUCCESS) {
-      logger.info(`Challenge ${legacyId} migrated previously.`)
-      if (forceMigrate !== true) return false
-      // logger.debug('Migrated Previously, but still continuing?')
-    }
-    if (legacyIdProgress.status === config.MIGRATION_PROGRESS_STATUSES.FAILED) {
-      logger.error(`Challenge ${legacyId} Failed Previously!`)
-      if (forceMigrate !== true) return false
-    }
-  }
-  // logger.debug(`Queueing for Migration ${legacyId}`)
-  return challengeMigrationStatusService.queueForMigration(legacyId)
 }
 
 module.exports = {

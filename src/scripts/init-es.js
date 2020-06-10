@@ -14,6 +14,7 @@ const client = helper.getESClient()
 const initES = async () => {
   for (const [index, type] of [
     [config.ES.MIGRATION_ES_INDEX, config.ES.MIGRATION_ES_TYPE],
+    [config.ES.SYNC_ES_INDEX, config.ES.SYNC_ES_TYPE],
     [config.ES.HISTORY_ES_INDEX, config.ES.HISTORY_ES_TYPE]
   ]) {
     if (process.argv.length === 3 && process.argv[2] === 'force') {
