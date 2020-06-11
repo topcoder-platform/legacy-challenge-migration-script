@@ -26,8 +26,8 @@ async function processChallenge (legacyId) {
   if (v5ChallengeFromAPI) {
     const challengeObj = pick(v5ChallengeObjectFromV4, ['legacy', 'events', 'status', 'winners', 'phases', 'terms', 'metadata'])
     challengeObj.id = v5ChallengeFromAPI.id
-    challengeObj.metadata.push({ name: 'synctest', value: 'true' })
-    logger.warn(`Challenge OBJ ${JSON.stringify(challengeObj.id)}`)
+    // challengeObj.metadata.push({ name: 'synctest', value: 'true' })
+    // logger.warn(`Challenge OBJ ${JSON.stringify(challengeObj.id)}`)
     return challengeService.save(challengeObj)
     // logger.info(`PUT challenge ${JSON.stringify(challengeObj)}`)
   } else {
@@ -39,14 +39,14 @@ async function processChallenge (legacyId) {
 async function processResources (legacyId, challengeId) {
   const currentV4Array = await resourceService.getResourcesForChallenge(legacyId)
   const currentV5Array = await getResourcesFromV5API(legacyId, challengeId)
-  logger.debug(`v4 Array: ${JSON.stringify(currentV4Array)}`)
-  logger.debug(`v5 Array: ${JSON.stringify(currentV5Array)}`)
+  // logger.debug(`v4 Array: ${JSON.stringify(currentV4Array)}`)
+  // logger.debug(`v5 Array: ${JSON.stringify(currentV5Array)}`)
 
   for (let i = 0; i < currentV4Array.length; i += 1) {
     const obj = currentV4Array[i]
     if (!find(currentV5Array, { memberId: obj.memberId, roleId: obj.roleId })) {
       logger.debug(`add ${JSON.stringify(obj)}`)
-      // await resourceService.saveResource(obj)
+      await resourceService.saveResource(obj)
     }
   }
 
@@ -54,7 +54,7 @@ async function processResources (legacyId, challengeId) {
     const obj = currentV5Array[i]
     if (!find(currentV4Array, { memberId: obj.memberId, roleId: obj.roleId })) {
       logger.debug(`remove ${JSON.stringify(obj.id)}`)
-      // await resourceService.deleteResource(obj.id)
+      await resourceService.deleteResource(obj.id)
     }
   }
 }
@@ -66,9 +66,9 @@ async function getChallengeFromV5API (legacyId) {
   return res.data || null
 }
 
-async function getResourcesFromV5API (challengeUUID) {
+async function getResourcesFromV5API (challengeId) {
   const token = await getM2MToken()
-  const url = `${config.RESOURCES_API_URL}?challengeId=${challengeUUID}`
+  const url = `${config.RESOURCES_API_URL}?challengeId=${challengeId}`
   const res = await axios.get(url, { headers: { Authorization: `Bearer ${token}` } })
   return res.data || null
 }

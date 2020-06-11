@@ -2,7 +2,9 @@ module.exports = {
   PORT: process.env.PORT || 3001,
   // MIGRATION_CRON_ENABLED: process.env.MIGRATION_CRON_ENABLED || true,
   API_VERSION: process.env.API_VERSION || 'v5',
-  SCHEDULE_INTERVAL: process.env.SCHEDULE_INTERVAL ? Number(process.env.SCHEDULE_INTERVAL) : 1, // minutes
+  MIGRATION_INTERVAL: process.env.MIGRATION_INTERVAL ? Number(process.env.MIGRATION_INTERVAL) : 5, // minutes
+  SYNC_INTERVAL: process.env.SYNC_INTERVAL ? Number(process.env.SYNC_INTERVAL) : 2, // minutes
+  SYNC_QUEUE_INTERVAL: process.env.SYNC_QUEUE_INTERVAL ? Number(process.env.SYNC_QUEUE_INTERVAL) : 1, // minutes
 
   // used to get M2M token
   AUTH0_URL: process.env.AUTH0_URL,
@@ -18,6 +20,7 @@ module.exports = {
   CHALLENGE_TYPE_API_URL: process.env.CHALLENGE_TYPE_API_URL || 'https://api.topcoder-dev.com/v4/challenge-types',
   CHALLENGE_TIMELINE_API_URL: process.env.CHALLENGE_TIMELINE_API_URL || 'https://api.topcoder-dev.com/v5/challenge-timelines',
   CHALLENGE_API_URL: process.env.CHALLENGE_API_URL || 'https://api.topcoder-dev.com/v5/challenges',
+  RESOURCES_API_URL: process.env.RESOURCES_API_URL || 'https://api.topcoder-dev.com/v5/resources',
   GROUPS_API_URL: process.env.GROUPS_API_URL || 'https://api.topcoder-dev.com/v5/groups',
   TERMS_API_URL: process.env.TERMS_API_URL || 'https://api.topcoder-dev.com/v5/terms',
   CREATED_DATE_BEGIN: process.env.CREATED_DATE_BEGIN,
@@ -68,6 +71,8 @@ module.exports = {
     SYNC_ES_TYPE: process.env.SYNC_ES_TYPE || '_doc',
     HISTORY_ES_INDEX: process.env.HISTORY_ES_INDEX || 'challenge_history',
     HISTORY_ES_TYPE: process.env.HISTORY_ES_TYPE || '_doc',
+    SYNC_HISTORY_ES_INDEX: process.env.HISTORY_ES_INDEX || 'challenge_sync_history',
+    SYNC_HISTORY_ES_TYPE: process.env.HISTORY_ES_TYPE || '_doc',
     ES_REFRESH: process.env.ES_REFRESH || 'true'
   },
 

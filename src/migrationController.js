@@ -24,7 +24,7 @@ async function migrate () {
       // logger.warn(`queuedChallenges ${JSON.stringify(queuedChallenges)}`)
       if (queuedChallenges.items.length <= 0) {
         running = false
-        logger.info(`0 Challenges with status of ${config.MIGRATION_PROGRESS_STATUSES.QUEUED}`)
+        logger.info(`0 Challenges with status of ${config.MIGRATION_PROGRESS_STATUSES.QUEUED} for migration`)
         // break
       } else {
         logger.debug(`Migrating [${queuedChallenges.items.length}] Challenges`)

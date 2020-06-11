@@ -151,8 +151,8 @@ async function getResourcesForChallenge (legacyChallengeId, v5ChallengeId) {
   return results
 }
 
-async function migrateResourcesForChallenge (legacyId) {
-  const resources = await getResourcesForChallenge(legacyId)
+async function migrateResourcesForChallenge (legacyId, challengeId) {
+  const resources = await getResourcesForChallenge(legacyId, challengeId)
   await Promise.all(resources.map(r => saveResource(r)))
   return resources.length
 }
@@ -217,7 +217,7 @@ async function deleteResource (resourceId) {
 //       }
 //     }
 //   }
-  
+
 //   logger.warn(`GET Challenge Resources from ES ${JSON.stringify(esQuery)}`)
 //   const resources = await getESClient().query(esQuery)
 //   // const resources = []

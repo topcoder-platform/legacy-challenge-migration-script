@@ -6,23 +6,27 @@ const config = require('config')
 const schedule = require('node-schedule')
 const express = require('express')
 const cors = require('cors')
-const _ = require('lodash')
+// const _ = require('lodash')
 const logger = require('./util/logger')
 const migrationController = require('./migrationController')
 // const syncService = require('./services/syncService')
 const apiController = require('./apiController')
 const syncController = require('./syncController')
 
-const rule = new schedule.RecurrenceRule()
-rule.minute = new schedule.Range(0, 59, config.SCHEDULE_INTERVAL)
-// schedule.scheduleJob(rule, migrationController.migrate)
-logger.info(`The migration is scheduled to be executed every ${config.SCHEDULE_INTERVAL} minutes`)
-// migrationController.migrate()
+const migrationRule = new schedule.RecurrenceRule()
+migrationRule.minute = new schedule.Range(0, 59, config.MIGRATION_INTERVAL)
+schedule.scheduleJob(migrationRule, migrationController.migrate)
+logger.info(`The migration is scheduled to be executed every ${config.MIGRATION_INTERVAL} minutes`)
 
-// exists in v4 and not in v5, add to db
-// -- Add { memberId: 4, roleId: 3 }
-// exists in v5 and not in v4, remove from db
-// -- Remove { memberId: 2, roleId: 3 }
+const syncQueueRule = new schedule.RecurrenceRule()
+syncQueueRule.minute = new schedule.Range(0, 59, config.SYNC_QUEUE_INTERVAL)
+schedule.scheduleJob(syncQueueRule, syncController.queueChallengesFromLastModified)
+logger.info(`The sync queue is scheduled to be executed every ${config.SYNC_QUEUE_INTERVAL} minutes`)
+
+const syncRule = new schedule.RecurrenceRule()
+syncRule.minute = new schedule.Range(0, 59, config.SYNC_INTERVAL)
+schedule.scheduleJob(syncRule, syncController.sync)
+logger.info(`The sync is scheduled to be executed every ${config.SYNC_INTERVAL} minutes`)
 
 /**
  * store the last modified date
@@ -31,7 +35,7 @@ logger.info(`The migration is scheduled to be executed every ${config.SCHEDULE_I
  * sync
  */
 // syncController.queueChallengesFromLastModified()
-syncController.sync()
+// syncController.sync()
 
 // logger.debug([
 //   `migrationInterval: ${config.SCHEDULE_INTERVAL}`,
