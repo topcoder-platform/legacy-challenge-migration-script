@@ -76,7 +76,8 @@ async function getLatestHistory () {
 async function getLatestDate () {
   const history = await getLatestHistory()
   // console.log(`latest history ${JSON.stringify(history)}`)
-  return history.date || null
+  if (history && history.date) return history.date
+  return null
 }
 
 module.exports = {
