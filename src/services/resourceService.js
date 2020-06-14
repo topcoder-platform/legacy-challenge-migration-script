@@ -116,7 +116,7 @@ async function getResourcesForChallenge (legacyChallengeId, v5ChallengeId) {
     throw Error('No v5 Challenge ID Passed')
   }
   const resources = await resourceInformixService.getResourcesForChallengeFromIfx(legacyChallengeId)
-  logger.info(`Migrating ${resources.length} Resources for ${legacyChallengeId} - ${v5ChallengeId}`)
+  logger.info(`Getting ${resources.length} Resources for ${legacyChallengeId} - ${v5ChallengeId}`)
   if (!_.isArray(resources) || resources.length < 1) {
     logger.error(`No Resources found for LegacyID ${legacyChallengeId}`)
     return true
@@ -183,20 +183,14 @@ async function deleteResource (resourceId) {
   const esQuery = {
     index: config.get('ES.RESOURCE_ES_INDEX'),
     type: config.get('ES.RESOURCE_ES_TYPE'),
-    size: 100,
-    from: 0, // Es Index starts from 0
-    body: {
-      match: {
-        id: resourceId
-      }
-    }
+    id: resourceId
   }
 
   try {
     await getESClient().delete(esQuery)
     await Resource.delete({ id: resourceId })
   } catch (e) {
-    throw Error(`Delete of Resource Failed ${JSON.stringify(e)}`)
+    throw Error(`Delete of Resource Failed ${e}`)
   }
 }
 // async function deleteResourcesForChallenge (challengeId) {
@@ -251,6 +245,7 @@ module.exports = {
   migrateResourcesForChallenge,
   deleteResource,
   getRoleUUIDForResourceRoleName,
+  getResourcesForChallenge,
   saveResourceRoles,
   saveResource
 }

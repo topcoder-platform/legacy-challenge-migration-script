@@ -8,10 +8,10 @@ const express = require('express')
 const cors = require('cors')
 // const _ = require('lodash')
 const logger = require('./util/logger')
-const migrationController = require('./migrationController')
+const migrationController = require('./controllers/migrationController')
 // const syncService = require('./services/syncService')
-const apiController = require('./apiController')
-const syncController = require('./syncController')
+const apiController = require('./controllers/apiController')
+const syncController = require('./controllers/syncController')
 
 const migrationRule = new schedule.RecurrenceRule()
 migrationRule.minute = new schedule.Range(0, 59, config.MIGRATION_INTERVAL)
@@ -28,6 +28,9 @@ syncRule.minute = new schedule.Range(0, 59, config.SYNC_INTERVAL)
 schedule.scheduleJob(syncRule, syncController.sync)
 logger.info(`The sync is scheduled to be executed every ${config.SYNC_INTERVAL} minutes`)
 
+// syncController.queueChallengesFromLastModified()
+// syncController.sync()
+// migrationController.migrate()
 /**
  * store the last modified date
  * pull the one from the config to "start" from

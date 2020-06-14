@@ -23,7 +23,7 @@ const groupsUUIDCache = new HashMap()
 
 async function save (challenge) {
   if (challenge.id) {
-    logger.warn(`Updating Challenge ${JSON.stringify(challenge)}`)
+    // logger.warn(`Updating Challenge ${JSON.stringify(challenge)}`)
     return updateChallenge(challenge)
   }
   return createChallenge(challenge)
@@ -501,7 +501,7 @@ async function buildV5Challenge (legacyId) {
   }
 
   // for (const challenge of challenges) {
-  logger.info(`Migrating Challenge ${challengeListing.id} - Last Modified Date ${moment(challengeListing.updatedAt).utc().format()}`)
+  logger.info(`Building Challenge ${challengeListing.id} - Last Modified Date ${moment(challengeListing.updatedAt).utc().format()}`)
 
   let detailRequirement = challengeDetails.detailRequirements || ''
   if (challengeDetails.introduction && challengeDetails.introduction.trim() !== '') {
@@ -595,7 +595,7 @@ async function buildV5Challenge (legacyId) {
           roleId = await resourceService.getRoleUUIDForResourceRoleName(term.role)
           terms.push({ id: v5Term.id, roleId })
         } catch (e) {
-          logger.warn(`Term Role ${term.role} not found - not creating association`)
+          // logger.warn(`Term Role ${term.role} not found - not creating association`)
         }
       } else {
         // logger.error(`V5 Term Not Found for ${term.termsOfUseId}`)

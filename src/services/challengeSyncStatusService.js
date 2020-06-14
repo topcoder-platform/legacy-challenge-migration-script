@@ -11,22 +11,22 @@ const moment = require('moment')
  * Put progress into
  *
  * @param {Number} legacyId
- * @param {Object} {status, challengeId, informixModified, migrationStarted, migrationEnded, errorMessage}
+ * @param {Object} {status, challengeId, informixModified, syncStarted, syncEnded, errorMessage}
  * }
  */
-async function createProgressRecord (legacyId, migrationRecord) {
+async function createProgressRecord (legacyId, syncRecord) {
   try {
     await getESClient().create({
       index: config.get('ES.SYNC_ES_INDEX'),
       type: config.get('ES.SYNC_ES_TYPE'),
       refresh: config.get('ES.ES_REFRESH'),
       id: legacyId,
-      body: migrationRecord
+      body: syncRecord
     })
-    console.log('create', legacyId, migrationRecord)
+    console.log('create', legacyId, syncRecord)
     return true
   } catch (err) {
-    throw Error(`createProgressRecord failed ${JSON.stringify(migrationRecord)} ${err}`)
+    throw Error(`createProgressRecord failed ${JSON.stringify(syncRecord)} ${err}`)
     // return false
   }
 }
@@ -35,9 +35,9 @@ async function createProgressRecord (legacyId, migrationRecord) {
  * Update challenge data to new system
  *
  * @param {Number} legacyId challenge data
- * @param {Object} {status, challengeId, informixModified, migrationStarted, migrationEnded, errorMessage}
+ * @param {Object} {status, challengeId, informixModified, syncStarted, syncEnded, errorMessage}
  */
-async function updateProgressRecord (legacyId, migrationRecord) {
+async function updateProgressRecord (legacyId, syncRecord) {
   try {
     await getESClient().update({
       index: config.get('ES.SYNC_ES_INDEX'),
@@ -45,13 +45,13 @@ async function updateProgressRecord (legacyId, migrationRecord) {
       refresh: config.get('ES.ES_REFRESH'),
       id: legacyId,
       body: {
-        doc: migrationRecord,
+        doc: syncRecord,
         doc_as_upsert: true
       }
     })
   } catch (err) {
-    throw Error(`updateProgressRecord failed ${migrationRecord} ${err}`)
-    // logger.error(`updateProgressRecord failed ${migrationRecord} ${err}`)
+    throw Error(`updateProgressRecord failed ${syncRecord} ${err}`)
+    // logger.error(`updateProgressRecord failed ${syncRecord} ${err}`)
   }
 }
 
@@ -106,17 +106,17 @@ async function getSyncProgress (filter, perPage = 100, page = 1) {
       }
     }
   }
-  logger.info(`Migration Progress Query  ${JSON.stringify(esQuery)}`)
-  logger.info(`Migration Progress Record ${JSON.stringify(docs)}`)
+  // logger.info(`Migration Progress Query  ${JSON.stringify(esQuery)}`)
+  // logger.info(`Migration Progress Record ${JSON.stringify(docs)}`)
   return {
     total: docs.hits.total,
     items: map(docs.hits.hits, item => ({
       legacyId: item._id,
       status: item._source.status,
       informixModified: item._source.informixModified,
-      migrationStarted: item._source.migrationStarted,
-      migrationEnded: item._source.migrationEnded,
-      migrationDuration: (moment(item._source.migrationEnded).format('x') - moment(item._source.migrationStarted).format('x')),
+      syncStarted: item._source.syncStarted,
+      syncEnded: item._source.syncEnded,
+      syncDuration: (moment(item._source.syncEnded).format('x') - moment(item._source.syncStarted).format('x')),
       errorMessage: item._source.errorMessage
     }))
   }
@@ -127,27 +127,27 @@ async function queueForSync (legacyId) {
 }
 
 async function startSync (legacyId, challengeModifiedDate) {
-  const migrationRecord = {
+  const syncRecord = {
     legacyId,
     status: config.MIGRATION_PROGRESS_STATUSES.IN_PROGRESS,
     informixModified: moment(challengeModifiedDate).utc().format(),
-    migrationStarted: moment()
+    syncStarted: moment()
   }
-  return updateProgressRecord(legacyId, migrationRecord)
+  return updateProgressRecord(legacyId, syncRecord)
 }
 
 async function endSync (legacyId, challengeId, status, errorMessage) {
   if (status === config.MIGRATION_PROGRESS_STATUSES.FAILED) {
-    logger.debug(`Logging Challenge As Failed ${errorMessage}`)
+    logger.debug(`Challenge Sync - Logging Challenge As Failed ${errorMessage}`)
   }
-  const migrationRecord = {
+  const syncRecord = {
     legacyId,
     challengeId,
     status,
-    migrationEnded: moment(),
+    syncEnded: moment(),
     errorMessage: toString(errorMessage)
   }
-  return updateProgressRecord(legacyId, migrationRecord)
+  return updateProgressRecord(legacyId, syncRecord)
 }
 
 module.exports = {

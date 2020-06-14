@@ -1,4 +1,4 @@
-const { map, pick, find } = require('lodash')
+const { map, pick, find, toString, toNumber } = require('lodash')
 const config = require('config')
 // const moment = require('moment')
 const logger = require('../util/logger')
@@ -20,40 +20,38 @@ const axios = require('axios')
 async function processChallenge (legacyId) {
   // get challenge from v4
   const v5ChallengeObjectFromV4 = await challengeService.buildV5Challenge(legacyId)
+  // logger.info(`v4 Challenge Obj ${JSON.stringify(v5ChallengeObjectFromV4)}`)
   // get challenge from v5
   const [v5ChallengeFromAPI] = await getChallengeFromV5API(legacyId)
   // logger.info(`v5 Challenge Obj ${JSON.stringify(v5ChallengeFromAPI)}`)
-  if (v5ChallengeFromAPI) {
-    const challengeObj = pick(v5ChallengeObjectFromV4, ['legacy', 'events', 'status', 'winners', 'phases', 'terms', 'metadata'])
-    challengeObj.id = v5ChallengeFromAPI.id
-    // challengeObj.metadata.push({ name: 'synctest', value: 'true' })
-    // logger.warn(`Challenge OBJ ${JSON.stringify(challengeObj.id)}`)
-    return challengeService.save(challengeObj)
-    // logger.info(`PUT challenge ${JSON.stringify(challengeObj)}`)
-  } else {
-    logger.error(`Challenge with Legacy ID ${legacyId} not found in v5 api, queueing for migration`)
-    await migrationService.queueForMigration(legacyId)
-  }
+  // if (v5ChallengeFromAPI) {
+  const challengeObj = pick(v5ChallengeObjectFromV4, ['legacy', 'events', 'status', 'winners', 'phases', 'terms', 'metadata'])
+  challengeObj.id = v5ChallengeFromAPI.id
+
+  return challengeService.save(challengeObj)
 }
 
 async function processResources (legacyId, challengeId) {
-  const currentV4Array = await resourceService.getResourcesForChallenge(legacyId)
-  const currentV5Array = await getResourcesFromV5API(legacyId, challengeId)
+  const currentV4Array = await resourceService.getResourcesForChallenge(legacyId, challengeId)
+  const currentV5Array = await getResourcesFromV5API(challengeId)
+  // logger.warn('Processing Resources')
   // logger.debug(`v4 Array: ${JSON.stringify(currentV4Array)}`)
   // logger.debug(`v5 Array: ${JSON.stringify(currentV5Array)}`)
 
   for (let i = 0; i < currentV4Array.length; i += 1) {
     const obj = currentV4Array[i]
-    if (!find(currentV5Array, { memberId: obj.memberId, roleId: obj.roleId })) {
-      logger.debug(`add ${JSON.stringify(obj)}`)
+    // v5 memberId is a string
+    if (!find(currentV5Array, { memberId: toString(obj.memberId), roleId: obj.roleId })) {
+      // logger.debug(`add resource ${JSON.stringify(obj)}`)
       await resourceService.saveResource(obj)
     }
   }
 
   for (let i = 0; i < currentV5Array.length; i += 1) {
     const obj = currentV5Array[i]
-    if (!find(currentV4Array, { memberId: obj.memberId, roleId: obj.roleId })) {
-      logger.debug(`remove ${JSON.stringify(obj.id)}`)
+    // v4 memberId is a number
+    if (!find(currentV4Array, { memberId: toNumber(obj.memberId), roleId: obj.roleId })) {
+      // logger.debug(`remove resource ${JSON.stringify(obj.id)}`)
       await resourceService.deleteResource(obj.id)
     }
   }
@@ -61,7 +59,7 @@ async function processResources (legacyId, challengeId) {
 
 async function getChallengeFromV5API (legacyId) {
   const token = await getM2MToken()
-  const url = `${config.CHALLENGE_API_URL}?legacyId=${legacyId}`
+  const url = `${config.CHALLENGE_API_URL}?legacyId=${legacyId}&perPage=1&page=1`
   const res = await axios.get(url, { headers: { Authorization: `Bearer ${token}` } })
   return res.data || null
 }
@@ -121,7 +119,7 @@ async function getChallengeIDsFromV4 (filter, perPage = 50, page = 1) {
   }
   // Search with constructed query
   let docs
-  console.log('es query', JSON.stringify(esQuery))
+  // console.log('es query', JSON.stringify(esQuery))
   try {
     docs = await getV4ESClient().search(esQuery)
   } catch (e) {
@@ -140,6 +138,7 @@ async function getChallengeIDsFromV4 (filter, perPage = 50, page = 1) {
 
 module.exports = {
   getChallengeIDsFromV4,
+  getChallengeFromV5API,
   processChallenge,
   processResources
 }

@@ -1,9 +1,8 @@
 const config = require('config')
-const logger = require('./util/logger')
-// const challengeMigrationHistoryService = require('./services/challengeMigrationHistoryService')
-const challengeMigrationStatusService = require('./services/challengeMigrationStatusService')
-const challengeService = require('./services/challengeService')
-const migrationService = require('./services/migrationService')
+const logger = require('../util/logger')
+const challengeMigrationStatusService = require('../services/challengeMigrationStatusService')
+const challengeService = require('../services/challengeService')
+const migrationService = require('../services/migrationService')
 
 let running = false
 

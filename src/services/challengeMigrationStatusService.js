@@ -98,6 +98,7 @@ async function getMigrationProgress (filter, perPage = 100, page = 0) {
     docs = await getESClient().search(esQuery)
   } catch (e) {
     // Catch error when the ES is fresh and has no data
+    logger.warn(`ES Error ${e}`)
     docs = {
       hits: {
         total: 0,
@@ -138,7 +139,7 @@ async function startMigration (legacyId, challengeModifiedDate) {
 
 async function endMigration (legacyId, challengeId, status, errorMessage) {
   if (status === config.MIGRATION_PROGRESS_STATUSES.FAILED) {
-    logger.debug(`Logging Challenge As Failed ${errorMessage}`)
+    logger.debug(`Challenge Migration - Logging Challenge As Failed ${errorMessage}`)
   }
   const migrationRecord = {
     legacyId,

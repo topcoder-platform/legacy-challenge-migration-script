@@ -1,9 +1,9 @@
 // const config = require('config')
-const logger = require('./util/logger')
-const helper = require('./util/helper')
-const challengeService = require('./services/challengeService')
-const migrationService = require('./services/migrationService')
-const challengeMigrationStatusService = require('./services/challengeMigrationStatusService')
+const logger = require('../util/logger')
+const helper = require('../util/helper')
+const challengeService = require('../services/challengeService')
+const migrationService = require('../services/migrationService')
+const challengeMigrationStatusService = require('../services/challengeMigrationStatusService')
 
 async function queueForMigration (req, res) {
   const startDate = req.query.startDate || null
