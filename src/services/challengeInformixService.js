@@ -607,6 +607,7 @@ async function execQuery (sql) {
 }
 
 module.exports = {
+  execQuery,
   getChallengeInfo,
   getMetadataFromIfx,
   getChallengesFromIfx,

@@ -1,10 +1,12 @@
 module.exports = {
   PORT: process.env.PORT || 3001,
-  // MIGRATION_CRON_ENABLED: process.env.MIGRATION_CRON_ENABLED || true,
   API_VERSION: process.env.API_VERSION || 'v5',
   MIGRATION_INTERVAL: process.env.MIGRATION_INTERVAL ? Number(process.env.MIGRATION_INTERVAL) : 5, // minutes
   SYNC_INTERVAL: process.env.SYNC_INTERVAL ? Number(process.env.SYNC_INTERVAL) : 2, // minutes
   SYNC_QUEUE_INTERVAL: process.env.SYNC_QUEUE_INTERVAL ? Number(process.env.SYNC_QUEUE_INTERVAL) : 1, // minutes
+
+  MIGRATION_ENABLED: process.env.MIGRATION_ENABLED ? process.env.MIGRATION_ENABLED === 'true' : false,
+  SYNC_ENABLED: process.env.SYNC_ENABLED ? process.env.SYNC_ENABLED === 'true' : false,
 
   // used to get M2M token
   AUTH0_URL: process.env.AUTH0_URL,

@@ -54,6 +54,30 @@ async function updateProgressRecord (legacyId, migrationRecord) {
   }
 }
 
+async function retryFailedMigrations () {
+  const esQuery = {
+    index: config.get('ES.MIGRATION_ES_INDEX'),
+    type: config.get('ES.MIGRATION_ES_TYPE'),
+    refresh: config.get('ES.ES_REFRESH'),
+    body: {
+      script: {
+        source: `ctx._source["status"] = "${config.MIGRATION_PROGRESS_STATUSES.QUEUED}"`
+      },
+      query: {
+        match: {
+          status: config.MIGRATION_PROGRESS_STATUSES.FAILED
+        }
+      }
+    }
+  }
+  try {
+    await getESClient().updateByQuery(esQuery)
+  } catch (err) {
+    throw Error(`setBulkMigrationProgress failed ${JSON.stringify(esQuery)}`)
+    // logger.error(`updateProgressRecord failed ${migrationRecord} ${err}`)
+  }
+}
+
 /**
  * Update challenge data to new system
  *
@@ -153,6 +177,7 @@ async function endMigration (legacyId, challengeId, status, errorMessage) {
 
 module.exports = {
   getMigrationProgress,
+  retryFailedMigrations,
   queueForMigration,
   startMigration,
   endMigration

@@ -49,7 +49,12 @@ async function getMigrationStatus (req, res) {
   return res.status(404).json({ message: 'Progress Not found' })
 }
 
+async function retryFailed (req, res) {
+  await challengeMigrationStatusService.retryFailedMigrations()
+}
+
 module.exports = {
   queueForMigration,
-  getMigrationStatus
+  getMigrationStatus,
+  retryFailed
 }

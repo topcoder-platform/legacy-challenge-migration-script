@@ -34,6 +34,7 @@
     "lint:fix": "standard --fix",
     "init-es": "node src/scripts/init-es.js",
     "migrate": "node src/scripts/migration.js -- $MIGRATION",
+    "migrate-groups": "node src/scripts/migrate-groupsDISABLED.js",
     "populate-progress-table": "node src/scripts/populate-progress-table.js"
   },
   "author": "TCSCODER",
