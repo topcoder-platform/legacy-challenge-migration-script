@@ -51,6 +51,7 @@ async function getMigrationStatus (req, res) {
 
 async function retryFailed (req, res) {
   await challengeMigrationStatusService.retryFailedMigrations()
+  return res.status(200)
 }
 
 module.exports = {
