@@ -153,7 +153,7 @@ async function getResourcesForChallenge (legacyChallengeId, v5ChallengeId) {
 
 async function migrateResourcesForChallenge (legacyId, challengeId) {
   const resources = await getResourcesForChallenge(legacyId, challengeId)
-  await Promise.all(resources.map(r => saveResource(r)))
+  if (resources.length > 0) await Promise.all(resources.map(r => saveResource(r)))
   return resources.length
 }
 

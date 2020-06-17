@@ -14,22 +14,22 @@ const moment = require('moment')
  * @param {Object} {status, challengeId, informixModified, syncStarted, syncEnded, errorMessage}
  * }
  */
-async function createProgressRecord (legacyId, syncRecord) {
-  try {
-    await getESClient().create({
-      index: config.get('ES.SYNC_ES_INDEX'),
-      type: config.get('ES.SYNC_ES_TYPE'),
-      refresh: config.get('ES.ES_REFRESH'),
-      id: legacyId,
-      body: syncRecord
-    })
-    console.log('create', legacyId, syncRecord)
-    return true
-  } catch (err) {
-    throw Error(`createProgressRecord failed ${JSON.stringify(syncRecord)} ${err}`)
-    // return false
-  }
-}
+// async function createProgressRecord (legacyId, syncRecord) {
+//   try {
+//     await getESClient().create({
+//       index: config.get('ES.SYNC_ES_INDEX'),
+//       type: config.get('ES.SYNC_ES_TYPE'),
+//       refresh: config.get('ES.ES_REFRESH'),
+//       id: legacyId,
+//       body: syncRecord
+//     })
+//     // console.log('create', legacyId, syncRecord)
+//     return true
+//   } catch (err) {
+//     throw Error(`createProgressRecord failed ${JSON.stringify(syncRecord)} ${err}`)
+//     // return false
+//   }
+// }
 
 /**
  * Update challenge data to new system
@@ -123,7 +123,7 @@ async function getSyncProgress (filter, perPage = 100, page = 1) {
 }
 
 async function queueForSync (legacyId) {
-  return createProgressRecord(legacyId, { status: config.MIGRATION_PROGRESS_STATUSES.QUEUED })
+  return updateProgressRecord(legacyId, { status: config.MIGRATION_PROGRESS_STATUSES.QUEUED, syncEnded: null, syncDuration: null })
 }
 
 async function startSync (legacyId, challengeModifiedDate) {
@@ -150,7 +150,32 @@ async function endSync (legacyId, challengeId, status, errorMessage) {
   return updateProgressRecord(legacyId, syncRecord)
 }
 
+async function retryFailed () {
+  const esQuery = {
+    index: config.get('ES.SYNC_ES_INDEX'),
+    type: config.get('ES.SYNC_ES_TYPE'),
+    refresh: config.get('ES.ES_REFRESH'),
+    body: {
+      script: {
+        source: `ctx._source["status"] = "${config.MIGRATION_PROGRESS_STATUSES.QUEUED}"`
+      },
+      query: {
+        match: {
+          status: config.MIGRATION_PROGRESS_STATUSES.FAILED
+        }
+      }
+    }
+  }
+  try {
+    await getESClient().updateByQuery(esQuery)
+  } catch (err) {
+    throw Error(`setBulkSyncProgress failed ${JSON.stringify(esQuery)}`)
+    // logger.error(`updateProgressRecord failed ${migrationRecord} ${err}`)
+  }
+}
+
 module.exports = {
+  retryFailed,
   getSyncProgress,
   queueForSync,
   startSync,

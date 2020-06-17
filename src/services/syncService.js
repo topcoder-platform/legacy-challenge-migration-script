@@ -5,7 +5,7 @@ const logger = require('../util/logger')
 const { getV4ESClient, getM2MToken } = require('../util/helper')
 const challengeService = require('./challengeService')
 const resourceService = require('./resourceService')
-const migrationService = require('./migrationService')
+// const migrationService = require('./migrationService')
 const axios = require('axios')
 // const challengeInformixService = require('./challengeInformixService')
 // const challengeSyncStatusService = require('./challengeSyncStatusService')
@@ -26,13 +26,20 @@ async function processChallenge (legacyId) {
   // logger.info(`v5 Challenge Obj ${JSON.stringify(v5ChallengeFromAPI)}`)
   // if (v5ChallengeFromAPI) {
   const challengeObj = pick(v5ChallengeObjectFromV4, ['legacy', 'events', 'status', 'winners', 'phases', 'terms', 'metadata'])
+  if (v5ChallengeObjectFromV4.descriptionFormat && v5ChallengeObjectFromV4.descriptionFormat.toLowerCase() === 'html') {
+    challengeObj.description = v5ChallengeObjectFromV4.description
+  }
   challengeObj.id = v5ChallengeFromAPI.id
 
   return challengeService.save(challengeObj)
 }
 
 async function processResources (legacyId, challengeId) {
+  let resourcesAdded = 0
+  const resourcesRemoved = 0
+  // logger.debug('Get Resources for Challenge')
   const currentV4Array = await resourceService.getResourcesForChallenge(legacyId, challengeId)
+  // logger.debug('Get Resources from V5')
   const currentV5Array = await getResourcesFromV5API(challengeId)
   // logger.warn('Processing Resources')
   // logger.debug(`v4 Array: ${JSON.stringify(currentV4Array)}`)
@@ -44,17 +51,22 @@ async function processResources (legacyId, challengeId) {
     if (!find(currentV5Array, { memberId: toString(obj.memberId), roleId: obj.roleId })) {
       // logger.debug(`add resource ${JSON.stringify(obj)}`)
       await resourceService.saveResource(obj)
+      resourcesAdded += 1
     }
   }
 
-  for (let i = 0; i < currentV5Array.length; i += 1) {
-    const obj = currentV5Array[i]
-    // v4 memberId is a number
-    if (!find(currentV4Array, { memberId: toNumber(obj.memberId), roleId: obj.roleId })) {
-      // logger.debug(`remove resource ${JSON.stringify(obj.id)}`)
-      await resourceService.deleteResource(obj.id)
-    }
-  }
+  // commented out because legacy shouldn't remove from v5, only add
+  // for (let i = 0; i < currentV5Array.length; i += 1) {
+  //   const obj = currentV5Array[i]
+  //   // v4 memberId is a number
+  //   if (!find(currentV4Array, { memberId: toNumber(obj.memberId), roleId: obj.roleId })) {
+  //     // logger.debug(`remove resource ${JSON.stringify(obj.id)}`)
+  //     await resourceService.deleteResource(obj.id)
+  //     resourcesRemoved += 1
+  //   }
+  // }
+
+  return { resourcesAdded, resourcesRemoved }
 }
 
 async function getChallengeFromV5API (legacyId) {

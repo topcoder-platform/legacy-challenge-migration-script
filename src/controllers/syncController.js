@@ -34,10 +34,10 @@ async function sync () {
           // see if v5 exists
           if (v5) {
             try {
-              await challengeSyncStatusService.startSync(legacyId)
+              await challengeSyncStatusService.startSync(legacyId, v5.legacy.informixModified)
               const challengeId = await syncService.processChallenge(legacyId)
-              await syncService.processResources(legacyId, challengeId)
-              await challengeSyncStatusService.endSync(legacyId, challengeId, config.MIGRATION_PROGRESS_STATUSES.SUCCESS)
+              const { resourcesAdded, resourcesRemoved } = await syncService.processResources(legacyId, challengeId)
+              await challengeSyncStatusService.endSync(legacyId, challengeId, config.MIGRATION_PROGRESS_STATUSES.SUCCESS, `Resources: ${resourcesAdded} added, ${resourcesRemoved} removed`)
             } catch (e) {
               logger.error(`Sync Failed for ${legacyId} ${e}`)
               await challengeSyncStatusService.endSync(legacyId, null, config.MIGRATION_PROGRESS_STATUSES.FAILED, e)
@@ -63,21 +63,42 @@ async function sync () {
 }
 
 async function queueChallengesFromLastModified () {
-  const lastModified = moment(await challengeSyncHistoryService.getLatestDate()).subtract(config.SYNC_INTERVAL, 'minutes') || moment().subtract(1, 'month')
-  // logger.info(`Queueing Challenges with Updated Date of ${lastModified} ${moment(lastModified).subtract(5, 'minutes')}`)
+  // const existingFailed = await challengeSyncStatusService.getSyncProgress({ status: config.MIGRATION_PROGRESS_STATUSES.failed }, 1000)
+  logger.info('Queueing existing failed challenges')
+  await challengeSyncStatusService.retryFailed()
+
+  const dbStartDate = false // await challengeSyncHistoryService.getLatestDate()
+  let lastModified = moment().subtract(1, 'month').utc()
+  if (dbStartDate) lastModified = moment(dbStartDate).subtract(config.SYNC_INTERVAL, 'minutes').utc()
+
   // find challenges in es with date
   const ids = await syncService.getChallengeIDsFromV4({ startDate: lastModified }, 100, 1)
   // loop through challenges and queue in updates table
-  logger.info(`Queue Challenges ${ids.length} with last modified > ${moment(lastModified).utc()}`)
+  logger.info(`Queue ${ids.length} Challenges with last modified > ${lastModified}`)
   for (let i = 0; i < ids.length; i += 1) {
     const legacyId = ids[i]
-    // logger.warn(`Create for ${legacyId}`)
     // make sure it's not queued
-    const existingQueue = await challengeSyncStatusService.getSyncProgress({ legacyId, status: config.MIGRATION_PROGRESS_STATUSES.queued }, 1, 1)
-    if (existingQueue && existingQueue.total === 1) {
+    const existingQueued = await challengeSyncStatusService.getSyncProgress({ legacyId, status: config.MIGRATION_PROGRESS_STATUSES.QUEUED })
+    if ((existingQueued && existingQueued.total >= 1)) {
       logger.warn(`Legacy ID ${legacyId} already queued`)
     } else {
-      await challengeSyncStatusService.queueForSync(legacyId)
+      const [v5] = await syncService.getChallengeFromV5API(legacyId)
+      const v4 = await challengeService.getChallengeListingFromV4ES(legacyId)
+      if (v4) {
+        if (v5) {
+          if (moment(v4.updatedAt).utc().isAfter(v5.legacy.informixModified)) {
+            // logger.info(`Informix Modified: ${v5.legacy.informixModified} is != to v4 updatedAt: ${moment(v4.updatedAt).utc().format()}`)
+            await challengeSyncStatusService.queueForSync(legacyId)
+          } else {
+            logger.info(`Informix Modified: ${v5.legacy.informixModified} is = to v4 updatedAt: ${moment(v4.updatedAt).utc().format()}`)
+          }
+        } else {
+          logger.warn(`Challenge ID ${legacyId} doesn't exist in v5, queueing for migration`)
+          await migrationService.queueForMigration(legacyId)
+        }
+      } else {
+        logger.error(`${legacyId} not found in v4 ES`)
+      }
     }
   }
   // TODO fix logging
