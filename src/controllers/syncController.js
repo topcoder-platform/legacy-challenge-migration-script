@@ -67,7 +67,7 @@ async function queueChallengesFromLastModified () {
   logger.info('Queueing existing failed challenges')
   await challengeSyncStatusService.retryFailed()
 
-  const dbStartDate = false // await challengeSyncHistoryService.getLatestDate()
+  const dbStartDate = await challengeSyncHistoryService.getLatestDate()
   let lastModified = moment().subtract(1, 'month').utc()
   if (dbStartDate) lastModified = moment(dbStartDate).subtract(config.SYNC_INTERVAL, 'minutes').utc()
 
@@ -87,10 +87,10 @@ async function queueChallengesFromLastModified () {
       if (v4) {
         if (v5) {
           if (moment(v4.updatedAt).utc().isAfter(v5.legacy.informixModified)) {
-            // logger.info(`Informix Modified: ${v5.legacy.informixModified} is != to v4 updatedAt: ${moment(v4.updatedAt).utc().format()}`)
+            logger.info(`Informix Modified: ${v5.legacy.informixModified} is != to v4 updatedAt: ${moment(v4.updatedAt).utc().format()}`)
             await challengeSyncStatusService.queueForSync(legacyId)
           } else {
-            logger.info(`Informix Modified: ${v5.legacy.informixModified} is = to v4 updatedAt: ${moment(v4.updatedAt).utc().format()}`)
+            // logger.info(`Informix Modified: ${v5.legacy.informixModified} is = to v4 updatedAt: ${moment(v4.updatedAt).utc().format()}`)
           }
         } else {
           logger.warn(`Challenge ID ${legacyId} doesn't exist in v5, queueing for migration`)
