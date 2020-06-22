@@ -1,4 +1,4 @@
-const { map, pick, find, toString, toNumber } = require('lodash')
+const { map, find, toString, omit } = require('lodash')
 const config = require('config')
 // const moment = require('moment')
 const logger = require('../util/logger')
@@ -25,11 +25,14 @@ async function processChallenge (legacyId) {
   const [v5ChallengeFromAPI] = await getChallengeFromV5API(legacyId)
   // logger.info(`v5 Challenge Obj ${JSON.stringify(v5ChallengeFromAPI)}`)
   // if (v5ChallengeFromAPI) {
-  const challengeObj = pick(v5ChallengeObjectFromV4, ['legacy', 'events', 'status', 'winners', 'phases', 'terms', 'metadata'])
-  if (v5ChallengeObjectFromV4.descriptionFormat && v5ChallengeObjectFromV4.descriptionFormat.toLowerCase() === 'html') {
-    challengeObj.description = v5ChallengeObjectFromV4.description
-  }
+  // const challengeObj = pick(v5ChallengeObjectFromV4, ['legacy', 'events', 'status', 'winners', 'phases', 'terms', 'metadata'])
+  // if (v5ChallengeObjectFromV4.descriptionFormat && v5ChallengeObjectFromV4.descriptionFormat.toLowerCase() === 'html') {
+  //   challengeObj.description = v5ChallengeObjectFromV4.description
+  // }
+
+  const challengeObj = omit(v5ChallengeObjectFromV4, ['numOfSubmissions', 'numOfRegistrants', 'type'])
   challengeObj.id = v5ChallengeFromAPI.id
+  console.log('updated', challengeObj.updated, '   informix modified', challengeObj.legacy.informixModified)
 
   return challengeService.save(challengeObj)
 }

@@ -62,17 +62,18 @@ async function sync () {
   }
 }
 
-async function queueChallengesFromLastModified () {
+async function queueChallengesFromLastModified (startDate = null) {
   // const existingFailed = await challengeSyncStatusService.getSyncProgress({ status: config.MIGRATION_PROGRESS_STATUSES.failed }, 1000)
   logger.info('Queueing existing failed challenges')
   await challengeSyncStatusService.retryFailed()
 
   const dbStartDate = await challengeSyncHistoryService.getLatestDate()
   let lastModified = moment().subtract(1, 'month').utc()
-  if (dbStartDate) lastModified = moment(dbStartDate).subtract(config.SYNC_INTERVAL, 'minutes').utc()
+  if (dbStartDate) lastModified = moment(dbStartDate).subtract(10, 'minutes').utc()
+  if (startDate !== null) lastModified = moment(startDate).utc()
 
   // find challenges in es with date
-  const ids = await syncService.getChallengeIDsFromV4({ startDate: lastModified }, 100, 1)
+  const ids = await syncService.getChallengeIDsFromV4({ startDate: lastModified }, 1000, 1)
   // loop through challenges and queue in updates table
   logger.info(`Queue ${ids.length} Challenges with last modified > ${lastModified}`)
   for (let i = 0; i < ids.length; i += 1) {
@@ -86,15 +87,19 @@ async function queueChallengesFromLastModified () {
       const v4 = await challengeService.getChallengeListingFromV4ES(legacyId)
       if (v4) {
         if (v5) {
-          if (moment(v4.updatedAt).utc().isAfter(v5.legacy.informixModified)) {
-            logger.info(`Informix Modified: ${v5.legacy.informixModified} is != to v4 updatedAt: ${moment(v4.updatedAt).utc().format()}`)
+          if (moment(v4.updatedAt).utc().isAfter(moment(v5.legacy.informixModified).utc(), 'second')) {
+            logger.info(`v5 Updated (${legacyId}): ${moment(v5.legacy.informixModified).utc()} is != to v4 updatedAt: ${moment(v4.updatedAt).utc()}`)
             await challengeSyncStatusService.queueForSync(legacyId)
           } else {
-            // logger.info(`Informix Modified: ${v5.legacy.informixModified} is = to v4 updatedAt: ${moment(v4.updatedAt).utc().format()}`)
+            logger.info(`v5 Updated (${legacyId}): ${moment(v5.legacy.informixModified).utc()} is THE SAME as v4 updatedAt: ${moment(v4.updatedAt).utc()}`)
           }
         } else {
           logger.warn(`Challenge ID ${legacyId} doesn't exist in v5, queueing for migration`)
-          await migrationService.queueForMigration(legacyId)
+          try {
+            await migrationService.queueForMigration(legacyId)
+          } catch (e) {
+            logger.info(`Challenge ID ${legacyId} already queued for migration`)
+          }
         }
       } else {
         logger.error(`${legacyId} not found in v4 ES`)

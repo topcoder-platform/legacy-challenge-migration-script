@@ -1,6 +1,8 @@
 // const config = require('config')
 const logger = require('../util/logger')
 const helper = require('../util/helper')
+const moment = require('moment')
+const syncController = require('./syncController')
 const challengeService = require('../services/challengeService')
 const migrationService = require('../services/migrationService')
 const challengeMigrationStatusService = require('../services/challengeMigrationStatusService')
@@ -54,8 +56,19 @@ async function retryFailed (req, res) {
   return res.status(200)
 }
 
+async function queueSync (req, res) {
+  const startDate = req.query.startDate
+  if (startDate !== null && (!moment(req.query.startDate) || !moment(req.query.startDate).isValid())) {
+    return res.status(400).json({ message: `Invalid startDate: ${startDate}` })
+  }
+  await syncController.queueChallengesFromLastModified(startDate)
+
+  return res.json({ success: true })
+}
+
 module.exports = {
   queueForMigration,
   getMigrationStatus,
-  retryFailed
+  retryFailed,
+  queueSync
 }
