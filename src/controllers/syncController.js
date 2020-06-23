@@ -82,50 +82,61 @@ async function queueChallengesFromLastModified (filter) {
   await challengeSyncStatusService.retryFailed()
 
   const startDate = filter.startDate
-  console.log(startDate)
-  // const endDate = filter.endDate || moment() // this can be implemented
-  // const legacyId = filter.legacyId || null
+  const endDate = filter.endDate
+  logger.info(`startDate: ${startDate} - endDate: ${endDate}`)
 
   // find challenges in es with date
-  const ids = await syncService.getChallengeIDsFromV4({ startDate }, 1000, 1)
+  const ids = await syncService.getChallengeIDsFromV4({ startDate, endDate }, 100, 1)
   // loop through challenges and queue in updates table
-  logger.info(`Queue ${ids.length} Challenges with last modified > ${startDate}`)
+  logger.info(`Queue ${ids.length} Challenges with last modified > ${startDate} and < ${endDate}`)
   for (let i = 0; i < ids.length; i += 1) {
-    const legacyId = ids[i]
-    // make sure it's not queued
-    const existingQueued = await challengeSyncStatusService.getSyncProgress({ legacyId, status: config.MIGRATION_PROGRESS_STATUSES.QUEUED })
-    if ((existingQueued && existingQueued.total >= 1)) {
-      logger.warn(`Legacy ID ${legacyId} already queued`)
-    } else {
-      const [v5] = await syncService.getChallengeFromV5API(legacyId)
-      const v4 = await challengeService.getChallengeListingFromV4ES(legacyId)
-      if (v4) {
-        if (v5) {
-          if (moment(v4.updatedAt).utc().isAfter(moment(v5.legacy.informixModified).utc(), 'second')) {
-            logger.info(`v5 Updated (${legacyId}): ${moment(v5.legacy.informixModified).utc()} is != to v4 updatedAt: ${moment(v4.updatedAt).utc()}`)
-            await challengeSyncStatusService.queueForSync(legacyId)
-          } else {
-            logger.info(`v5 Updated (${legacyId}): ${moment(v5.legacy.informixModified).utc()} is THE SAME as v4 updatedAt: ${moment(v4.updatedAt).utc()}`)
-          }
-        } else {
-          logger.warn(`Challenge ID ${legacyId} doesn't exist in v5, queueing for migration`)
-          try {
-            await migrationService.queueForMigration(legacyId)
-          } catch (e) {
-            logger.info(`Challenge ID ${legacyId} already queued for migration`)
-          }
-        }
-      } else {
-        logger.error(`${legacyId} not found in v4 ES`)
-      }
-    }
+    await queueChallengeById(ids[i])
   }
   // TODO fix logging
   await challengeSyncHistoryService.createHistoryRecord(0, 0)
 }
 
+/**
+ * Queue a single challenge
+ * @param {Number} legacyId the legacy challenge ID
+ * @param {Boolean} withLogging should print progress in stdout
+ */
+async function queueChallengeById (legacyId, withLogging = false) {
+  if (withLogging) {
+    logger.info(`Queue challenge with ID: ${legacyId}`)
+  }
+  // make sure it's not queued
+  const existingQueued = await challengeSyncStatusService.getSyncProgress({ legacyId, status: config.MIGRATION_PROGRESS_STATUSES.QUEUED })
+  if ((existingQueued && existingQueued.total >= 1)) {
+    logger.warn(`Legacy ID ${legacyId} already queued`)
+  } else {
+    const [v5] = await syncService.getChallengeFromV5API(legacyId)
+    const v4 = await challengeService.getChallengeListingFromV4ES(legacyId)
+    if (v4) {
+      if (v5) {
+        if (moment(v4.updatedAt).utc().isAfter(moment(v5.legacy.informixModified).utc(), 'second')) {
+          logger.info(`v5 Updated (${legacyId}): ${moment(v5.legacy.informixModified).utc()} is != to v4 updatedAt: ${moment(v4.updatedAt).utc()}`)
+          await challengeSyncStatusService.queueForSync(legacyId)
+        } else {
+          logger.info(`v5 Updated (${legacyId}): ${moment(v5.legacy.informixModified).utc()} is THE SAME as v4 updatedAt: ${moment(v4.updatedAt).utc()}`)
+        }
+      } else {
+        logger.warn(`Challenge ID ${legacyId} doesn't exist in v5, queueing for migration`)
+        try {
+          await migrationService.queueForMigration(legacyId)
+        } catch (e) {
+          logger.info(`Challenge ID ${legacyId} already queued for migration`)
+        }
+      }
+    } else {
+      logger.error(`${legacyId} not found in v4 ES`)
+    }
+  }
+}
+
 module.exports = {
   sync,
   autoQueueChallenges,
-  queueChallengesFromLastModified
+  queueChallengesFromLastModified,
+  queueChallengeById
 }
