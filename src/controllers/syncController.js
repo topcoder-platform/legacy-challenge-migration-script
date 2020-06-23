@@ -1,6 +1,7 @@
 const config = require('config')
 const logger = require('../util/logger')
 const moment = require('moment')
+const _ = require('lodash')
 const challengeMigrationStatusService = require('../services/challengeMigrationStatusService')
 const challengeSyncStatusService = require('../services/challengeSyncStatusService')
 const challengeSyncHistoryService = require('../services/challengeSyncHistoryService')
@@ -70,7 +71,10 @@ async function queueChallengesFromLastModified (startDate = null) {
   const dbStartDate = await challengeSyncHistoryService.getLatestDate()
   let lastModified = moment().subtract(1, 'month').utc()
   if (dbStartDate) lastModified = moment(dbStartDate).subtract(10, 'minutes').utc()
-  if (startDate !== null) lastModified = moment(startDate).utc()
+  if (!_.isUndefined(startDate)) {
+    logger.warn(`Start Date Set by API: ${startDate}`)
+    lastModified = moment(startDate).utc()
+  }
 
   // find challenges in es with date
   const ids = await syncService.getChallengeIDsFromV4({ startDate: lastModified }, 1000, 1)
