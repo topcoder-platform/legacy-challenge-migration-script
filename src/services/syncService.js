@@ -102,6 +102,10 @@ async function getChallengeIDsFromV4 (filter, perPage = 50, page = 1) {
     boolQuery.push({ range: { updatedAt: { gte: filter.startDate } } })
   }
 
+  if (filter.endDate) {
+    boolQuery.push({ range: { updatedAt: { lte: filter.endDate } } })
+  }
+
   if (filter.legacyId) {
     boolQuery.push({ match: { _id: filter.legacyId } })
   }
