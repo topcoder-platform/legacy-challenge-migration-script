@@ -23,8 +23,8 @@ if (config.MIGRATION_ENABLED === true) {
 }
 if (config.SYNC_ENABLED === true) {
   const syncQueueRule = new schedule.RecurrenceRule()
-  syncQueueRule.minute = new schedule.Range(0, 59, config.SYNC_QUEUE_INTERVAL)
-  schedule.scheduleJob(syncQueueRule, syncController.queueChallengesFromLastModified)
+  syncQueueRule.minute = new schedule.Range(0, 59, 0.5) // config.SYNC_QUEUE_INTERVAL)
+  schedule.scheduleJob(syncQueueRule, syncController.autoQueueChallenges)
   logger.info(`The sync queue is scheduled to be executed every ${config.SYNC_QUEUE_INTERVAL} minutes`)
 
   const syncRule = new schedule.RecurrenceRule()
