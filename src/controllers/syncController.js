@@ -63,25 +63,33 @@ async function sync () {
   }
 }
 
-async function queueChallengesFromLastModified (startDate) {
-  // const existingFailed = await challengeSyncStatusService.getSyncProgress({ status: config.MIGRATION_PROGRESS_STATUSES.failed }, 1000)
-  logger.info('Queueing existing failed challenges')
-  await challengeSyncStatusService.retryFailed()
-
+/**
+ * Allow the Scheduler to call, pulls date from the DB
+ */
+async function autoQueueChallenges () {
   const dbStartDate = await challengeSyncHistoryService.getLatestDate()
   // console.log('dbstartdate', dbStartDate)
   let lastModified = moment().subtract(1, 'month').utc()
   if (dbStartDate) lastModified = moment(dbStartDate).subtract(10, 'minutes').utc()
-  // console.log('dbstartdate adjusted', lastModified)
-  if (!_.isUndefined(startDate)) {
-    logger.warn(`Start Date Set by API: ${startDate}`)
-    lastModified = moment(startDate).utc()
-  }
+  return queueChallengesFromLastModified({ startDate: lastModified })
+}
+
+/**
+ * @param {Object} filter {startDate, endDate, legacyId}
+ */
+async function queueChallengesFromLastModified (filter) {
+  logger.info('Queueing existing failed challenges')
+  await challengeSyncStatusService.retryFailed()
+
+  const startDate = filter.startDate
+  console.log(startDate)
+  // const endDate = filter.endDate || moment() // this can be implemented
+  // const legacyId = filter.legacyId || null
 
   // find challenges in es with date
-  const ids = await syncService.getChallengeIDsFromV4({ startDate: lastModified }, 1000, 1)
+  const ids = await syncService.getChallengeIDsFromV4({ startDate }, 1000, 1)
   // loop through challenges and queue in updates table
-  logger.info(`Queue ${ids.length} Challenges with last modified > ${lastModified}`)
+  logger.info(`Queue ${ids.length} Challenges with last modified > ${startDate}`)
   for (let i = 0; i < ids.length; i += 1) {
     const legacyId = ids[i]
     // make sure it's not queued
@@ -118,5 +126,6 @@ async function queueChallengesFromLastModified (startDate) {
 
 module.exports = {
   sync,
+  autoQueueChallenges,
   queueChallengesFromLastModified
 }

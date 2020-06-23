@@ -61,7 +61,7 @@ async function queueSync (req, res) {
   if (startDate !== null && (!moment(req.query.startDate) || !moment(req.query.startDate).isValid())) {
     return res.status(400).json({ message: `Invalid startDate: ${startDate}` })
   }
-  await syncController.queueChallengesFromLastModified(startDate)
+  await syncController.queueChallengesFromLastModified({ startDate })
 
   return res.json({ success: true })
 }
