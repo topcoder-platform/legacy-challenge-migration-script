@@ -75,7 +75,7 @@ async function processResources (legacyId, challengeId) {
 async function getChallengeFromV5API (legacyId) {
   const token = await getM2MToken()
   const url = `${config.CHALLENGE_API_URL}?legacyId=${legacyId}&perPage=1&page=1`
-  logger.debug(`Get Challenge from V5 URL ${url}`)
+  // logger.debug(`Get Challenge from V5 URL ${url}`)
   const res = await axios.get(url, { headers: { Authorization: `Bearer ${token}` } })
   // console.log(res.data)
   return res.data || null

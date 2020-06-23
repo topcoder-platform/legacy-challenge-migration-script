@@ -63,14 +63,16 @@ async function sync () {
   }
 }
 
-async function queueChallengesFromLastModified (startDate = null) {
+async function queueChallengesFromLastModified (startDate) {
   // const existingFailed = await challengeSyncStatusService.getSyncProgress({ status: config.MIGRATION_PROGRESS_STATUSES.failed }, 1000)
   logger.info('Queueing existing failed challenges')
   await challengeSyncStatusService.retryFailed()
 
   const dbStartDate = await challengeSyncHistoryService.getLatestDate()
+  // console.log('dbstartdate', dbStartDate)
   let lastModified = moment().subtract(1, 'month').utc()
   if (dbStartDate) lastModified = moment(dbStartDate).subtract(10, 'minutes').utc()
+  // console.log('dbstartdate adjusted', lastModified)
   if (!_.isUndefined(startDate)) {
     logger.warn(`Start Date Set by API: ${startDate}`)
     lastModified = moment(startDate).utc()
