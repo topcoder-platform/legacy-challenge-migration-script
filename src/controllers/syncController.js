@@ -86,12 +86,24 @@ async function queueChallengesFromLastModified (filter) {
   logger.info(`startDate: ${startDate} - endDate: ${endDate}`)
 
   // find challenges in es with date
-  const ids = await syncService.getChallengeIDsFromV4({ startDate, endDate }, 100, 1)
-  // loop through challenges and queue in updates table
-  logger.info(`Queue ${ids.length} Challenges with last modified > ${startDate} and < ${endDate}`)
-  for (let i = 0; i < ids.length; i += 1) {
-    await queueChallengeById(ids[i])
+  let page = 0
+  let running = true
+  while (running) {
+    logger.info(`Processing batch - ${page + 1}`)
+    const ids = await syncService.getChallengeIDsFromV4({ startDate, endDate }, 100, page)
+    if (ids.length === 0) {
+      running = false
+      logger.info(`0 challenges found to queue on batch ${page}`)
+    } else {
+      // loop through challenges and queue in updates table
+      logger.info(`Queue ${ids.length} Challenges with last modified > ${startDate} and < ${endDate}`)
+      for (let i = 0; i < ids.length; i += 1) {
+        await queueChallengeById(ids[i])
+      }
+      page += 1
+    }
   }
+  logger.info('Queue completed!')
   // TODO fix logging
   await challengeSyncHistoryService.createHistoryRecord(0, 0)
 }

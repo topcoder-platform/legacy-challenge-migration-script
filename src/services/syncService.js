@@ -95,7 +95,7 @@ async function getResourcesFromV5API (challengeId) {
 //   return res.data || null
 // }
 
-async function getChallengeIDsFromV4 (filter, perPage = 50, page = 1) {
+async function getChallengeIDsFromV4 (filter, perPage = 50, page = 0) {
   const boolQuery = []
   const mustQuery = []
   if (filter.startDate) {
@@ -122,7 +122,7 @@ async function getChallengeIDsFromV4 (filter, perPage = 50, page = 1) {
     index: 'challengeslisting',
     type: 'challenges',
     size: perPage,
-    from: perPage * (page - 1),
+    from: perPage * page,
     _source: ['id'],
     body: {
       query: mustQuery.length > 0 ? {
