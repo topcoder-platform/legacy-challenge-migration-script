@@ -1,7 +1,7 @@
 module.exports = {
   PORT: process.env.PORT || 3001,
   API_VERSION: process.env.API_VERSION || 'v5',
-  MIGRATION_INTERVAL: process.env.MIGRATION_INTERVAL ? Number(process.env.MIGRATION_INTERVAL) : 5, // minutes
+  MIGRATION_INTERVAL: process.env.MIGRATION_INTERVAL ? Number(process.env.MIGRATION_INTERVAL) : 3, // minutes
   SYNC_INTERVAL: process.env.SYNC_INTERVAL ? Number(process.env.SYNC_INTERVAL) : 2, // minutes
   SYNC_QUEUE_INTERVAL: process.env.SYNC_QUEUE_INTERVAL ? Number(process.env.SYNC_QUEUE_INTERVAL) : 1, // minutes
 

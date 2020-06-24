@@ -3,11 +3,12 @@ const uuid = require('uuid/v4')
 const config = require('config')
 const request = require('superagent')
 const moment = require('moment')
+const axios = require('axios')
 const _ = require('lodash')
 const { Challenge, ChallengeType, ChallengeTypeTimelineTemplate } = require('../models')
 const logger = require('../util/logger')
 const helper = require('../util/helper')
-const { getESClient, getV4ESClient } = require('../util/helper')
+const { getESClient, getV4ESClient, getM2MToken } = require('../util/helper')
 const util = require('util')
 // const getErrorService = require('./errorService')
 // const errorService = getErrorService()
@@ -348,7 +349,7 @@ async function cacheTypesAndTimelines () {
   challengeTimelineMapping = createChallengeTimelineMapping(challengeTimelines, challengeTypes)
 }
 
-async function getChallengeIDsFromV4 (filter, perPage, offset) {
+async function getChallengeIDsFromV4 (filter, perPage, page = 1) {
   const boolQuery = []
   const mustQuery = []
   if (filter.startDate) {
@@ -373,7 +374,7 @@ async function getChallengeIDsFromV4 (filter, perPage, offset) {
     index: 'challengeslisting',
     type: 'challenges',
     size: perPage,
-    from: perPage * offset,
+    from: perPage * (page - 1),
     _source: ['id'],
     body: {
       query: mustQuery.length > 0 ? {
@@ -722,6 +723,15 @@ async function convertGroupIdsToV5UUIDs (oldIds) {
   return groups
 }
 
+async function getChallengeFromV5API (legacyId) {
+  const token = await getM2MToken()
+  const url = `${config.CHALLENGE_API_URL}?legacyId=${legacyId}&perPage=1&page=1`
+  // logger.debug(`Get Challenge from V5 URL ${url}`)
+  const res = await axios.get(url, { headers: { Authorization: `Bearer ${token}` } })
+  // console.log(res.data)
+  return res.data || null
+}
+
 module.exports = {
   save,
   buildV5Challenge,
@@ -735,5 +745,6 @@ module.exports = {
   saveChallengeTypes,
   deleteChallenge,
   createChallengeTimelineMapping,
+  getChallengeFromV5API,
   getChallengeTypesFromDynamo
 }

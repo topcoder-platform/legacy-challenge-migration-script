@@ -2,9 +2,10 @@ const uuid = require('uuid/v4')
 const _ = require('lodash')
 const moment = require('moment')
 const config = require('config')
+const axios = require('axios')
 const { Resource, ResourceRole } = require('../models')
 const logger = require('../util/logger')
-const { getESClient } = require('../util/helper')
+const { getESClient, getM2MToken } = require('../util/helper')
 // const util = require('util')
 const HashMap = require('hashmap')
 const resourceInformixService = require('./resourceInformixService')
@@ -193,52 +194,13 @@ async function deleteResource (resourceId) {
     throw Error(`Delete of Resource Failed ${e}`)
   }
 }
-// async function deleteResourcesForChallenge (challengeId) {
-//   const esQuery = {
-//     index: config.get('ES.RESOURCE_ES_INDEX'),
-//     type: config.get('ES.RESOURCE_ES_TYPE'),
-//     size: 100,
-//     from: 0, // Es Index starts from 0
-//     body: {
-//       query: {
-//         bool: {
-//           should: {
-//             match: {
-//               challengeId
-//             }
-//           }
-//         }
-//       }
-//     }
-//   }
 
-//   logger.warn(`GET Challenge Resources from ES ${JSON.stringify(esQuery)}`)
-//   const resources = await getESClient().query(esQuery)
-//   // const resources = []
-//   logger.warn(`Resources ${JSON.stringify(resources)}`)
-//   const ids = _.map(resources, r => r.id)
-//   logger.warn(`IDs ${JSON.stringify(ids)}`)
-//   for (let i = 0; i < ids.length; i += 1) {
-//     const resource = await Resource.get(ids[i])
-//     logger.warn(`Deleting ${JSON.stringify(resource)}`)
-//     await resource.delete()
-//   }
-//   logger.warn('DELETE Challenge Resources from ES')
-//   try {
-//     return getESClient().deleteByQuery(esQuery)
-//   } catch (err) {
-//     throw Error(`Could not delete resources for ${challengeId} - ${esQuery}`)
-//   }
-// }
-
-/**
-   * Put all resource data to new system
-   *
-   * @param {Object} resources data
-   */
-// async function saveResources (resources) {
-//   await Promise.all(resources.map(r => saveResource(r)))
-// }
+async function getResourcesFromV5API (challengeId) {
+  const token = await getM2MToken()
+  const url = `${config.RESOURCES_API_URL}?challengeId=${challengeId}`
+  const res = await axios.get(url, { headers: { Authorization: `Bearer ${token}` } })
+  return res.data || null
+}
 
 module.exports = {
   createMissingResourceRoles,
@@ -247,5 +209,6 @@ module.exports = {
   getRoleUUIDForResourceRoleName,
   getResourcesForChallenge,
   saveResourceRoles,
-  saveResource
+  saveResource,
+  getResourcesFromV5API
 }

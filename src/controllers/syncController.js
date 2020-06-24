@@ -1,7 +1,6 @@
 const config = require('config')
 const logger = require('../util/logger')
 const moment = require('moment')
-const _ = require('lodash')
 const challengeMigrationStatusService = require('../services/challengeMigrationStatusService')
 const challengeSyncStatusService = require('../services/challengeSyncStatusService')
 const challengeSyncHistoryService = require('../services/challengeSyncHistoryService')
@@ -31,7 +30,7 @@ async function sync () {
         logger.debug(`Syncing [${queuedChallenges.items.length}] Challenges`)
         for (let i = 0; i < queuedChallenges.items.length; i += 1) {
           const legacyId = queuedChallenges.items[i].legacyId
-          const [v5] = await syncService.getChallengeFromV5API(legacyId)
+          const [v5] = await challengeService.getChallengeFromV5API(legacyId)
           // see if v5 exists
           if (v5) {
             try {
@@ -86,11 +85,11 @@ async function queueChallengesFromLastModified (filter) {
   logger.info(`startDate: ${startDate} - endDate: ${endDate}`)
 
   // find challenges in es with date
-  let page = 0
+  let page = 1
   let running = true
   while (running) {
-    logger.info(`Processing batch - ${page + 1}`)
-    const ids = await syncService.getChallengeIDsFromV4({ startDate, endDate }, 100, page)
+    logger.info(`Processing batch - ${page}`)
+    const ids = await challengeService.getChallengeIDsFromV4({ startDate, endDate }, 100, page)
     if (ids.length === 0) {
       running = false
       logger.info(`0 challenges found to queue on batch ${page}`)
@@ -122,7 +121,7 @@ async function queueChallengeById (legacyId, withLogging = false) {
   if ((existingQueued && existingQueued.total >= 1)) {
     logger.warn(`Legacy ID ${legacyId} already queued`)
   } else {
-    const [v5] = await syncService.getChallengeFromV5API(legacyId)
+    const [v5] = await challengeService.getChallengeFromV5API(legacyId)
     const v4 = await challengeService.getChallengeListingFromV4ES(legacyId)
     if (v4) {
       if (v5) {

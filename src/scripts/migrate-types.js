@@ -21,8 +21,8 @@ for (const obj of arr) {
   }
 }
 
-console.log(uniqueTypeIds)
-console.log('Challenges', challengeIds.length, challengeIds)
+// console.log(uniqueTypeIds)
+// console.log('Challenges', challengeIds.length, challengeIds)
 
 // getTypeObjects(uniqueTypeIds)
 

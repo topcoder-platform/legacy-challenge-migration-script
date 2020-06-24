@@ -85,7 +85,7 @@ async function retryFailedMigrations () {
  * @param {Number} perPage
  * @param {Number} page
  */
-async function getMigrationProgress (filter, perPage = 100, page = 0) {
+async function getMigrationProgress (filter, perPage = 100, page = 1) {
   const boolQuery = []
   const mustQuery = []
   if (filter.challengeId) boolQuery.push({ match: { challengeId: filter.challengeId } })
@@ -103,7 +103,7 @@ async function getMigrationProgress (filter, perPage = 100, page = 0) {
     index: config.get('ES.MIGRATION_ES_INDEX'),
     type: config.get('ES.MIGRATION_ES_TYPE'),
     size: perPage,
-    from: perPage * page, // Es Index starts from 0
+    from: perPage * (page - 1), // Es Index starts from 0
     body: {
       query: mustQuery.length > 0 ? {
         bool: {
@@ -122,7 +122,7 @@ async function getMigrationProgress (filter, perPage = 100, page = 0) {
     docs = await getESClient().search(esQuery)
   } catch (e) {
     // Catch error when the ES is fresh and has no data
-    logger.warn(`ES Error ${e}`)
+    // logger.warn(`ES Error ${e}`)
     docs = {
       hits: {
         total: 0,

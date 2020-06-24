@@ -16,7 +16,7 @@ async function queueForMigration (req, res) {
   // get legacy ids
   let count = 0
   let skipped = 0
-  let page = 0
+  let page = 1
   let loop = true
   while (loop) {
     const legacyIds = await challengeService.getChallengeIDsFromV4({ startDate, endDate, legacyId }, 1000, page)
@@ -41,7 +41,7 @@ async function getMigrationStatus (req, res) {
   const legacyId = req.query.legacyId || null
   const challengeId = req.query.challengeId || null
   const status = req.query.status || null
-  const page = (req.query.page - 1) || 0
+  const page = req.query.page || 1
   const perPage = req.query.perPage || 50
   const result = await challengeMigrationStatusService.getMigrationProgress({ legacyId, challengeId, status }, perPage, page)
   if (result) {

@@ -13,7 +13,7 @@ async function migrate () {
 
   if (!running) {
     running = true
-    let page = 0
+    let page = 1
     await challengeService.cacheTypesAndTimelines()
     await migrationService.processResourceRoles()
 
