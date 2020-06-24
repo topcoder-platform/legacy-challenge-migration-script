@@ -529,7 +529,7 @@ async function buildV5Challenge (legacyId) {
 
   const newChallenge = {
     // id: uuid(), //this is removed from here and created in the save function
-    legacyId: challengeListing.id,
+    legacyId,
     typeId: challengeTypeMapping[challengeInfoFromIfx.type_id],
     legacy: {
       track: challengeListing.track,
