@@ -1,4 +1,5 @@
 // const config = require('config')
+const _ = require('lodash')
 const logger = require('../util/logger')
 const helper = require('../util/helper')
 const moment = require('moment')
@@ -57,7 +58,9 @@ async function retryFailed (req, res) {
 }
 
 async function queueSync (req, res) {
-  if (req.query.legacyId) {
+  if (_.toString(_.get(req, 'query.force')) === 'true') {
+    await syncController.queueChallengesFromLastModified({ force: true })
+  } else if (req.query.legacyId) {
     // Target a single challenge based on the provided legacyId if provided
     await syncController.queueChallengeById(req.query.legacyId, true)
   } else {

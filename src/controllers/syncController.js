@@ -80,9 +80,12 @@ async function queueChallengesFromLastModified (filter) {
   logger.info('Queueing existing failed challenges')
   await challengeSyncStatusService.retryFailed()
 
+  // Those will be undefined if the 'filter.force' is true
   const startDate = filter.startDate
   const endDate = filter.endDate
-  logger.info(`startDate: ${startDate} - endDate: ${endDate}`)
+  if (!filter.force) {
+    logger.info(`startDate: ${startDate} - endDate: ${endDate}`)
+  }
 
   // find challenges in es with date
   let page = 1
@@ -95,7 +98,11 @@ async function queueChallengesFromLastModified (filter) {
       logger.info(`0 challenges found to queue on batch ${page}`)
     } else {
       // loop through challenges and queue in updates table
-      logger.info(`Queue ${ids.length} Challenges with last modified > ${startDate} and < ${endDate}`)
+      if (!filter.force) {
+        logger.info(`Queue ${ids.length} Challenges with last modified > ${startDate} and < ${endDate}`)
+      } else {
+        logger.info(`Queue ${ids.length} Challenges using the 'force' flag`)
+      }
       for (let i = 0; i < ids.length; i += 1) {
         await queueChallengeById(ids[i])
       }
