@@ -732,6 +732,16 @@ async function getChallengeFromV5API (legacyId) {
   return res.data || null
 }
 
+async function getChallengeSubmissionsFromV5API (challengeId, type) {
+  const token = await getM2MToken()
+  let url = `${config.SUBMISSIONS_API_URL}?challengeId=${challengeId}`
+  if (type) {
+    url += `&type=${type}`
+  }
+  const res = await axios.get(url, { headers: { Authorization: `Bearer ${token}` } })
+  return res.data || null
+}
+
 module.exports = {
   save,
   buildV5Challenge,
@@ -746,5 +756,6 @@ module.exports = {
   deleteChallenge,
   createChallengeTimelineMapping,
   getChallengeFromV5API,
-  getChallengeTypesFromDynamo
+  getChallengeTypesFromDynamo,
+  getChallengeSubmissionsFromV5API
 }

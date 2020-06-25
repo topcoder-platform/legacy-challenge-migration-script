@@ -22,6 +22,7 @@ module.exports = {
   CHALLENGE_TYPE_API_URL: process.env.CHALLENGE_TYPE_API_URL || 'https://api.topcoder-dev.com/v4/challenge-types',
   CHALLENGE_TIMELINE_API_URL: process.env.CHALLENGE_TIMELINE_API_URL || 'https://api.topcoder-dev.com/v5/challenge-timelines',
   CHALLENGE_API_URL: process.env.CHALLENGE_API_URL || 'https://api.topcoder-dev.com/v5/challenges',
+  SUBMISSIONS_API_URL: process.env.SUBMISSIONS_API_URL || 'https://api.topcoder-dev.com/v5/submissions',
   RESOURCES_API_URL: process.env.RESOURCES_API_URL || 'https://api.topcoder-dev.com/v5/resources',
   GROUPS_API_URL: process.env.GROUPS_API_URL || 'https://api.topcoder-dev.com/v5/groups',
   TERMS_API_URL: process.env.TERMS_API_URL || 'https://api.topcoder-dev.com/v5/terms',
@@ -196,5 +197,8 @@ module.exports = {
     IN_PROGRESS: 'In progress',
     FAILED: 'Failed',
     SUCCESS: 'Success'
-  }
+  },
+
+  SUBMITTER_ROLE_ID: process.env.SUBMITTER_ROLE_ID || '732339e7-8e30-49d7-9198-cccf9451e221',
+  SUBMISSION_TYPE: process.env.SUBMISSION_TYPE || 'Contest Submission'
 }
