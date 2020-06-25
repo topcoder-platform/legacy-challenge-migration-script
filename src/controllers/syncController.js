@@ -83,9 +83,7 @@ async function queueChallengesFromLastModified (filter) {
   // Those will be undefined if the 'filter.force' is true
   const startDate = filter.startDate
   const endDate = filter.endDate
-  if (!filter.force) {
-    logger.info(`startDate: ${startDate} - endDate: ${endDate}`)
-  }
+  logger.info(`startDate: ${startDate} - endDate: ${endDate}`)
 
   // find challenges in es with date
   let page = 1
@@ -98,13 +96,9 @@ async function queueChallengesFromLastModified (filter) {
       logger.info(`0 challenges found to queue on batch ${page}`)
     } else {
       // loop through challenges and queue in updates table
-      if (!filter.force) {
-        logger.info(`Queue ${ids.length} Challenges with last modified > ${startDate} and < ${endDate}`)
-      } else {
-        logger.info(`Queue ${ids.length} Challenges using the 'force' flag`)
-      }
+      logger.info(`Queue ${ids.length} Challenges with last modified > ${startDate} and < ${endDate}`)
       for (let i = 0; i < ids.length; i += 1) {
-        await queueChallengeById(ids[i])
+        await queueChallengeById(ids[i], false, filter.force)
       }
       page += 1
     }
@@ -118,8 +112,9 @@ async function queueChallengesFromLastModified (filter) {
  * Queue a single challenge
  * @param {Number} legacyId the legacy challenge ID
  * @param {Boolean} withLogging should print progress in stdout
+ * @param {Boolean} force force update without comparing the last modified date
  */
-async function queueChallengeById (legacyId, withLogging = false) {
+async function queueChallengeById (legacyId, withLogging = false, force = false) {
   if (withLogging) {
     logger.info(`Queue challenge with ID: ${legacyId}`)
   }
@@ -132,7 +127,7 @@ async function queueChallengeById (legacyId, withLogging = false) {
     const v4 = await challengeService.getChallengeListingFromV4ES(legacyId)
     if (v4) {
       if (v5) {
-        if (moment(v4.updatedAt).utc().isAfter(moment(v5.legacy.informixModified).utc(), 'second')) {
+        if (force === true || moment(v4.updatedAt).utc().isAfter(moment(v5.legacy.informixModified).utc(), 'second')) {
           logger.info(`v5 Updated (${legacyId}): ${moment(v5.legacy.informixModified).utc()} is != to v4 updatedAt: ${moment(v4.updatedAt).utc()}`)
           await challengeSyncStatusService.queueForSync(legacyId)
         } else {

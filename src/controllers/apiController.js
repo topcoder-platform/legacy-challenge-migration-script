@@ -58,11 +58,10 @@ async function retryFailed (req, res) {
 }
 
 async function queueSync (req, res) {
-  if (_.toString(_.get(req, 'query.force')) === 'true') {
-    await syncController.queueChallengesFromLastModified({ force: true })
-  } else if (req.query.legacyId) {
+  const force = _.toString(_.get(req, 'query.force')) === 'true'
+  if (req.query.legacyId) {
     // Target a single challenge based on the provided legacyId if provided
-    await syncController.queueChallengeById(req.query.legacyId, true)
+    await syncController.queueChallengeById(req.query.legacyId, true, force)
   } else {
     const startDate = req.query.startDate
     const endDate = req.query.endDate ? moment(req.query.endDate).utc() : moment().utc()
@@ -73,7 +72,7 @@ async function queueSync (req, res) {
     if (endDate !== null && (!moment(endDate) || !moment(endDate).isValid())) {
       return res.status(400).json({ message: `Invalid endDate: ${endDate}` })
     }
-    await syncController.queueChallengesFromLastModified({ startDate, endDate })
+    await syncController.queueChallengesFromLastModified({ startDate, endDate, force })
   }
 
   return res.json({ success: true })
