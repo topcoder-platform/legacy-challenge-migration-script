@@ -61,7 +61,7 @@ async function createChallenge (challenge) {
  */
 async function updateChallenge (challenge) {
   try {
-    await Challenge.update({ id: challenge.id }, challenge)
+    await Challenge.update({ id: challenge.id }, _.omit(challenge, ['numOfSubmissions', 'numOfRegistrants']))
     await getESClient().update({
       index: config.get('ES.CHALLENGE_ES_INDEX'),
       type: config.get('ES.CHALLENGE_ES_TYPE'),
