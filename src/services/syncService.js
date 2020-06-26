@@ -26,12 +26,12 @@ async function processChallenge (legacyId) {
   }
 
   try {
-    const submissions = await challengeService.getChallengeSubmissionsFromV5API(v5ChallengeFromAPI.id, config.SUBMISSION_TYPE)
+    const submissions = await challengeService.getChallengeSubmissionsFromV5API(legacyId, config.SUBMISSION_TYPE)
     if (submissions && submissions.length) {
       challengeObj.numOfSubmissions = submissions.length
     }
   } catch (e) {
-    logger.error(`Failed to load submissions for challenge ${v5ChallengeFromAPI.id}`)
+    logger.error(`Failed to load submissions for challenge ${legacyId}`)
     logger.logFullError(e)
   }
   challengeObj.id = v5ChallengeFromAPI.id
