@@ -35,6 +35,7 @@ async function save (challenge) {
  */
 async function createChallenge (challenge) {
   challenge.id = uuid()
+  // numOfSubmissions and numOfRegistrants are not stored in dynamo, they're calclated by the ES processor
   const dynamoChallenge = new Challenge(_.omit(challenge, ['numOfSubmissions', 'numOfRegistrants']))
 
   try {
@@ -61,6 +62,7 @@ async function createChallenge (challenge) {
  */
 async function updateChallenge (challenge) {
   try {
+    // numOfSubmissions and numOfRegistrants are not stored in dynamo, they're calclated by the ES processor
     await Challenge.update({ id: challenge.id }, _.omit(challenge, ['numOfSubmissions', 'numOfRegistrants']))
     await getESClient().update({
       index: config.get('ES.CHALLENGE_ES_INDEX'),

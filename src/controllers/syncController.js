@@ -89,21 +89,21 @@ async function queueChallengesFromLastModified (filter) {
   let page = 1
   let running = true
   while (running) {
-    logger.info(`Processing batch - ${page}`)
+    logger.info(`Processing Sync Batch - ${page}`)
     const ids = await challengeService.getChallengeIDsFromV4({ startDate, endDate }, 100, page)
     if (ids.length === 0) {
       running = false
-      logger.info(`0 challenges found to queue on batch ${page}`)
+      logger.info(`0 challenges found in sync queue on batch ${page}`)
     } else {
       // loop through challenges and queue in updates table
-      logger.info(`Queue ${ids.length} Challenges with last modified > ${startDate} and < ${endDate}`)
+      logger.info(`Queue ${ids.length} Challenges for Sync with last modified > ${startDate} and < ${endDate}`)
       for (let i = 0; i < ids.length; i += 1) {
         await queueChallengeById(ids[i], false, filter.force)
       }
       page += 1
     }
   }
-  logger.info('Queue completed!')
+  logger.info('Sync Queueing completed!')
   // TODO fix logging
   await challengeSyncHistoryService.createHistoryRecord(0, 0)
 }
@@ -127,7 +127,10 @@ async function queueChallengeById (legacyId, withLogging = false, force = false)
     const v4 = await challengeService.getChallengeListingFromV4ES(legacyId)
     if (v4) {
       if (v5) {
-        if (force === true || moment(v4.updatedAt).utc().isAfter(moment(v5.legacy.informixModified).utc(), 'second')) {
+        if (force === true) {
+          logger.info(`Sync of ${legacyId} is being forced`)
+          await challengeSyncStatusService.queueForSync(legacyId)
+        } else if (moment(v4.updatedAt).utc().isAfter(moment(v5.legacy.informixModified).utc(), 'second')) {
           logger.info(`v5 Updated (${legacyId}): ${moment(v5.legacy.informixModified).utc()} is != to v4 updatedAt: ${moment(v4.updatedAt).utc()}`)
           await challengeSyncStatusService.queueForSync(legacyId)
         } else {
