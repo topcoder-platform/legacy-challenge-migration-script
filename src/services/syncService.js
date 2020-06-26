@@ -1,4 +1,6 @@
 const { find, toString, omit } = require('lodash')
+const config = require('config')
+const logger = require('../util/logger')
 const challengeService = require('./challengeService')
 const resourceService = require('./resourceService')
 
@@ -11,7 +13,27 @@ async function processChallenge (legacyId) {
   const v5ChallengeObjectFromV4 = await challengeService.buildV5Challenge(legacyId)
   const [v5ChallengeFromAPI] = await challengeService.getChallengeFromV5API(legacyId)
 
-  const challengeObj = omit(v5ChallengeObjectFromV4, ['numOfSubmissions', 'numOfRegistrants', 'type'])
+  const challengeObj = omit(v5ChallengeObjectFromV4, ['type'])
+
+  try {
+    const registrants = await resourceService.getResourcesFromV5API(v5ChallengeFromAPI.id, config.SUBMITTER_ROLE_ID)
+    if (registrants && registrants.length) {
+      challengeObj.numOfRegistrants = registrants.length
+    }
+  } catch (e) {
+    logger.error(`Failed to load resources for challenge ${v5ChallengeFromAPI.id}`)
+    logger.logFullError(e)
+  }
+
+  try {
+    const submissions = await challengeService.getChallengeSubmissionsFromV5API(v5ChallengeFromAPI.id, config.SUBMISSION_TYPE)
+    if (submissions && submissions.length) {
+      challengeObj.numOfSubmissions = submissions.length
+    }
+  } catch (e) {
+    logger.error(`Failed to load submissions for challenge ${v5ChallengeFromAPI.id}`)
+    logger.logFullError(e)
+  }
   challengeObj.id = v5ChallengeFromAPI.id
   // console.log('updated', challengeObj.updated, '   informix modified', challengeObj.legacy.informixModified)
 

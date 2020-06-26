@@ -195,9 +195,12 @@ async function deleteResource (resourceId) {
   }
 }
 
-async function getResourcesFromV5API (challengeId) {
+async function getResourcesFromV5API (challengeId, roleId) {
   const token = await getM2MToken()
-  const url = `${config.RESOURCES_API_URL}?challengeId=${challengeId}`
+  let url = `${config.RESOURCES_API_URL}?challengeId=${challengeId}`
+  if (roleId) {
+    url += `&roleId=${roleId}`
+  }
   const res = await axios.get(url, { headers: { Authorization: `Bearer ${token}` } })
   return res.data || null
 }

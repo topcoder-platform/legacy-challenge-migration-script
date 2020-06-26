@@ -61,7 +61,7 @@ async function createChallenge (challenge) {
  */
 async function updateChallenge (challenge) {
   try {
-    await Challenge.update({ id: challenge.id }, challenge)
+    await Challenge.update({ id: challenge.id }, _.omit(challenge, ['numOfSubmissions', 'numOfRegistrants']))
     await getESClient().update({
       index: config.get('ES.CHALLENGE_ES_INDEX'),
       type: config.get('ES.CHALLENGE_ES_TYPE'),
@@ -732,6 +732,16 @@ async function getChallengeFromV5API (legacyId) {
   return res.data || null
 }
 
+async function getChallengeSubmissionsFromV5API (challengeId, type) {
+  const token = await getM2MToken()
+  let url = `${config.SUBMISSIONS_API_URL}?challengeId=${challengeId}`
+  if (type) {
+    url += `&type=${type}`
+  }
+  const res = await axios.get(url, { headers: { Authorization: `Bearer ${token}` } })
+  return res.data || null
+}
+
 module.exports = {
   save,
   buildV5Challenge,
@@ -746,5 +756,6 @@ module.exports = {
   deleteChallenge,
   createChallengeTimelineMapping,
   getChallengeFromV5API,
-  getChallengeTypesFromDynamo
+  getChallengeTypesFromDynamo,
+  getChallengeSubmissionsFromV5API
 }
