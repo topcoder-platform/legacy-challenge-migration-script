@@ -49,14 +49,14 @@ async function createMissingResourceRoles (names) {
  * Get existing resource roles that have been imported to Dynamo
  */
 async function getExistingResourceRoleIds (names) {
-  const results = await ResourceRole.scan('name').in(names).exec()
+  const results = await ResourceRole.scan('name').limit(50).in(names).exec()
   return _.map(results, 'legacyId')
 }
 
 async function getRoleUUIDForResourceRoleId (resourceRoleId) {
   if (resourceRoleUUIDRoleIdCache.get(resourceRoleId)) return resourceRoleUUIDRoleIdCache.get(resourceRoleId)
-  const result = await ResourceRole.scan('legacyId').eq(resourceRoleId).exec()
-  if (result) {
+  const result = await ResourceRole.scan('legacyId').limit(50).eq(resourceRoleId).exec()
+  if (result && result[0]) {
     logger.debug(`getRoleUUIDForResourceRoleId ${JSON.stringify(result)}`)
     resourceRoleUUIDRoleIdCache.set(resourceRoleId, result[0].id)
     // console.log('Role Found', resourceRoleUUIDRoleIdCache)
@@ -68,7 +68,7 @@ async function getRoleUUIDForResourceRoleId (resourceRoleId) {
 
 async function getRoleUUIDForResourceRoleName (name) {
   if (resourceRoleUUIDRoleNameCache.get(name)) return resourceRoleUUIDRoleNameCache.get(name)
-  const result = await ResourceRole.scan('name').eq(name).exec()
+  const result = await ResourceRole.scan('name').limit(50).eq(name).exec()
   if (result && result[0]) {
     resourceRoleUUIDRoleNameCache.set(name, result[0].id)
     // console.log('Role Found', resourceRoleUUIDRoleIdCache)
