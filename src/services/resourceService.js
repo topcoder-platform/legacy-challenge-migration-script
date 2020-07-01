@@ -57,6 +57,7 @@ async function getRoleUUIDForResourceRoleId (resourceRoleId) {
   if (resourceRoleUUIDRoleIdCache.get(resourceRoleId)) return resourceRoleUUIDRoleIdCache.get(resourceRoleId)
   const result = await ResourceRole.scan('legacyId').eq(resourceRoleId).exec()
   if (result) {
+    logger.debug(`getRoleUUIDForResourceRoleId ${JSON.stringify(result)}`)
     resourceRoleUUIDRoleIdCache.set(resourceRoleId, result[0].id)
     // console.log('Role Found', resourceRoleUUIDRoleIdCache)
     return result[0].id
@@ -129,7 +130,7 @@ async function getResourcesForChallenge (legacyChallengeId, v5ChallengeId) {
     const roleId = await getRoleUUIDForResourceRoleId(resource.resource_role_id)
 
     if (v5ChallengeId && roleId) {
-      // logger.debug(`Will create resource with role iD ${roleId} for challenge ${challengeId} for member ${r.member_id}`)
+      logger.debug(`Will create resource with role ID ${roleId} for challenge ${v5ChallengeId} for member ${JSON.stringify(resource)}`)
       const newResource = {
         // id: uuid(),
         legacyId: resource.id,
