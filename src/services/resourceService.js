@@ -57,7 +57,7 @@ async function getRoleUUIDForResourceRoleId (resourceRoleId) {
   if (resourceRoleUUIDRoleIdCache.get(resourceRoleId)) return resourceRoleUUIDRoleIdCache.get(resourceRoleId)
   const result = await ResourceRole.scan('legacyId').limit(50).eq(resourceRoleId).exec()
   if (result && result[0]) {
-    logger.debug(`getRoleUUIDForResourceRoleId ${JSON.stringify(result)}`)
+    // logger.debug(`getRoleUUIDForResourceRoleId ${JSON.stringify(result)}`)
     resourceRoleUUIDRoleIdCache.set(resourceRoleId, result[0].id)
     // console.log('Role Found', resourceRoleUUIDRoleIdCache)
     return result[0].id
