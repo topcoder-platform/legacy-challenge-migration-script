@@ -54,7 +54,7 @@ async function processResources (legacyId, challengeId) {
     // v5 memberId is a string
     // logger.debug(`Find resource in V5 ${JSON.stringify(obj)}`)
     if (!find(currentV5Array, { memberId: toString(obj.memberId), roleId: obj.roleId })) {
-      // logger.debug(`Resource Not Found ${JSON.stringify(obj)}`)
+      logger.debug(`Resource Not Found, adding ${JSON.stringify(obj)}`)
       await resourceService.saveResource(obj)
       resourcesAdded += 1
     }

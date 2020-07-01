@@ -130,7 +130,7 @@ async function getResourcesForChallenge (legacyChallengeId, v5ChallengeId) {
     const roleId = await getRoleUUIDForResourceRoleId(resource.resource_role_id)
 
     if (v5ChallengeId && roleId) {
-      logger.debug(`Will create resource with role ID ${roleId} for challenge ${v5ChallengeId} for member ${JSON.stringify(resource)}`)
+      // logger.debug(`Will create resource with role ID ${roleId} for challenge ${v5ChallengeId} for member ${JSON.stringify(resource)}`)
       const newResource = {
         // id: uuid(),
         legacyId: resource.id,
