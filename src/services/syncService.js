@@ -46,11 +46,15 @@ async function processResources (legacyId, challengeId) {
   const currentV4Array = await resourceService.getResourcesForChallenge(legacyId, challengeId)
   const currentV5Array = await resourceService.getResourcesFromV5API(challengeId)
 
+  logger.debug(`Resources V4 Array ${JSON.stringify(currentV4Array)}`)
+  logger.debug(`Resources V5 Array ${JSON.stringify(currentV5Array)}`)
+
   for (let i = 0; i < currentV4Array.length; i += 1) {
     const obj = currentV4Array[i]
     // v5 memberId is a string
+    logger.debug(`Find resource in V5 ${JSON.stringify(obj)}`)
     if (!find(currentV5Array, { memberId: toString(obj.memberId), roleId: obj.roleId })) {
-      // logger.debug(`add resource ${JSON.stringify(obj)}`)
+      logger.debug(`Resource Not Found ${JSON.stringify(obj)}`)
       await resourceService.saveResource(obj)
       resourcesAdded += 1
     }
