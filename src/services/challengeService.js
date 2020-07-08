@@ -36,7 +36,15 @@ async function save (challenge) {
 async function createChallenge (challenge) {
   challenge.id = uuid()
   // numOfSubmissions and numOfRegistrants are not stored in dynamo, they're calclated by the ES processor
-  const dynamoChallenge = new Challenge(_.omit(challenge, ['numOfSubmissions', 'numOfRegistrants']))
+  const dynamoChallenge = new Challenge(_.omit(challenge, [
+    'numOfSubmissions',
+    'numOfRegistrants',
+    'registrationStartDate',
+    'registrationEndDate',
+    'currentPhaseNames',
+    'submissionStartDate',
+    'submissionEndDate'
+  ]))
 
   try {
     await dynamoChallenge.save()
@@ -63,7 +71,15 @@ async function createChallenge (challenge) {
 async function updateChallenge (challenge) {
   try {
     // numOfSubmissions and numOfRegistrants are not stored in dynamo, they're calclated by the ES processor
-    await Challenge.update({ id: challenge.id }, _.omit(challenge, ['numOfSubmissions', 'numOfRegistrants']))
+    await Challenge.update({ id: challenge.id }, _.omit(challenge, [
+      'numOfSubmissions',
+      'numOfRegistrants',
+      'registrationStartDate',
+      'registrationEndDate',
+      'currentPhaseNames',
+      'submissionStartDate',
+      'submissionEndDate'
+    ]))
     await getESClient().update({
       index: config.get('ES.CHALLENGE_ES_INDEX'),
       type: config.get('ES.CHALLENGE_ES_TYPE'),
@@ -634,6 +650,20 @@ async function buildV5Challenge (legacyId) {
     return newPhase
   })
   newChallenge.endDate = challengeEndDate
+
+  if (phases.length > 0) {
+    const registrationPhase = _.find(phases, p => p.name === 'Registration')
+    const submissionPhase = _.find(phases, p => p.name === 'Submission')
+    newChallenge.currentPhaseNames = _.map(_.filter(phases, p => p.isOpen === true), 'name')
+    if (registrationPhase) {
+      newChallenge.registrationStartDate = registrationPhase.actualStartDate || registrationPhase.scheduledStartDate
+      newChallenge.registrationEndDate = registrationPhase.actualEndDate || registrationPhase.scheduledEndDate
+    }
+    if (submissionPhase) {
+      newChallenge.submissionStartDate = submissionPhase.actualStartDate || submissionPhase.scheduledStartDate
+      newChallenge.submissionEndDate = submissionPhase.actualEndDate || submissionPhase.scheduledEndDate
+    }
+  }
 
   const metadata = []
   if (challengeListing.fileTypes && challengeListing.fileTypes.length > 0) {
