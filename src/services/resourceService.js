@@ -168,6 +168,7 @@ async function saveResource (resource) {
   resource.id = uuid()
   const newResource = new Resource(resource)
   try {
+    logger.debug(`Saving Resource ${JSON.stringify(resource)}`)
     await newResource.save()
     return getESClient().create({
       index: config.get('ES.RESOURCE_ES_INDEX'),

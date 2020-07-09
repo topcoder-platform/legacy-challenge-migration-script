@@ -1,4 +1,4 @@
-const { find, toString, omit } = require('lodash')
+const { find, toString, omit, toNumber } = require('lodash')
 const config = require('config')
 const logger = require('../util/logger')
 const challengeService = require('./challengeService')
@@ -42,34 +42,32 @@ async function processChallenge (legacyId) {
 
 async function processResources (legacyId, challengeId) {
   let resourcesAdded = 0
-  const resourcesRemoved = 0
+  let resourcesRemoved = 0
   const currentV4Array = await resourceService.getResourcesForChallenge(legacyId, challengeId)
   const currentV5Array = await resourceService.getResourcesFromV5API(challengeId)
 
-  // logger.debug(`Resources V4 Array ${JSON.stringify(currentV4Array)}`)
-  // logger.debug(`Resources V5 Array ${JSON.stringify(currentV5Array)}`)
+  logger.debug(`Resources V4 Array ${JSON.stringify(currentV4Array)}`)
+  logger.debug(`Resources V5 Array ${JSON.stringify(currentV5Array)}`)
 
   for (let i = 0; i < currentV4Array.length; i += 1) {
     const obj = currentV4Array[i]
     // v5 memberId is a string
     // logger.debug(`Find resource in V5 ${JSON.stringify(obj)}`)
     if (!find(currentV5Array, { memberId: toString(obj.memberId), roleId: obj.roleId })) {
-      logger.debug(`Resource Not Found, adding ${JSON.stringify(obj)}`)
+      logger.debug(` ++ Resource Not Found, adding ${JSON.stringify(obj)}`)
       await resourceService.saveResource(obj)
       resourcesAdded += 1
     }
   }
-
-  // commented out because legacy shouldn't remove from v5, only add
-  // for (let i = 0; i < currentV5Array.length; i += 1) {
-  //   const obj = currentV5Array[i]
-  //   // v4 memberId is a number
-  //   if (!find(currentV4Array, { memberId: toNumber(obj.memberId), roleId: obj.roleId })) {
-  //     // logger.debug(`remove resource ${JSON.stringify(obj.id)}`)
-  //     await resourceService.deleteResource(obj.id)
-  //     resourcesRemoved += 1
-  //   }
-  // }
+  for (let i = 0; i < currentV5Array.length; i += 1) {
+    const obj = currentV5Array[i]
+    // v4 memberId is a number
+    if (!find(currentV4Array, { memberId: toNumber(obj.memberId), roleId: obj.roleId })) {
+      logger.debug(` -- Resource Found, removing ${JSON.stringify(obj.id)}`)
+      await resourceService.deleteResource(obj.id)
+      resourcesRemoved += 1
+    }
+  }
 
   return { resourcesAdded, resourcesRemoved }
 }
