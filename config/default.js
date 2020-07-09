@@ -60,8 +60,8 @@ module.exports = {
     HOST: process.env.ES_HOST || 'localhost:9200', // es host and port
     API_VERSION: process.env.ES_API_VERSION || '6.8',
     CHALLENGE_ES_INDEX: process.env.CHALLENGE_ES_INDEX || 'challenge', // challenge es index
-    RESOURCE_ES_INDEX: process.env.RESOURCE_ES_INDEX || 'resource', // resource es index
-    RESOURCE_ROLE_ES_INDEX: process.env.RESOURCE_ROLE_ES_INDEX || 'resource_role', // resource role es index
+    RESOURCE_ES_INDEX: process.env.RESOURCE_ES_INDEX || 'resources', // resource es index
+    RESOURCE_ROLE_ES_INDEX: process.env.RESOURCE_ROLE_ES_INDEX || 'resource_roles', // resource role es index
     CHALLENGE_TYPE_ES_INDEX: process.env.CHALLENGE_TYPE_ES_INDEX || 'challenge_type', // challenge type es index
     CHALLENGE_ES_TYPE: process.env.CHALLENGE_ES_TYPE || '_doc', // challenge es type
     RESOURCE_ES_TYPE: process.env.RESOURCE_ES_TYPE || '_doc', // resource es type
