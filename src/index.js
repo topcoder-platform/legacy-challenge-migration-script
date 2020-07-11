@@ -13,6 +13,11 @@ const migrationController = require('./controllers/migrationController')
 const apiController = require('./controllers/apiController')
 const syncController = require('./controllers/syncController')
 
+process.on('unhandledRejection', (reason, p) => {
+  logger.warn('Unhandled Rejection at: Promise', p, 'reason:', reason)
+  // application specific logging, throwing an error, or other logic here
+})
+
 if (config.MIGRATION_ENABLED === true) {
   const migrationRule = new schedule.RecurrenceRule()
   migrationRule.minute = new schedule.Range(0, 59, config.MIGRATION_INTERVAL)
