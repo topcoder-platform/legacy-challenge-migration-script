@@ -66,21 +66,19 @@ async function sync () {
  * Allow the Scheduler to call, pulls date from the DB
  */
 async function autoQueueChallenges () {
+  logger.info('Queueing existing failed challenges')
+  await challengeSyncStatusService.retryFailed()
   const dbStartDate = await challengeSyncHistoryService.getLatestDate()
-  // console.log('dbstartdate', dbStartDate)
   let lastModified = moment().subtract(1, 'month').utc()
   if (dbStartDate) lastModified = moment(dbStartDate).subtract(10, 'minutes').utc()
-  return queueChallengesFromLastModified({ startDate: lastModified })
+  await queueChallengesFromLastModified({ startDate: lastModified })
+  return challengeSyncHistoryService.createHistoryRecord(0, 0)
 }
 
 /**
  * @param {Object} filter {startDate, endDate, legacyId}
  */
 async function queueChallengesFromLastModified (filter) {
-  logger.info('Queueing existing failed challenges')
-  await challengeSyncStatusService.retryFailed()
-
-  // Those will be undefined if the 'filter.force' is true
   const startDate = filter.startDate
   const endDate = filter.endDate
   logger.info(`startDate: ${startDate} - endDate: ${endDate}`)
@@ -102,7 +100,6 @@ async function queueChallengesFromLastModified (filter) {
       }
       page += 1
     }
-    await challengeSyncHistoryService.createHistoryRecord(0, 0)
   }
   logger.info('Sync Queueing completed!')
   // TODO fix logging
