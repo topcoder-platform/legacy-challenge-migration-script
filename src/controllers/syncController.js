@@ -102,10 +102,10 @@ async function queueChallengesFromLastModified (filter) {
       }
       page += 1
     }
+    await challengeSyncHistoryService.createHistoryRecord(0, 0)
   }
   logger.info('Sync Queueing completed!')
   // TODO fix logging
-  await challengeSyncHistoryService.createHistoryRecord(0, 0)
 }
 
 /**

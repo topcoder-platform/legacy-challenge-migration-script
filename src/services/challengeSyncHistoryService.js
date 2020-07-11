@@ -24,7 +24,7 @@ async function createHistoryRecord (challengesUpdated, resourcesUpdated) {
       }
     })
   } catch (err) {
-    logger.error(err)
+    logger.error(`createHistoryRecord ${err}`)
   }
 }
 
@@ -71,11 +71,11 @@ async function getLatestHistory () {
       resourcesUpdated: item._source.resourcesUpdated
     }
   }
+  return {}
 }
 
 async function getLatestDate () {
   const history = await getLatestHistory()
-  // console.log(`latest history ${JSON.stringify(history)}`)
   if (history && history.date) return history.date
   return null
 }
