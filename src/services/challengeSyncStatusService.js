@@ -66,7 +66,7 @@ async function getSyncProgress (filter, perPage = 100, page = 1) {
   const boolQuery = []
   const mustQuery = []
   if (filter.challengeId) boolQuery.push({ match: { challengeId: filter.challengeId } })
-  if (filter.legacyId) boolQuery.push({ match: { _id: filter.legacyId } })
+  if (filter.legacyId) boolQuery.push({ match: { legacyId: filter.legacyId } })
   if (filter.status) boolQuery.push({ match: { status: filter.status } })
   if (boolQuery.length > 0) {
     mustQuery.push({

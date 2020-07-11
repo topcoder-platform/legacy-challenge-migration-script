@@ -69,9 +69,10 @@ app.use(cors({
 // setup express app
 app.set('port', config.PORT)
 
-app.post(`/${config.API_VERSION}/challenge-migration`, apiController.queueForMigration)
-app.get(`/${config.API_VERSION}/challenge-migration`, apiController.getMigrationStatus)
+app.get(`/${config.API_VERSION}/challenge-migration/sync`, apiController.getSyncStatus)
 app.post(`/${config.API_VERSION}/challenge-migration/sync`, apiController.queueSync)
+app.get(`/${config.API_VERSION}/challenge-migration`, apiController.getMigrationStatus)
+app.post(`/${config.API_VERSION}/challenge-migration`, apiController.queueForMigration)
 app.put(`/${config.API_VERSION}/challenge-migration`, apiController.retryFailed)
 // app.get(`/${config.API_VERSION}/challenge-migration`, controller.checkStatus)
 

@@ -7,6 +7,7 @@ const syncController = require('./syncController')
 const challengeService = require('../services/challengeService')
 const migrationService = require('../services/migrationService')
 const challengeMigrationStatusService = require('../services/challengeMigrationStatusService')
+const challengeSyncStatusService = require('../services/challengeSyncStatusService')
 
 async function queueForMigration (req, res) {
   const startDate = req.query.startDate || null
@@ -52,6 +53,22 @@ async function getMigrationStatus (req, res) {
   return res.status(404).json({ message: 'Progress Not found' })
 }
 
+async function getSyncStatus (req, res) {
+  // logger.error(`GET STATUS ${JSON.stringify(req.query)}`)
+  const legacyId = req.query.legacyId || null
+  const challengeId = req.query.challengeId || null
+  const status = req.query.status || null
+  const page = req.query.page || 1
+  const perPage = req.query.perPage || 50
+  // logger.debug(JSON.stringify({ legacyId, challengeId, status }))
+  const result = await challengeSyncStatusService.getSyncProgress({ legacyId, challengeId, status }, perPage, page)
+  if (result) {
+    helper.setResHeaders(req, res, { total: result.total, page, perPage })
+    return res.json(result.items)
+  }
+  return res.status(404).json({ message: 'Progress Not found' })
+}
+
 async function retryFailed (req, res) {
   await challengeMigrationStatusService.retryFailedMigrations()
   return res.status(200)
@@ -82,5 +99,6 @@ module.exports = {
   queueForMigration,
   getMigrationStatus,
   retryFailed,
-  queueSync
+  queueSync,
+  getSyncStatus
 }
