@@ -766,12 +766,13 @@ async function getChallengeFromV5API (legacyId) {
 
 async function getChallengeSubmissionsFromV5API (challengeId, type) {
   const token = await getM2MToken()
-  let url = `${config.SUBMISSIONS_API_URL}?challengeId=${challengeId}`
+  let url = `${config.SUBMISSIONS_API_URL}?challengeId=${challengeId}&perPage=1`
   if (type) {
     url += `&type=${type}`
   }
   const res = await axios.get(url, { headers: { Authorization: `Bearer ${token}` } })
-  return res.data || null
+  logger.error(`results! ${res.headers['X-Total']}`)
+  return { result: res.data, total: res.headers['X-Total'] } || null
 }
 
 module.exports = {

@@ -14,7 +14,7 @@ const apiController = require('./controllers/apiController')
 const syncController = require('./controllers/syncController')
 
 process.on('unhandledRejection', (reason, p) => {
-  logger.warn('Unhandled Rejection at: Promise', p, 'reason:', reason)
+  logger.warn(`Unhandled Rejection at: Promise ${JSON.stringify(p)} reason:, ${JSON.stringify(reason)}`)
   // application specific logging, throwing an error, or other logic here
 })
 

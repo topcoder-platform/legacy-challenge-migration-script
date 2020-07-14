@@ -17,8 +17,8 @@ async function processChallenge (legacyId) {
 
   try {
     const registrants = await resourceService.getResourcesFromV5API(v5ChallengeFromAPI.id, config.SUBMITTER_ROLE_ID)
-    if (registrants && registrants.length) {
-      challengeObj.numOfRegistrants = registrants.length
+    if (registrants && registrants.total) {
+      challengeObj.numOfRegistrants = registrants.total
     }
   } catch (e) {
     logger.error(`Failed to load resources for challenge ${v5ChallengeFromAPI.id}`)
@@ -27,8 +27,8 @@ async function processChallenge (legacyId) {
 
   try {
     const submissions = await challengeService.getChallengeSubmissionsFromV5API(legacyId, config.SUBMISSION_TYPE)
-    if (submissions && submissions.length) {
-      challengeObj.numOfSubmissions = submissions.length
+    if (submissions && submissions.total) {
+      challengeObj.numOfSubmissions = submissions.total
     }
   } catch (e) {
     logger.error(`Failed to load submissions for challenge ${legacyId}`)
@@ -53,14 +53,14 @@ async function processResources (legacyId, challengeId) {
     const obj = currentV4Array[i]
     // v5 memberId is a string
     // logger.debug(`Find resource in V5 ${JSON.stringify(obj)}`)
-    if (!find(currentV5Array, { memberId: toString(obj.memberId), roleId: obj.roleId })) {
+    if (!find(currentV5Array.result, { memberId: toString(obj.memberId), roleId: obj.roleId })) {
       // logger.debug(` ++ Resource Not Found, adding ${JSON.stringify(obj)}`)
       await resourceService.saveResource(obj)
       resourcesAdded += 1
     }
   }
-  for (let i = 0; i < currentV5Array.length; i += 1) {
-    const obj = currentV5Array[i]
+  for (let i = 0; i < currentV5Array.result.length; i += 1) {
+    const obj = currentV5Array.result[i]
     // v4 memberId is a number
     if (!find(currentV4Array, { memberId: toNumber(obj.memberId), roleId: obj.roleId })) {
       // logger.debug(` -- Resource Found, removing ${JSON.stringify(obj.id)}`)

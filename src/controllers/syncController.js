@@ -1,6 +1,7 @@
 const config = require('config')
 const logger = require('../util/logger')
 const moment = require('moment')
+const { toNumber } = require('lodash')
 const challengeMigrationStatusService = require('../services/challengeMigrationStatusService')
 const challengeSyncStatusService = require('../services/challengeSyncStatusService')
 const challengeSyncHistoryService = require('../services/challengeSyncHistoryService')
@@ -35,9 +36,9 @@ async function sync () {
           if (v5) {
             try {
               await challengeSyncStatusService.startSync(legacyId, v5.legacy.informixModified)
-              const challengeId = await syncService.processChallenge(legacyId)
-              const { resourcesAdded, resourcesRemoved } = await syncService.processResources(legacyId, challengeId)
-              await challengeSyncStatusService.endSync(legacyId, challengeId, config.MIGRATION_PROGRESS_STATUSES.SUCCESS, `Resources: ${resourcesAdded} added, ${resourcesRemoved} removed`)
+              const { resourcesAdded, resourcesRemoved } = await syncService.processResources(legacyId, v5.id)
+              await syncService.processChallenge(legacyId)
+              await challengeSyncStatusService.endSync(legacyId, v5.id, config.MIGRATION_PROGRESS_STATUSES.SUCCESS, `Resources: ${resourcesAdded} added, ${resourcesRemoved} removed`)
             } catch (e) {
               logger.error(`Sync Failed for ${legacyId} ${e}`)
               await challengeSyncStatusService.endSync(legacyId, null, config.MIGRATION_PROGRESS_STATUSES.FAILED, e)
@@ -124,14 +125,23 @@ async function queueChallengeById (legacyId, withLogging = false, force = false)
     const v4 = await challengeService.getChallengeListingFromV4ES(legacyId)
     if (v4) {
       if (v5) {
+        const datesDontMatch = moment(v4.updatedAt).utc().isAfter(moment(v5.legacy.informixModified).utc(), 'second')
+        const registrationCountsDontMatch = toNumber(v4.numberOfRegistrants) !== toNumber(v5.numOfRegistrants)
+        const submissionsCountsDontMatch = toNumber(v4.numberOfSubmissions) !== toNumber(v5.numOfSubmissions)
         if (force === true) {
           logger.info(`Sync of ${legacyId} is being forced`)
           await challengeSyncStatusService.queueForSync(legacyId)
-        } else if (moment(v4.updatedAt).utc().isAfter(moment(v5.legacy.informixModified).utc(), 'second')) {
+        } else if (datesDontMatch) {
           logger.info(`v5 Updated (${legacyId}): ${moment(v5.legacy.informixModified).utc()} is != to v4 updatedAt: ${moment(v4.updatedAt).utc()}`)
           await challengeSyncStatusService.queueForSync(legacyId)
+        } else if (submissionsCountsDontMatch) {
+          logger.info(`v5 Submissions (${legacyId}): ${v5.numOfSubmissions} is != to v4 numberOfSubmissions: ${v4.numberOfSubmissions}`)
+          await challengeSyncStatusService.queueForSync(legacyId)
+        } else if (registrationCountsDontMatch) {
+          logger.info(`v5 Registrants (${legacyId}): ${v5.numOfRegistrants} is != to v4 numberOfRegistrants: ${v4.numberOfRegistrants}`)
+          await challengeSyncStatusService.queueForSync(legacyId)
         } else {
-          logger.info(`v5 Updated (${legacyId}): ${moment(v5.legacy.informixModified).utc()} is THE SAME as v4 updatedAt: ${moment(v4.updatedAt).utc()}`)
+          logger.info(`${legacyId} v5 is the same as v4`)
         }
       } else {
         logger.warn(`Challenge ID ${legacyId} doesn't exist in v5, queueing for migration`)

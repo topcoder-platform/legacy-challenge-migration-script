@@ -204,7 +204,7 @@ async function getResourcesFromV5API (challengeId, roleId) {
     url += `&roleId=${roleId}`
   }
   const res = await axios.get(url, { headers: { Authorization: `Bearer ${token}` } })
-  return res.data || null
+  return { result: res.data, total: res.headers['X-Total'] } || null
 }
 
 module.exports = {
