@@ -35,10 +35,16 @@ async function sync () {
           // see if v5 exists
           if (v5) {
             try {
+              logger.info(`---- Syncing Challenge ${legacyId}`)
               await challengeSyncStatusService.startSync(legacyId, v5.legacy.informixModified)
-              const { resourcesAdded, resourcesRemoved } = await syncService.processResources(legacyId, v5.id)
-              await syncService.processChallenge(legacyId)
+              logger.debug(`---- Start Process Resources ${v5.id}`)
+              const { resourcesAdded, resourcesRemoved, resourceCount } = await syncService.processResources(legacyId, v5.id)
+              logger.debug(`---- END Process Resources ${v5.id}`)
+              logger.debug(`---- Start Process Challenge ${v5.id}`)
+              await syncService.processChallenge(legacyId, resourceCount)
+              logger.debug(`---- End Process Challenge ${v5.id}`)
               await challengeSyncStatusService.endSync(legacyId, v5.id, config.MIGRATION_PROGRESS_STATUSES.SUCCESS, `Resources: ${resourcesAdded} added, ${resourcesRemoved} removed`)
+              logger.info(`---- END Syncing Challenge ${legacyId}`)
             } catch (e) {
               logger.error(`Sync Failed for ${legacyId} ${e}`)
               await challengeSyncStatusService.endSync(legacyId, null, config.MIGRATION_PROGRESS_STATUSES.FAILED, e)

@@ -9,34 +9,32 @@ const resourceService = require('./resourceService')
  * the updated date on informix/v4ES was newer than v5
  * @param {Number} legacyId
  */
-async function processChallenge (legacyId) {
+async function processChallenge (legacyId, registrantCount) {
   const v5ChallengeObjectFromV4 = await challengeService.buildV5Challenge(legacyId)
   const [v5ChallengeFromAPI] = await challengeService.getChallengeFromV5API(legacyId)
 
   const challengeObj = omit(v5ChallengeObjectFromV4, ['type'])
 
-  try {
-    const registrants = await resourceService.getResourcesFromV5API(v5ChallengeFromAPI.id, config.SUBMITTER_ROLE_ID)
-    // if (registrants && registrants.total) {
-    challengeObj.numOfRegistrants = registrants.total
-    // }
-  } catch (e) {
-    logger.error(`Failed to load resources for challenge ${v5ChallengeFromAPI.id}`)
-    logger.logFullError(e)
+  if (registrantCount) {
+    challengeObj.numOfRegistrants = registrantCount
+  } else {
+    try {
+      const registrants = await resourceService.getResourcesFromV5API(v5ChallengeFromAPI.id, config.SUBMITTER_ROLE_ID)
+      challengeObj.numOfRegistrants = registrants.total
+    } catch (e) {
+      logger.error(`Failed to load resources for challenge ${v5ChallengeFromAPI.id}`)
+      logger.logFullError(e)
+    }
   }
 
   try {
     const submissions = await challengeService.getChallengeSubmissionsFromV5API(legacyId, config.SUBMISSION_TYPE)
-    logger.warn(`Submissions ${JSON.stringify(submissions)}`)
-    // if (submissions && submissions.total) {
     challengeObj.numOfSubmissions = submissions.total
-    // }
   } catch (e) {
     logger.error(`Failed to load submissions for challenge ${legacyId}`)
     logger.logFullError(e)
   }
   challengeObj.id = v5ChallengeFromAPI.id
-  // console.log('updated', challengeObj.updated, '   informix modified', challengeObj.legacy.informixModified)
 
   return challengeService.save(challengeObj)
 }
@@ -70,7 +68,7 @@ async function processResources (legacyId, challengeId) {
     }
   }
 
-  return { resourcesAdded, resourcesRemoved }
+  return { resourcesAdded, resourcesRemoved, resourceCount: currentV4Array }
 }
 
 module.exports = {
