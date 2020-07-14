@@ -29,7 +29,7 @@ async function processChallenge (legacyId, registrantCount) {
 
   try {
     const submissions = await challengeService.getChallengeSubmissionsFromV5API(legacyId, config.SUBMISSION_TYPE)
-    challengeObj.numOfSubmissions = toNumber(submissions.total)
+    challengeObj.numOfSubmissions = submissions.total || 0
   } catch (e) {
     logger.error(`Failed to load submissions for challenge ${legacyId}`)
     logger.logFullError(e)
@@ -41,32 +41,32 @@ async function processChallenge (legacyId, registrantCount) {
 
 async function processResources (legacyId, challengeId) {
   let resourcesAdded = 0
-  let resourcesRemoved = 0
+  const resourcesRemoved = 0
   const currentV4Array = await resourceService.getResourcesForChallenge(legacyId, challengeId)
   const currentV5Array = await resourceService.getResourcesFromV5API(challengeId)
 
-  // logger.debug(`Resources V4 Array ${JSON.stringify(currentV4Array)}`)
-  // logger.debug(`Resources V5 Array ${JSON.stringify(currentV5Array)}`)
+  logger.debug(`Resources V4 Array ${JSON.stringify(currentV4Array)}`)
+  logger.debug(`Resources V5 Array ${JSON.stringify(currentV5Array)}`)
 
   for (let i = 0; i < currentV4Array.length; i += 1) {
     const obj = currentV4Array[i]
     // v5 memberId is a string
     // logger.debug(`Find resource in V5 ${JSON.stringify(obj)}`)
     if (!find(currentV5Array.result, { memberId: toString(obj.memberId), roleId: obj.roleId })) {
-      logger.debug(` ++ Resource Not Found, adding ${JSON.stringify(obj)}`)
+      logger.debug(` ++ Resource Not Found, adding ${JSON.stringify({ memberId: toString(obj.memberId), roleId: obj.roleId })}`)
       resourceService.saveResource(obj) // no await - don't need the result
       resourcesAdded += 1
     }
   }
-  for (let i = 0; i < currentV5Array.result.length; i += 1) {
-    const obj = currentV5Array.result[i]
-    // v4 memberId is a number
-    if (!find(currentV4Array, { memberId: toNumber(obj.memberId), roleId: obj.roleId })) {
-      logger.debug(` -- Resource Found, removing ${JSON.stringify(obj)}`)
-      resourceService.deleteResource(obj.id) // no await - don't need the result
-      resourcesRemoved += 1
-    }
-  }
+  // for (let i = 0; i < currentV5Array.result.length; i += 1) {
+  //   const obj = currentV5Array.result[i]
+  //   // v4 memberId is a number
+  //   if (!find(currentV4Array, { memberId: toNumber(obj.memberId), roleId: obj.roleId })) {
+  //     logger.debug(` -- Resource Found, removing ${JSON.stringify(obj)}`)
+  //     resourceService.deleteResource(obj.id) // no await - don't need the result
+  //     resourcesRemoved += 1
+  //   }
+  // }
 
   return { resourcesAdded, resourcesRemoved, resourceCount: currentV4Array.length }
 }
