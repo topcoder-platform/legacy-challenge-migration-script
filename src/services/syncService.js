@@ -68,7 +68,7 @@ async function processResources (legacyId, challengeId) {
     }
   }
 
-  return { resourcesAdded, resourcesRemoved, resourceCount: currentV4Array }
+  return { resourcesAdded, resourcesRemoved, resourceCount: currentV4Array.length }
 }
 
 module.exports = {
