@@ -137,7 +137,7 @@ async function startSync (legacyId, challengeModifiedDate) {
   return updateProgressRecord(legacyId, syncRecord)
 }
 
-async function endSync (legacyId, challengeId, status, errorMessage) {
+async function endSync (legacyId, challengeId, status, errorMessage, force = false) {
   if (status === config.MIGRATION_PROGRESS_STATUSES.FAILED) {
     logger.debug(`Challenge Sync - Logging Challenge As Failed ${errorMessage}`)
   }
@@ -145,6 +145,7 @@ async function endSync (legacyId, challengeId, status, errorMessage) {
     legacyId,
     challengeId,
     status,
+    force,
     syncEnded: moment(),
     errorMessage: toString(errorMessage)
   }

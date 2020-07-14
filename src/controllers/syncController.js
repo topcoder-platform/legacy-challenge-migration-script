@@ -47,7 +47,7 @@ async function sync () {
               logger.info(`---- END Syncing Challenge ${legacyId}`)
             } catch (e) {
               logger.error(`Sync Failed for ${legacyId} ${e}`)
-              await challengeSyncStatusService.endSync(legacyId, null, config.MIGRATION_PROGRESS_STATUSES.FAILED, e)
+              await challengeSyncStatusService.endSync(legacyId, null, config.MIGRATION_PROGRESS_STATUSES.FAILED, e, queuedChallenges.items[i].force === true)
             }
           } else {
             const progress = await challengeMigrationStatusService.getMigrationProgress({ legacyId }, 1, 1)
