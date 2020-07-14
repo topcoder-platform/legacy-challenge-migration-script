@@ -17,9 +17,9 @@ async function processChallenge (legacyId) {
 
   try {
     const registrants = await resourceService.getResourcesFromV5API(v5ChallengeFromAPI.id, config.SUBMITTER_ROLE_ID)
-    if (registrants && registrants.total) {
-      challengeObj.numOfRegistrants = registrants.total
-    }
+    // if (registrants && registrants.total) {
+    challengeObj.numOfRegistrants = registrants.total
+    // }
   } catch (e) {
     logger.error(`Failed to load resources for challenge ${v5ChallengeFromAPI.id}`)
     logger.logFullError(e)
@@ -27,9 +27,10 @@ async function processChallenge (legacyId) {
 
   try {
     const submissions = await challengeService.getChallengeSubmissionsFromV5API(legacyId, config.SUBMISSION_TYPE)
-    if (submissions && submissions.total) {
-      challengeObj.numOfSubmissions = submissions.total
-    }
+    logger.warn(`Submissions ${JSON.stringify(submissions)}`)
+    // if (submissions && submissions.total) {
+    challengeObj.numOfSubmissions = submissions.total
+    // }
   } catch (e) {
     logger.error(`Failed to load submissions for challenge ${legacyId}`)
     logger.logFullError(e)

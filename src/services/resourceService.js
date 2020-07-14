@@ -203,8 +203,15 @@ async function getResourcesFromV5API (challengeId, roleId) {
   if (roleId) {
     url += `&roleId=${roleId}`
   }
-  const res = await axios.get(url, { headers: { Authorization: `Bearer ${token}` } })
-  return { result: res.data, total: res.headers['X-Total'] } || null
+  let res = null
+  try {
+    res = await axios.get(url, { headers: { Authorization: `Bearer ${token}` } })
+  } catch (e) {
+    logger.error(`get from v5 error ${JSON.stringify(e)}`)
+  }
+  if (res) return { result: res.data, total: res.headers['x-total'] }
+
+  return { result: [], total: 0 }
 }
 
 module.exports = {

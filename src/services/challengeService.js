@@ -572,8 +572,8 @@ async function buildV5Challenge (legacyId) {
     phases: [],
     terms: [],
     startDate: moment().utc().format(),
-    numOfSubmissions: challengeListing.numberOfSubmissions,
-    numOfRegistrants: challengeListing.numberOfRegistrants
+    numOfSubmissions: _.toNumber(challengeListing.numberOfSubmissions),
+    numOfRegistrants: _.toNumber(challengeListing.numberOfRegistrants)
   }
 
   // console.log('CHALLENGE DESCRIPTION', newChallenge.description)
@@ -771,8 +771,9 @@ async function getChallengeSubmissionsFromV5API (challengeId, type) {
     url += `&type=${type}`
   }
   const res = await axios.get(url, { headers: { Authorization: `Bearer ${token}` } })
-  logger.error(`results! ${res.headers['X-Total']}`)
-  return { result: res.data, total: res.headers['X-Total'] } || null
+  if (res) return { result: res.data, total: res.headers['x-total'] }
+
+  return { results: [], total: 0 }
 }
 
 module.exports = {
