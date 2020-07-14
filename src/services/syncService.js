@@ -29,7 +29,7 @@ async function processChallenge (legacyId, registrantCount) {
 
   try {
     const submissions = await challengeService.getChallengeSubmissionsFromV5API(legacyId, config.SUBMISSION_TYPE)
-    challengeObj.numOfSubmissions = submissions.total || 0
+    challengeObj.numOfSubmissions = toNumber(submissions.total) || 0
   } catch (e) {
     logger.error(`Failed to load submissions for challenge ${legacyId}`)
     logger.logFullError(e)
@@ -39,7 +39,11 @@ async function processChallenge (legacyId, registrantCount) {
   return challengeService.save(challengeObj)
 }
 
-async function processResources (legacyId, challengeId) {
+async function processResources (legacyId, challengeId, force) {
+  if (force === true) {
+    logger.warn('Force Deleting Resources')
+    await resourceService.deleteAllResourcesForChallenge(challengeId)
+  }
   let resourcesAdded = 0
   let resourcesRemoved = 0
   const currentV4Array = await resourceService.getResourcesForChallenge(legacyId, challengeId)

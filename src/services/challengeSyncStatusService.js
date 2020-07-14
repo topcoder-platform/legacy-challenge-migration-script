@@ -116,14 +116,15 @@ async function getSyncProgress (filter, perPage = 100, page = 1) {
       informixModified: item._source.informixModified,
       syncStarted: item._source.syncStarted,
       syncEnded: item._source.syncEnded,
+      force: item._source.force || false,
       syncDuration: (moment(item._source.syncEnded).format('x') - moment(item._source.syncStarted).format('x')),
       errorMessage: item._source.errorMessage
     }))
   }
 }
 
-async function queueForSync (legacyId) {
-  return updateProgressRecord(legacyId, { status: config.MIGRATION_PROGRESS_STATUSES.QUEUED, syncEnded: null, syncDuration: null })
+async function queueForSync (legacyId, force) {
+  return updateProgressRecord(legacyId, { status: config.MIGRATION_PROGRESS_STATUSES.QUEUED, syncEnded: null, syncDuration: null, force: (force === true) })
 }
 
 async function startSync (legacyId, challengeModifiedDate) {

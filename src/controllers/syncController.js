@@ -38,7 +38,7 @@ async function sync () {
               logger.info(`---- Syncing Challenge ${legacyId}`)
               await challengeSyncStatusService.startSync(legacyId, v5.legacy.informixModified)
               logger.debug(`---- Start Process Resources ${v5.id}`)
-              const { resourcesAdded, resourcesRemoved } = await syncService.processResources(legacyId, v5.id)
+              const { resourcesAdded, resourcesRemoved } = await syncService.processResources(legacyId, v5.id, queuedChallenges.items[i].force === true)
               logger.debug(`---- END Process Resources ${v5.id}`)
               logger.debug(`---- Start Process Challenge ${v5.id}`)
               await syncService.processChallenge(legacyId)
@@ -136,7 +136,7 @@ async function queueChallengeById (legacyId, withLogging = false, force = false)
         const submissionsCountsDontMatch = toNumber(v4.numberOfSubmissions) !== toNumber(v5.numOfSubmissions)
         if (force === true) {
           logger.info(`Sync of ${legacyId} is being forced`)
-          await challengeSyncStatusService.queueForSync(legacyId)
+          await challengeSyncStatusService.queueForSync(legacyId, true)
         } else if (datesDontMatch) {
           logger.info(`v5 Updated (${legacyId}): ${moment(v5.legacy.informixModified).utc()} is != to v4 updatedAt: ${moment(v4.updatedAt).utc()}`)
           await challengeSyncStatusService.queueForSync(legacyId)

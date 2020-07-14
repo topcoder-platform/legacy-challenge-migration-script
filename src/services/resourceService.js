@@ -183,17 +183,27 @@ async function saveResource (resource) {
 }
 
 async function deleteResource (resourceId) {
+  // logger.error(`deleteResource ${resourceId}`)
   const esQuery = {
     index: config.get('ES.RESOURCE_ES_INDEX'),
     type: config.get('ES.RESOURCE_ES_TYPE'),
     id: resourceId
   }
-
   try {
     await getESClient().delete(esQuery)
     await Resource.delete({ id: resourceId })
   } catch (e) {
     throw Error(`Delete of Resource Failed ${e}`)
+  }
+}
+
+async function deleteAllResourcesForChallenge (challengeId) {
+  const resources = await getResourcesFromV5API(challengeId)
+  // logger.warn(`Resources ${JSON.stringify(resources)}`)
+  try {
+    await Promise.all(resources.result.map(r => deleteResource(r.id)))
+  } catch (e) {
+    logger.error(`delete all error ${e}`)
   }
 }
 
@@ -222,5 +232,6 @@ module.exports = {
   getResourcesForChallenge,
   saveResourceRoles,
   saveResource,
-  getResourcesFromV5API
+  getResourcesFromV5API,
+  deleteAllResourcesForChallenge
 }
