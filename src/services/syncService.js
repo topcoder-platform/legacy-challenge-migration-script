@@ -16,11 +16,11 @@ async function processChallenge (legacyId, registrantCount) {
   const challengeObj = omit(v5ChallengeObjectFromV4, ['type'])
 
   if (registrantCount) {
-    challengeObj.numOfRegistrants = registrantCount
+    challengeObj.numOfRegistrants = toNumber(registrantCount)
   } else {
     try {
       const registrants = await resourceService.getResourcesFromV5API(v5ChallengeFromAPI.id, config.SUBMITTER_ROLE_ID)
-      challengeObj.numOfRegistrants = registrants.total
+      challengeObj.numOfRegistrants = toNumber(registrants.total)
     } catch (e) {
       logger.error(`Failed to load resources for challenge ${v5ChallengeFromAPI.id}`)
       logger.logFullError(e)
@@ -29,7 +29,7 @@ async function processChallenge (legacyId, registrantCount) {
 
   try {
     const submissions = await challengeService.getChallengeSubmissionsFromV5API(legacyId, config.SUBMISSION_TYPE)
-    challengeObj.numOfSubmissions = submissions.total
+    challengeObj.numOfSubmissions = toNumber(submissions.total)
   } catch (e) {
     logger.error(`Failed to load submissions for challenge ${legacyId}`)
     logger.logFullError(e)
@@ -62,7 +62,7 @@ async function processResources (legacyId, challengeId) {
     const obj = currentV5Array.result[i]
     // v4 memberId is a number
     if (!find(currentV4Array, { memberId: toNumber(obj.memberId), roleId: obj.roleId })) {
-      logger.debug(` -- Resource Found, removing ${JSON.stringify(obj.id)}`)
+      logger.debug(` -- Resource Found, removing ${JSON.stringify(obj)}`)
       resourceService.deleteResource(obj.id) // no await - don't need the result
       resourcesRemoved += 1
     }
