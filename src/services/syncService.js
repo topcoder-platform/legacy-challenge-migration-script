@@ -3,6 +3,37 @@ const config = require('config')
 const logger = require('../util/logger')
 const challengeService = require('./challengeService')
 const resourceService = require('./resourceService')
+const challengeSyncStatusService = require('../services/challengeSyncStatusService')
+const challengeMigrationStatusService = require('../services/challengeMigrationStatusService')
+const migrationService = require('../services/migrationService')
+
+async function syncLegacyId (legacyId, force) {
+  // const legacyId = queuedChallenges.items[i].legacyId
+  const [v5] = await challengeService.getChallengeFromV5API(legacyId)
+  // see if v5 exists
+  if (v5) {
+    const v4Listing = await challengeService.getChallengeListingFromV4ES(legacyId)
+    const v4Detail = await challengeService.getChallengeDetailFromV4ES(legacyId)
+    // logger.warn(`v4Listing ${JSON.stringify(v4Listing)}`)
+    try {
+      await challengeSyncStatusService.startSync(legacyId, v4Listing.version, v4Detail.version, v5.legacy.informixModified)
+      const { resourcesAdded, resourcesRemoved } = await processResources(legacyId, v5.id, force === true)
+      await processChallenge(legacyId, v4Listing.data, v4Detail.data)
+      await challengeSyncStatusService.endSync(legacyId, v5.id, config.MIGRATION_PROGRESS_STATUSES.SUCCESS, `Resources: ${resourcesAdded} added, ${resourcesRemoved} removed`)
+    } catch (e) {
+      logger.error(`Sync Failed for ${legacyId} ${e}`)
+      await challengeSyncStatusService.endSync(legacyId, null, config.MIGRATION_PROGRESS_STATUSES.FAILED, e, force === true)
+    }
+  } else {
+    const progress = await challengeMigrationStatusService.getMigrationProgress({ legacyId }, 1, 1)
+    if (progress.total < 1) {
+      logger.warn(`Challenge ID ${legacyId} doesn't exist in v5, queueing for migration`)
+      await migrationService.queueForMigration(legacyId)
+    } else {
+      logger.debug(`Challenge ID ${legacyId} doesn't exist in v5 and is already queued for migration with a status of ${JSON.stringify(progress.items)}`)
+    }
+  }
+}
 
 /**
  * This function assumes that a challenge was added to the queue because
@@ -72,6 +103,5 @@ async function processResources (legacyId, challengeId, force) {
 }
 
 module.exports = {
-  processChallenge,
-  processResources
+  syncLegacyId
 }

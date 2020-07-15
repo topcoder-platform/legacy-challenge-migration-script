@@ -26,31 +26,26 @@ if (config.MIGRATION_ENABLED === true) {
 } else {
   logger.info(`Migration Disabled by Config: ${config.MIGRATION_ENABLED}`)
 }
-if (config.SYNC_ENABLED === true) {
+if (config.AUTO_SYNC_ENABLED === true) {
   const syncQueueRule = new schedule.RecurrenceRule()
   syncQueueRule.minute = new schedule.Range(0, 59, 0.5) // config.SYNC_QUEUE_INTERVAL)
   schedule.scheduleJob(syncQueueRule, syncController.autoQueueChallenges)
   logger.info(`The sync queue is scheduled to be executed every ${config.SYNC_QUEUE_INTERVAL} minutes`)
+} else {
+  logger.info(`Auto Sync Disabled by Config: ${config.AUTO_SYNC_ENABLED}`)
+}
 
+if (config.SYNC_ENABLED === true) {
   const syncRule = new schedule.RecurrenceRule()
   syncRule.minute = new schedule.Range(0, 59, config.SYNC_INTERVAL)
-  schedule.scheduleJob(syncRule, syncController.sync)
+  schedule.scheduleJob(syncRule, syncController.syncQueuedChallenges)
   logger.info(`The sync is scheduled to be executed every ${config.SYNC_INTERVAL} minutes`)
 } else {
   logger.info(`Sync Disabled by Config: ${config.SYNC_ENABLED}`)
 }
 
-// syncController.queueChallengesFromLastModified()
-// syncController.sync()
+// syncController.syncQueuedChallenges()
 // migrationController.migrate()
-/**
- * store the last modified date
- * pull the one from the config to "start" from
- * queueChallengesFromLastModified
- * sync
- */
-// syncController.queueChallengesFromLastModified()
-// syncController.sync()
 
 // logger.debug([
 //   `migrationInterval: ${config.SCHEDULE_INTERVAL}`,
