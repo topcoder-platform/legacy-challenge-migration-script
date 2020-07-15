@@ -545,12 +545,18 @@ async function buildV5Challenge (legacyId, challengeListing, challengeDetails) {
   // for (const challenge of challenges) {
   logger.info(`Building Challenge ${challengeListing.id} - Last Modified Date ${moment(challengeListing.updatedAt).utc().format()}`)
 
-  let detailRequirement = challengeDetails.detailRequirements || ''
-  if (challengeDetails.introduction && challengeDetails.introduction.trim() !== '') {
-    detailRequirement = challengeDetails.introduction + '<br />' + detailRequirement
-  }
-  if (challengeDetails.finalSubmissionGuidelines && challengeDetails.finalSubmissionGuidelines.trim() !== '') {
-    detailRequirement += '<br /><br /><h2>Final Submission Guidelines</h2>' + challengeDetails.finalSubmissionGuidelines
+  let detailRequirement = ''
+
+  if (challengeDetails) {
+    detailRequirement += challengeDetails.detailRequirements
+    if (challengeDetails.introduction && challengeDetails.introduction.trim() !== '') {
+      detailRequirement = challengeDetails.introduction + '<br />' + detailRequirement
+    }
+    if (challengeDetails.finalSubmissionGuidelines && challengeDetails.finalSubmissionGuidelines.trim() !== '') {
+      detailRequirement += '<br /><br /><h2>Final Submission Guidelines</h2>' + challengeDetails.finalSubmissionGuidelines
+    }
+  } else {
+    logger.warn(`!! No Challenge Details v4 index entry for ${legacyId}. Spec & Terms will be missing`)
   }
 
   let connectProjectId = null
