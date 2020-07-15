@@ -1,0 +1,250 @@
+swagger: '2.0'
+info:
+  description: |
+    REST API for Topcoder Challenge Sync.
+
+      Pagination response data is included in http headers. By Default, the response header contains links with `next`, `last`, `first`, `prev` resource links.
+  version: '5.0.0'
+  title: 'Topcoder v4->v5 Challenge Sync API'
+  termsOfService: 'http://topcoder.com/terms/'
+
+  contact:
+    url: 'http://www.topcoder.com/support'
+    email: support@topcoder.com
+
+schemes:
+  - https
+  - http
+produces:
+  - application/json
+consumes:
+  - application/json
+tags:
+  - name: 'Migration'
+    description: Moves a challenge from v4 ES to v5.
+  - name: 'Sync'
+    description: Checks v4 ES versions for syncing data.
+
+paths:
+  '/challenge-migration':
+    get:
+      summary: Get migration status.
+      tags:
+        - Migration
+      operationId: getMigrationStatus
+      responses:
+        200:
+          description: Status Returned Successfully
+          schema: 
+            type: array
+            items:
+              $ref: '#/definitions/MigrationStatusObject'
+          headers:
+            X-Next-Page:
+              type: integer
+              description: The index of the next page
+            X-Page:
+              type: integer
+              description: The index of the current page (starting at 1)
+            X-Per-Page:
+              type: integer
+              description: The number of items to list per page
+            X-Prev-Page:
+              type: integer
+              description: The index of the previous page
+            X-Total:
+              type: integer
+              description: The total number of items
+            X-Total-Pages:
+              type: integer
+              description: The total number of pages
+            Link:
+              type: string
+              description: Pagination link header.
+        400:
+          $ref: '#/definitions/BadRequest'
+        401:
+          $ref: '#/definitions/Unauthorized'
+        403:
+          $ref: '#/definitions/Forbidden'
+        500:
+          $ref: '#/definitions/ServerError'
+    post:
+      summary: Migrate challenges
+      tags:
+        - Migration
+      operationId: queueForMigration
+      responses:
+        200:
+          description: success
+        400:
+          $ref: '#/definitions/BadRequest'
+        401:
+          $ref: '#/definitions/Unauthorized'
+        403:
+          $ref: '#/definitions/Forbidden'
+        500:
+          $ref: '#/definitions/ServerError'
+    put:
+      summary: Reset Failed Challenges to Retry them
+      tags:
+        - Migration
+      operationId: retryFailed
+      responses:
+        200:
+          description: success
+        400:
+          $ref: '#/definitions/BadRequest'
+        401:
+          $ref: '#/definitions/Unauthorized'
+        403:
+          $ref: '#/definitions/Forbidden'
+        500:
+          $ref: '#/definitions/ServerError'
+          
+  '/challenge-migration/sync':
+    get:
+      summary: Get Sync status.
+      tags:
+        - Sync
+      operationId: getSyncStatus
+      responses:
+        200:
+          description: Status Returned Successfully
+          schema: 
+            type: array
+            items:
+              $ref: '#/definitions/SyncStatusObject'
+          headers:
+            X-Next-Page:
+              type: integer
+              description: The index of the next page
+            X-Page:
+              type: integer
+              description: The index of the current page (starting at 1)
+            X-Per-Page:
+              type: integer
+              description: The number of items to list per page
+            X-Prev-Page:
+              type: integer
+              description: The index of the previous page
+            X-Total:
+              type: integer
+              description: The total number of items
+            X-Total-Pages:
+              type: integer
+              description: The total number of pages
+            Link:
+              type: string
+              description: Pagination link header.
+        400:
+          $ref: '#/definitions/BadRequest'
+        401:
+          $ref: '#/definitions/Unauthorized'
+        403:
+          $ref: '#/definitions/Forbidden'
+        500:
+          $ref: '#/definitions/ServerError'
+    post:
+      summary: Sync challenges
+      tags:
+        - Sync
+      operationId: queueSync
+      responses:
+        200:
+          description: success
+        400:
+          $ref: '#/definitions/BadRequest'
+        401:
+          $ref: '#/definitions/Unauthorized'
+        403:
+          $ref: '#/definitions/Forbidden'
+        500:
+          $ref: '#/definitions/ServerError'
+
+
+
+definitions:
+  MigrationStatusObject:
+    description: The Migration Status Object.
+    type: object
+  SyncStatusObject:
+    description: The Sync Status Object.
+    type: object
+  NoContent:
+    description: |
+      No Content - The server has successfully fulfilled the request and that there is no additional content to send in the response payload body.
+
+  BadRequestWithoutBody:
+    description: |
+      Bad Request - Request validation error, unable to process the request due to an error (e.g., malformed request syntax, size too large, invalid request message framing, or deceptive request routing).
+
+  UnauthorizedWithoutBody:
+    description: |
+      Unauthorized - Occurs when the JWT token provided is either expired or invalid.
+
+  ForbiddenWithoutBody:
+    description: |
+      Forbidden - The request is not allowed.
+
+  ServerErrorWithoutBody:
+    description: |
+      Server Error - While handling the request something went wrong server-side.
+
+
+  # Schema for error body
+  Unauthorized:
+    type: object
+    description: The unauthorized error entity.
+    properties:
+      message:
+        type: string
+        description: The unauthorized error message.
+        example: Unable to authenticate the user.
+
+  NotFound:
+    type: object
+    description: The not found error entity.
+    properties:
+      message:
+        type: string
+        description: The not found error message.
+        example: A resource with the name could not be found.
+
+  ServerError:
+    type: object
+    description: The server error entity.
+    properties:
+      message:
+        type: string
+        description: The server error message.
+        example: Something went wrong while processing your request. We’re sorry for the trouble. We’ve been notified of the error and will correct it as soon as possible. Please try your request again in a moment.
+
+  BadRequest:
+    type: object
+    description: The bad request error entity.
+    properties:
+      message:
+        type: string
+        description: The bad request error message.
+        example: Invalid input.
+
+  Forbidden:
+    type: object
+    description: The permission error entity.
+    properties:
+      message:
+        type: string
+        description: The forbidden error message.
+        example: You are not allowed to access the request.
+
+  Conflict:
+    type: object
+    description: The conflict error entity.
+    required:
+      - message
+    properties:
+      message:
+        type: string
+        description: The conflict error message.
+        example: Creating a resource with a name already exists.

@@ -10,15 +10,15 @@ It runs on a scheduled basis and also on-demand by exposing an API allowing admi
 [![CircleCI](https://circleci.com/gh/topcoder-platform/legacy-challenge-migration-script/tree/master.svg?style=svg)](https://circleci.com/gh/topcoder-platform/legacy-challenge-migration-script/tree/master)
 
 ## Intended use
-- Data migration script to move Informix Data to Dynamo/ES
+- Data migration script to move v4/Informix to v5 Dynamo/ES
 
 ## Related repos
 - [Challenge API](https://github.com/topcoder-platform/challenge-api)
+- [Resources API](https://github.com/topcoder-platform/resources-api)
 
 ## Prerequisites
 
 -  [NodeJS](https://nodejs.org/en/) 
--  [Kafka](https://kafka.apache.org/)
 -  [Elasticsearch](https://www.elastic.co/)(v6.3.1)
 -  [DynamoDB](https://aws.amazon.com/dynamodb/)
 -  [Informix](https://www.ibm.com/cloud/informix)
@@ -38,14 +38,7 @@ See `config/default.js`. Most of them is self explain there.
 - `ERROR_LOG_FILENAME` Filename for data that error to migrate.
 - `RESOURCE_ROLE` List of resource role to be included in migration
 
-Other configuration is for `informix`, `dynamodb` and `elastic-search` which use same format as `challenge-api`
-
-### Note
-- If `CREATED_DATE_BEGIN` is not set from env variable, the date will be read from
-    the most recent record in the ChallengeHistory table and an error will be thrown if no record exists in the table.
-- You can pass in a start date and override the env var `POST http://localhost:3000/v5/challenge-migration?startDate=2020-05-08`
 ## Local Deployment
-
 ### Foreman Setup
 To install foreman follow this [link](https://theforeman.org/manuals/1.24/#3.InstallingForeman)
 To know how to use foreman follow this [link](https://theforeman.org/manuals/1.24/#2.Quickstart) 
@@ -67,29 +60,10 @@ docker exec -ti legacy-challenge-migration-cli bash
 npm i
 ```
 
-### Commands
-- Reset ES
-`npm run init-es`
-- Check linting
-`npm run lint`
-- Fix linting error:
-`npm run lint:fix`
-
 ### Command for API
 - Inside the docker container, start the express server: `npm start`
 
 This command also run a schedule to execute the migration periodically at an interval which is defined by `SCHEDULE_INTERVAL`.
-
-## Running Manual Migration
-There is a manual script to migrate data. Since production data has been fully migrated, these will migrate data we may have missed
-
-Scripts live in the migrations directory with a prefix of the number for order they should be run
- `src/script/migrations/NUM-name-of-migration`
-
-To run that script, on the command line you should use:  
-`MIGRATION="NUM-name-of-migration" npm run migration`  
-or  
-`MIGRATION="NUM-name-of-migration" nf run npm run migration`  to use the .env file
 
 ## Production deployment
 - TBD

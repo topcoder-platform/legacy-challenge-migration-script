@@ -8,6 +8,9 @@ const express = require('express')
 const cors = require('cors')
 // const _ = require('lodash')
 const logger = require('./util/logger')
+const YAML = require('yamljs')
+const swaggerUi = require('swagger-ui-express')
+const apiSwaggerDoc = YAML.load('./docs/swagger.yaml')
 const migrationController = require('./controllers/migrationController')
 // const syncService = require('./services/syncService')
 const apiController = require('./controllers/apiController')
@@ -69,11 +72,17 @@ app.use(cors({
 // setup express app
 app.set('port', config.PORT)
 
+// serve challenge V5 API swagger definition
+const swaggerRoute = '/v5/challenge-migration/docs'
+app.use(swaggerRoute, swaggerUi.serve, swaggerUi.setup(apiSwaggerDoc))
+logger.info(`Swagger doc is available at ${swaggerRoute}`)
+
 app.get(`/${config.API_VERSION}/challenge-migration/sync`, apiController.getSyncStatus)
 app.post(`/${config.API_VERSION}/challenge-migration/sync`, apiController.queueSync)
 app.get(`/${config.API_VERSION}/challenge-migration`, apiController.getMigrationStatus)
 app.post(`/${config.API_VERSION}/challenge-migration`, apiController.queueForMigration)
 app.put(`/${config.API_VERSION}/challenge-migration`, apiController.retryFailed)
+
 // app.get(`/${config.API_VERSION}/challenge-migration`, controller.checkStatus)
 
 // the topcoder-healthcheck-dropin library returns checksRun count,
