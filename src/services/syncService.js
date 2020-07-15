@@ -1,4 +1,4 @@
-const { find, toString, omit, toNumber } = require('lodash')
+const { find, omit, toNumber } = require('lodash')
 const config = require('config')
 const logger = require('../util/logger')
 const challengeService = require('./challengeService')
@@ -9,22 +9,18 @@ const resourceService = require('./resourceService')
  * the updated date on informix/v4ES was newer than v5
  * @param {Number} legacyId
  */
-async function processChallenge (legacyId, registrantCount) {
-  const v5ChallengeObjectFromV4 = await challengeService.buildV5Challenge(legacyId)
+async function processChallenge (legacyId, challengeListing, challengeDetails) {
+  const v5ChallengeObjectFromV4 = await challengeService.buildV5Challenge(legacyId, challengeListing, challengeDetails)
   const [v5ChallengeFromAPI] = await challengeService.getChallengeFromV5API(legacyId)
 
   const challengeObj = omit(v5ChallengeObjectFromV4, ['type'])
 
-  if (registrantCount) {
-    challengeObj.numOfRegistrants = toNumber(registrantCount)
-  } else {
-    try {
-      const registrants = await resourceService.getResourcesFromV5API(v5ChallengeFromAPI.id, config.SUBMITTER_ROLE_ID)
-      challengeObj.numOfRegistrants = toNumber(registrants.total)
-    } catch (e) {
-      logger.error(`Failed to load resources for challenge ${v5ChallengeFromAPI.id}`)
-      logger.logFullError(e)
-    }
+  try {
+    const registrants = await resourceService.getResourcesFromV5API(v5ChallengeFromAPI.id, config.SUBMITTER_ROLE_ID)
+    challengeObj.numOfRegistrants = toNumber(registrants.total)
+  } catch (e) {
+    logger.error(`Failed to load resources for challenge ${v5ChallengeFromAPI.id}`)
+    logger.logFullError(e)
   }
 
   try {
@@ -57,7 +53,7 @@ async function processResources (legacyId, challengeId, force) {
     // v5 memberId is a string
     // logger.debug(`Find resource in V5 ${JSON.stringify(v4Obj)}`)
     if (!find(currentV5Array.result, { memberId: toNumber(v4Obj.memberId), roleId: v4Obj.roleId })) {
-      logger.debug(` ++ Resource Not Found, adding ${JSON.stringify({ memberId: toString(v4Obj.memberId), roleId: v4Obj.roleId })}`)
+      logger.debug(` ++ Resource Not Found, adding ${JSON.stringify({ memberId: toNumber(v4Obj.memberId), roleId: v4Obj.roleId })}`)
       resourceService.saveResource(v4Obj) // no await - don't need the result
       resourcesAdded += 1
     }
@@ -66,7 +62,7 @@ async function processResources (legacyId, challengeId, force) {
     const v5Obj = currentV5Array.result[i]
     // v4 memberId is a number
     if (!find(currentV4Array, { memberId: toNumber(v5Obj.memberId), roleId: v5Obj.roleId })) {
-      logger.debug(` -- Resource Found, removing ${JSON.stringify(v5Obj)}`)
+      logger.debug(` -- Resource Found, removing ${JSON.stringify({ memberId: toNumber(v5Obj.memberId), roleId: v5Obj.roleId })}`)
       resourceService.deleteResource(v5Obj.id) // no await - don't need the result
       resourcesRemoved += 1
     }

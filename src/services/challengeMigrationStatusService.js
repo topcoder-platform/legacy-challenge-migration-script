@@ -14,21 +14,21 @@ const moment = require('moment')
  * @param {Object} {status, challengeId, informixModified, migrationStarted, migrationEnded, errorMessage}
  * }
  */
-async function createProgressRecord (legacyId, migrationRecord) {
-  try {
-    await getESClient().create({
-      index: config.get('ES.MIGRATION_ES_INDEX'),
-      type: config.get('ES.MIGRATION_ES_TYPE'),
-      refresh: config.get('ES.ES_REFRESH'),
-      id: legacyId,
-      body: migrationRecord
-    })
-    return true
-  } catch (err) {
-    throw Error(`createProgressRecord failed ${migrationRecord} ${err}`)
-    // return false
-  }
-}
+// async function createProgressRecord (legacyId, migrationRecord) {
+//   try {
+//     await getESClient().create({
+//       index: config.get('ES.MIGRATION_ES_INDEX'),
+//       type: config.get('ES.MIGRATION_ES_TYPE'),
+//       refresh: config.get('ES.ES_REFRESH'),
+//       id: legacyId,
+//       body: migrationRecord
+//     })
+//     return true
+//   } catch (err) {
+//     throw Error(`createProgressRecord failed ${migrationRecord} ${err}`)
+//     // return false
+//   }
+// }
 
 /**
  * Update challenge data to new system
@@ -148,7 +148,7 @@ async function getMigrationProgress (filter, perPage = 100, page = 1) {
 }
 
 async function queueForMigration (legacyId) {
-  return createProgressRecord(legacyId, { status: config.MIGRATION_PROGRESS_STATUSES.QUEUED })
+  return updateProgressRecord(legacyId, { status: config.MIGRATION_PROGRESS_STATUSES.QUEUED })
 }
 
 async function startMigration (legacyId, challengeModifiedDate) {

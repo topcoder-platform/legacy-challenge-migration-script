@@ -1,6 +1,6 @@
-const { get, map } = require('lodash')
+const { map } = require('lodash')
 const config = require('config')
-const moment = require('moment')
+// const moment = require('moment')
 const logger = require('../util/logger')
 const challengeService = require('./challengeService')
 // const challengeInformixService = require('./challengeInformixService')
@@ -9,27 +9,8 @@ const challengeMigrationStatusService = require('./challengeMigrationStatusServi
 const resourceService = require('./resourceService')
 
 async function processChallenge (legacyId, forceMigrate = false) {
-  // logger.debug(`Loading challenge ${legacyId}`)
-  const [existingV5Challenge] = await challengeService.getChallengeFromES(legacyId)
-  const v5informixModifiedDate = moment(get(existingV5Challenge, 'legacy.informixModified'))
-
   const legacyChallengeDetailFromV4 = await challengeService.getChallengeListingFromV4ES(legacyId)
-
-  let legacyChallengeLastModified = null
-  legacyChallengeLastModified = legacyChallengeDetailFromV4.updatedAt || null
-  const legacyModifiedDate = moment(legacyChallengeLastModified)
-
-  // logger.debug(`legacyModifiedDate ${legacyModifiedDate}`)
-  if (existingV5Challenge && legacyChallengeDetailFromV4) {
-    if (v5informixModifiedDate >= legacyModifiedDate && !forceMigrate) {
-      const e = `Challenge ${legacyId} was migrated and the dates were equal`
-      await challengeMigrationStatusService.endMigration(legacyId, existingV5Challenge.id, config.MIGRATION_PROGRESS_STATUSES.SUCCESS, e)
-      return false
-    }
-  }
-  // else {
-  //   logger.debug(`v5 Challenge is : ${JSON.stringify(existingV5Challenge)} v4 Challenge is: ${JSON.stringify(legacyChallengeDetailFromV4)}`)
-  // }
+  const legacyChallengeLastModified = legacyChallengeDetailFromV4.data.updatedAt || null
 
   let v5ChallengeId = null
   try {

@@ -114,6 +114,8 @@ async function getSyncProgress (filter, perPage = 100, page = 1) {
       legacyId: item._id,
       status: item._source.status,
       informixModified: item._source.informixModified,
+      v4ListingVersion: item._source.v4ListingVersion,
+      v4DetailVersion: item._source.v4DetailVersion,
       syncStarted: item._source.syncStarted,
       syncEnded: item._source.syncEnded,
       force: item._source.force || false,
@@ -127,11 +129,13 @@ async function queueForSync (legacyId, force) {
   return updateProgressRecord(legacyId, { status: config.MIGRATION_PROGRESS_STATUSES.QUEUED, syncEnded: null, syncDuration: null, force: (force === true) })
 }
 
-async function startSync (legacyId, challengeModifiedDate) {
+async function startSync (legacyId, v4ListingVersion, v4DetailVersion, challengeModifiedDate) {
   const syncRecord = {
     legacyId,
     status: config.MIGRATION_PROGRESS_STATUSES.IN_PROGRESS,
     informixModified: moment(challengeModifiedDate).utc().format(),
+    v4ListingVersion,
+    v4DetailVersion,
     syncStarted: moment()
   }
   return updateProgressRecord(legacyId, syncRecord)

@@ -104,9 +104,9 @@ async function updateChallenge (challenge) {
  */
 async function deleteChallenge (challengeId) {
   try {
-    logger.warn('Delete Challenge From Dynamo')
+    // logger.warn('Delete Challenge From Dynamo')
     await Challenge.delete({ id: challengeId })
-    logger.warn('Delete Challenge From ES')
+    // logger.warn('Delete Challenge From ES')
     await getESClient().deleteByQuery({
       index: config.get('ES.CHALLENGE_ES_INDEX'),
       type: config.get('ES.CHALLENGE_ES_TYPE'),
@@ -118,7 +118,7 @@ async function deleteChallenge (challengeId) {
         }
       }
     })
-    logger.warn('Delete Challenge Resources')
+    // logger.warn('Delete Challenge Resources')
     return resourceService.deleteResourcesForChallenge(challengeId)
   } catch (e) {
     throw Error(`updateChallenge Failed ${e}`)
@@ -367,6 +367,13 @@ async function cacheTypesAndTimelines () {
   challengeTimelineMapping = createChallengeTimelineMapping(challengeTimelines, challengeTypes)
 }
 
+/**
+ * getChallengeIDsFromV4
+ * @param {Object} filter {startDate, endDate, legacyId, status}
+ * @param {Number} perPage
+ * @param {Number} page
+ * @returns {Object} { total, ids }
+ */
 async function getChallengeIDsFromV4 (filter, perPage, page = 1) {
   const boolQuery = []
   const mustQuery = []
@@ -378,6 +385,9 @@ async function getChallengeIDsFromV4 (filter, perPage, page = 1) {
   }
   if (filter.legacyId) {
     boolQuery.push({ match: { _id: filter.legacyId } })
+  }
+  if (filter.status) {
+    boolQuery.push({ match_phrase: { status: filter.status } })
   }
 
   if (boolQuery.length > 0) {
@@ -395,6 +405,7 @@ async function getChallengeIDsFromV4 (filter, perPage, page = 1) {
     from: perPage * (page - 1),
     _source: ['id'],
     body: {
+      version: 'true',
       query: mustQuery.length > 0 ? {
         bool: {
           must: mustQuery
@@ -410,7 +421,7 @@ async function getChallengeIDsFromV4 (filter, perPage, page = 1) {
   }
   // Search with constructed query
   let docs
-  // console.log('es query', JSON.stringify(esQuery))
+  // logger.warn('es query', JSON.stringify(esQuery))
   try {
     docs = await getV4ESClient().search(esQuery)
   } catch (e) {
@@ -425,7 +436,8 @@ async function getChallengeIDsFromV4 (filter, perPage, page = 1) {
   }
   // logger.warn(JSON.stringify(docs))
   // Extract data from hits
-  return _.map(docs.hits.hits, hit => hit._source.id)
+  if (docs.hits.total > 0) return { total: docs.hits.total, ids: _.map(docs.hits.hits, hit => hit._source.id) }
+  return false
 }
 
 async function getChallengeListingFromV4ES (legacyId) {
@@ -436,40 +448,7 @@ async function getChallengeListingFromV4ES (legacyId) {
     from: 0, // Es Index starts from 0
     // id: legacyId
     body: {
-      query: {
-        match: {
-          id: legacyId
-        }
-      }
-    }
-  }
-  // Search with constructed query
-  let docs
-  // console.log('es query', JSON.stringify(esQuery))
-  try {
-    docs = await getV4ESClient().search(esQuery)
-  } catch (e) {
-    // Catch error when the ES is fresh and has no data
-    logger.error(e)
-    docs = {
-      hits: {
-        total: 0,
-        hits: []
-      }
-    }
-  }
-  // Extract data from hits
-  return docs.hits.hits[0]._source
-}
-
-async function getChallengeDetailFromV4ES (legacyId) {
-  const esQuery = {
-    index: 'challengesdetail',
-    type: 'challenges',
-    size: 1,
-    from: 0, // Es Index starts from 0
-    // id: legacyId
-    body: {
+      version: 'true',
       query: {
         match: {
           id: legacyId
@@ -494,7 +473,45 @@ async function getChallengeDetailFromV4ES (legacyId) {
   }
   // Extract data from hits
   if (docs.hits.hits && docs.hits.hits[0]) {
-    return docs.hits.hits[0]._source || {}
+    return { data: docs.hits.hits[0]._source, version: docs.hits.hits[0]._version }
+  }
+  return {}
+}
+
+async function getChallengeDetailFromV4ES (legacyId) {
+  const esQuery = {
+    index: 'challengesdetail',
+    type: 'challenges',
+    size: 1,
+    from: 0, // Es Index starts from 0
+    // id: legacyId
+    body: {
+      version: 'true',
+      query: {
+        match: {
+          id: legacyId
+        }
+      }
+    }
+  }
+  // Search with constructed query
+  let docs
+  // console.log('es query', JSON.stringify(esQuery))
+  try {
+    docs = await getV4ESClient().search(esQuery)
+  } catch (e) {
+    // Catch error when the ES is fresh and has no data
+    logger.error(e)
+    docs = {
+      hits: {
+        total: 0,
+        hits: []
+      }
+    }
+  }
+  // Extract data from hits
+  if (docs.hits.hits && docs.hits.hits[0]) {
+    return { data: docs.hits.hits[0]._source, version: docs.hits.hits[0]._version }
   }
   return {}
 }
@@ -503,10 +520,16 @@ async function getChallengeDetailFromV4ES (legacyId) {
  * @param {Number} legacyId
  * @returns {Object} v5ChallengeObject
  */
-async function buildV5Challenge (legacyId) {
-  // logger.warn(`Start Getting Challenge Data ${legacyId}`)
-  const challengeListing = await getChallengeListingFromV4ES(legacyId)
-  const challengeDetails = await getChallengeDetailFromV4ES(legacyId)
+async function buildV5Challenge (legacyId, challengeListing, challengeDetails) {
+  if (!challengeListing) {
+    const challengeListingObj = await getChallengeListingFromV4ES(legacyId)
+    challengeListing = challengeListingObj.data
+  }
+  if (!challengeDetails) {
+    const challengeDetailObj = await getChallengeDetailFromV4ES(legacyId)
+    challengeDetails = challengeDetailObj.data
+  }
+
   const allGroups = challengeListing.groupIds
 
   if (!allV5Terms) {
@@ -704,7 +727,7 @@ async function buildV5Challenge (legacyId) {
  * @returns V5 Challenge UUID
  */
 async function migrateChallenge (legacyId) {
-  return save(await buildV5Challenge(legacyId))
+  return save(await buildV5Challenge(legacyId, null, null))
 }
 async function getAllV5Terms () {
   logger.debug('Getting V5 Terms')
@@ -770,7 +793,7 @@ async function getChallengeSubmissionsFromV5API (challengeId, type) {
   if (type) {
     url += `&type=${type}`
   }
-  logger.warn(`Getting Submissions: ${url}`)
+  // logger.warn(`Getting Submissions: ${url}`)
   const res = await axios.get(url, { headers: { Authorization: `Bearer ${token}` } })
   // logger.warn(`Getting Submissions Response: ${JSON.stringify(res.data)} ${res.headers['x-total']}`)
   if (res) return { result: res.data, total: res.headers['x-total'] }
@@ -787,6 +810,7 @@ module.exports = {
   getChallengesFromES,
   getChallengeIDsFromV4,
   getChallengeListingFromV4ES,
+  getChallengeDetailFromV4ES,
   getChallengeTypes,
   saveChallengeTypes,
   deleteChallenge,

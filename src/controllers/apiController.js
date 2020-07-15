@@ -21,11 +21,11 @@ async function queueForMigration (req, res) {
   let page = 1
   let loop = true
   while (loop) {
-    const legacyIds = await challengeService.getChallengeIDsFromV4({ startDate, endDate, legacyId }, 1000, page)
-    logger.debug(`Request IDs ${JSON.stringify(legacyIds)}`)
+    const { total, ids: legacyIds } = await challengeService.getChallengeIDsFromV4({ startDate, endDate, legacyId }, 1000, page)
     if (legacyIds.length > 0) {
+      logger.info(`Queueing ${legacyIds.length} of ${total} challenges for migration`)
       for (let i = 0; i < legacyIds.length; i += 1) {
-        const result = await migrationService.queueForMigration(legacyIds[i])
+        const result = await migrationService.queueForMigration(legacyIds[i].id)
         if (result === true) count += 1
         if (result === false) skipped += 1
       }
@@ -71,14 +71,18 @@ async function getSyncStatus (req, res) {
 
 async function retryFailed (req, res) {
   await challengeMigrationStatusService.retryFailedMigrations()
-  return res.status(200)
+  return res.status(200).json({ message: 'Challenges with Migration Status Failed Queued for Retry' })
 }
 
+/**
+ * @param {Object} req { query.legacyId, query.startDate, query.endDate, query.force }
+ * @param {Object} res
+ */
 async function queueSync (req, res) {
   const force = _.toString(_.get(req, 'query.force')) === 'true'
   if (req.query.legacyId) {
     // Target a single challenge based on the provided legacyId if provided
-    await syncController.queueChallengeById(req.query.legacyId, true, force)
+    await syncController.queueChallenges({ legacyId: req.query.legacyId, force })
   } else {
     const startDate = req.query.startDate
     const endDate = req.query.endDate ? moment(req.query.endDate).utc() : moment().utc()
@@ -89,7 +93,7 @@ async function queueSync (req, res) {
     if (endDate !== null && (!moment(endDate) || !moment(endDate).isValid())) {
       return res.status(400).json({ message: `Invalid endDate: ${endDate}` })
     }
-    await syncController.queueChallengesFromLastModified({ startDate, endDate, force })
+    await syncController.queueChallenges({ startDate, endDate, force })
   }
 
   return res.json({ success: true })
