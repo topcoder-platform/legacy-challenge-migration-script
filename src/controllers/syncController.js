@@ -31,7 +31,7 @@ async function syncQueuedChallenges () {
         logger.debug(`Syncing [${queuedChallenges.items.length}] Challenges`)
         // await Promise.all(queuedChallenges.items.map(item => syncLegacyId(item.legacyId, item.force)))
         for (let i = 0; i < queuedChallenges.items.length; i += 1) {
-          const item = queuedChallenges.items[0]
+          const item = queuedChallenges.items[i]
           await syncService.syncLegacyId(item.legacyId, item.force)
         }
         page += 1
