@@ -139,8 +139,15 @@ async function queueChallengeById (legacyId, withLogging = false, force = false)
     const [v5] = await challengeService.getChallengeFromV5API(legacyId)
     if (v5) {
       // v5 exists, sync it
-      logger.info(`Challenge Found in V5 but no sync queue version logged for ${legacyId}, syncing challenge`)
-      return challengeSyncStatusService.queueForSync(legacyId)
+      // TODO Check to see if queue record exists
+      const queuedRecord = await challengeSyncStatusService.getSyncProgress({ legacyId })
+      if (queuedRecord.total >= 1) {
+        logger.debug(`Challenge Found in V5 but no sync queue version logged for ${legacyId}, Already Queued`)
+        return false
+      } else {
+        logger.info(`Challenge Found in V5 but no sync queue version logged for ${legacyId}, syncing challenge`)
+        return challengeSyncStatusService.queueForSync(legacyId)
+      }
     } else {
       // v5 doesn't exist, migrate it
       logger.warn(`Challenge ID ${legacyId} doesn't exist in v5, queueing for migration`)
