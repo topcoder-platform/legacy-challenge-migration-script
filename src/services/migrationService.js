@@ -15,12 +15,15 @@ async function processChallenge (legacyId, forceMigrate = false) {
   let v5ChallengeId = null
   try {
     await challengeMigrationStatusService.startMigration(legacyId, legacyChallengeLastModified)
+    logger.debug(`${legacyId} - Start Challenge Migration`)
     v5ChallengeId = await challengeService.migrateChallenge(legacyId)
+    logger.debug(`${legacyId} - Start Resource Migration`)
     const resourcesMigrated = resourceService.migrateResourcesForChallenge(legacyId, v5ChallengeId)
+    logger.debug(`${legacyId} - Completed Resource Migration`)
     await challengeMigrationStatusService.endMigration(legacyId, v5ChallengeId, config.MIGRATION_PROGRESS_STATUSES.SUCCESS)
     return { challengeId: v5ChallengeId, resourcesMigrated: resourcesMigrated }
   } catch (e) {
-    logger.error(`Migration Failed for ${legacyId} ${e}`)
+    logger.error(`Migration Failed for ${legacyId} ${JSON.stringify(e)}`)
 
     // TODO : delete challenge id
     // TODO : delete resources for challenge id
@@ -73,7 +76,7 @@ async function queueForMigration (legacyId) {
       // logger.debug('Migrated Previously, but still continuing?')
     }
     if (legacyIdProgress.status === config.MIGRATION_PROGRESS_STATUSES.FAILED) {
-      logger.error(`Challenge ${legacyId} Failed Previously!`)
+      logger.error(`Challenge ${legacyId} Failed Previously with error: ${legacyIdProgressObj[0].errorMessage}`)
       if (forceMigrate !== true) return false
     }
   }
