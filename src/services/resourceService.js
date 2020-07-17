@@ -138,7 +138,7 @@ async function getResourcesForChallenge (legacyChallengeId, v5ChallengeId) {
         createdBy: resource.created_by,
         updated: moment(resource.updated).utc().format(),
         updatedBy: resource.updated_by,
-        memberId: resource.member_id,
+        memberId: _.toString(resource.member_id),
         memberHandle: resource.member_handle,
         challengeId: v5ChallengeId,
         roleId: roleId

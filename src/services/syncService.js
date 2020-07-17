@@ -83,7 +83,7 @@ async function processResources (legacyId, challengeId, force) {
     const v4Obj = currentV4Array[i]
     // v5 memberId is a string
     // logger.debug(`Find resource in V5 ${JSON.stringify(v4Obj)}`)
-    if (!find(currentV5Array.result, { memberId: toNumber(v4Obj.memberId), roleId: v4Obj.roleId })) {
+    if (!find(currentV5Array.result, { memberId: toString(v4Obj.memberId), roleId: v4Obj.roleId })) {
       logger.debug(` ++ Resource Not Found, adding ${JSON.stringify({ memberId: toNumber(v4Obj.memberId), roleId: v4Obj.roleId })}`)
       resourceService.saveResource(v4Obj) // no await - don't need the result
       resourcesAdded += 1
