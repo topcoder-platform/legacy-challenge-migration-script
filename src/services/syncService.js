@@ -21,7 +21,7 @@ async function syncLegacyId (legacyId, force) {
       await processChallenge(legacyId, v4Listing.data, v4Detail.data)
       await challengeSyncStatusService.endSync(legacyId, v5.id, config.MIGRATION_PROGRESS_STATUSES.SUCCESS, `Resources: ${resourcesAdded} added, ${resourcesRemoved} removed`)
     } catch (e) {
-      logger.error(`Sync Failed for ${legacyId} ${e}`)
+      logger.error(`Sync Failed for ${legacyId} ${JSON.stringify(e)}`)
       await challengeSyncStatusService.endSync(legacyId, null, config.MIGRATION_PROGRESS_STATUSES.FAILED, e, force === true)
     }
   } else {
