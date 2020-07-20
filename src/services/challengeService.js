@@ -508,7 +508,7 @@ async function getChallengeIDsFromV5 (filter, perPage, page = 1) {
   }
   // logger.warn(JSON.stringify(docs))
   // Extract data from hits
-  if (docs.hits.total > 0) return { total: docs.hits.total, ids: _.map(docs.hits.hits, hit => hit._source.legacyId) }
+  if (docs.hits.total > 0) return { total: docs.hits.total, ids: _.map(docs.hits.hits, hit => _.toNumber(hit._source.legacyId)) }
   return false
 }
 
