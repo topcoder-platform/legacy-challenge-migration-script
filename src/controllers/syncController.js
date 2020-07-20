@@ -130,12 +130,12 @@ async function queueChallengeById (legacyId, withLogging = false, force = false)
   // logger.debug(`v4Listing: ${v4Listing.version} - ${existingQueued.v4ListingVersion}`)
   // logger.debug(`v4Detail: ${v4Detail.version} - ${existingQueued.v4DetailVersion}`)
 
-  if (existingQueued && existingQueued.v4ListingVersion && existingQueued.v4DetailVersion) {
+  if (existingQueued && existingQueued.v4ListingVersion) {
     if (v4Listing.version !== existingQueued.v4ListingVersion) {
       // listing versions don't match, sync it
       logger.info(`Sync of ${legacyId} - Listing Versions do not match: ${v4Listing.version} - syncQueue Version: ${existingQueued.v4ListingVersion}`)
       return challengeSyncStatusService.queueForSync(legacyId)
-    } else if (v4Detail.version !== existingQueued.v4DetailVersion) {
+    } else if (v4Detail.version && v4Detail.version !== existingQueued.v4DetailVersion) {
       // detail versions don't match, sync it
       logger.info(`Sync of ${legacyId} - Detail Versions do not match: ${v4Detail.version} - syncQueue Version: ${existingQueued.v4DetailVersion}`)
       return challengeSyncStatusService.queueForSync(legacyId)
