@@ -421,7 +421,7 @@ async function getChallengeIDsFromV4 (filter, perPage, page = 1) {
   }
   // Search with constructed query
   let docs
-  // logger.warn('es query', JSON.stringify(esQuery))
+  // logger.warn(`V4 Challenge IDs Query ${JSON.stringify(esQuery)}`)
   try {
     docs = await getV4ESClient().search(esQuery)
   } catch (e) {
@@ -437,6 +437,78 @@ async function getChallengeIDsFromV4 (filter, perPage, page = 1) {
   // logger.warn(JSON.stringify(docs))
   // Extract data from hits
   if (docs.hits.total > 0) return { total: docs.hits.total, ids: _.map(docs.hits.hits, hit => hit._source.id) }
+  return false
+}
+/**
+ * getChallengeIDsFromV5
+ * @param {Object} filter {startDate, endDate, legacyId, status}
+ * @param {Number} perPage
+ * @param {Number} page
+ * @returns {Object} { total, ids }
+ */
+async function getChallengeIDsFromV5 (filter, perPage, page = 1) {
+  const boolQuery = []
+  const mustQuery = []
+  if (filter.startDate) {
+    boolQuery.push({ range: { updated: { gte: filter.startDate } } })
+  }
+  if (filter.endDate) {
+    boolQuery.push({ range: { updated: { lte: filter.endDate } } })
+  }
+  if (filter.legacyId) {
+    boolQuery.push({ match: { legacyId: filter.legacyId } })
+  }
+  if (filter.status) {
+    boolQuery.push({ match_phrase: { status: filter.status } })
+  }
+
+  if (boolQuery.length > 0) {
+    mustQuery.push({
+      bool: {
+        filter: boolQuery
+      }
+    })
+  }
+
+  const esQuery = {
+    index: config.CHALLENGE_ES_INDEX,
+    type: config.CHALLENGE_ES_TYPE,
+    size: perPage,
+    from: perPage * (page - 1),
+    _source: ['legacyId'],
+    body: {
+      version: 'true',
+      query: mustQuery.length > 0 ? {
+        bool: {
+          must: mustQuery
+          // must_not: mustNotQuery
+        }
+      } : {
+        match_all: {}
+      },
+      sort: [
+        { updated: 'desc' }
+      ]
+    }
+  }
+  // Search with constructed query
+  let docs
+  // logger.warn(`V5 Challenge IDs Query ${JSON.stringify(esQuery)}`)
+  try {
+    docs = await getESClient().search(esQuery)
+  } catch (e) {
+    // Catch error when the ES is fresh and has no data
+    logger.error(e)
+    docs = {
+      hits: {
+        total: 0,
+        hits: []
+      }
+    }
+  }
+  // logger.warn(JSON.stringify(docs))
+  // Extract data from hits
+  if (docs.hits.total > 0) return { total: docs.hits.total, ids: _.map(docs.hits.hits, hit => hit._source.legacyId) }
   return false
 }
 
@@ -815,6 +887,7 @@ module.exports = {
   getChallengeFromES,
   getChallengesFromES,
   getChallengeIDsFromV4,
+  getChallengeIDsFromV5,
   getChallengeListingFromV4ES,
   getChallengeDetailFromV4ES,
   getChallengeTypes,

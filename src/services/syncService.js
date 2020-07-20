@@ -1,4 +1,4 @@
-const { find, omit, toNumber } = require('lodash')
+const { find, omit, toNumber, concat } = require('lodash')
 const config = require('config')
 const logger = require('../util/logger')
 const challengeService = require('./challengeService')
@@ -83,8 +83,8 @@ async function processResources (legacyId, challengeId, force) {
     const v4Obj = currentV4Array[i]
     // v5 memberId is a string
     // logger.debug(`Find resource in V5 ${JSON.stringify(v4Obj)}`)
-    if (!find(currentV5Array.result, { memberId: toString(v4Obj.memberId), roleId: v4Obj.roleId })) {
-      logger.debug(` ++ Resource Not Found, adding ${JSON.stringify({ memberId: toNumber(v4Obj.memberId), roleId: v4Obj.roleId })}`)
+    if (!find(currentV5Array.result, { memberId: v4Obj.memberId, roleId: v4Obj.roleId })) {
+      logger.debug(` ++ Resource Not Found, adding ${JSON.stringify({ memberId: v4Obj.memberId, roleId: v4Obj.roleId })}`)
       resourceService.saveResource(v4Obj) // no await - don't need the result
       resourcesAdded += 1
     }
@@ -92,8 +92,8 @@ async function processResources (legacyId, challengeId, force) {
   for (let i = 0; i < currentV5Array.result.length; i += 1) {
     const v5Obj = currentV5Array.result[i]
     // v4 memberId is a number
-    if (!find(currentV4Array, { memberId: toNumber(v5Obj.memberId), roleId: v5Obj.roleId })) {
-      logger.debug(` -- Resource Found, removing ${JSON.stringify({ memberId: toNumber(v5Obj.memberId), roleId: v5Obj.roleId })}`)
+    if (!find(currentV4Array, { memberId: v5Obj.memberId, roleId: v5Obj.roleId })) {
+      logger.debug(` -- Resource Found, removing ${JSON.stringify({ memberId: v5Obj.memberId, roleId: v5Obj.roleId })}`)
       resourceService.deleteResource(v5Obj.id) // no await - don't need the result
       resourcesRemoved += 1
     }
@@ -102,6 +102,52 @@ async function processResources (legacyId, challengeId, force) {
   return { resourcesAdded, resourcesRemoved }
 }
 
+async function getV4ChallengeIds (filter) {
+  let page = 1
+  let running = true
+  let v4Ids = []
+  const perPage = 1000
+  let combinedTotal = 0
+
+  while (running) {
+    // logger.debug(`V4 Challenge IDs - Getting ${page}`)
+    const { total, ids } = await challengeService.getChallengeIDsFromV4(filter, perPage, page)
+    if (ids && ids.length > 0) {
+      combinedTotal = total
+      v4Ids = concat(v4Ids, ids)
+      page += 1
+    } else {
+      running = false
+    }
+  }
+
+  return { total: combinedTotal, ids: v4Ids }
+}
+
+async function getV5LegacyChallengeIds (filter) {
+  let page = 1
+  let running = true
+  let v5Ids = []
+  const perPage = 1000
+  let combinedTotal = 0
+
+  while (running) {
+    // logger.debug(`V5 Challenge IDs - Getting ${page}`)
+    const { total, ids } = await challengeService.getChallengeIDsFromV5(filter, perPage, page)
+    if (ids && ids.length > 0) {
+      combinedTotal = total
+      v5Ids = concat(v5Ids, ids)
+      page += 1
+    } else {
+      running = false
+    }
+  }
+  // logger.debug(`V5 Challenge IDs ${JSON.stringify(v5Ids)} total ${combinedTotal}`)
+  return { total: combinedTotal, ids: v5Ids }
+}
+
 module.exports = {
-  syncLegacyId
+  syncLegacyId,
+  getV4ChallengeIds,
+  getV5LegacyChallengeIds
 }

@@ -1,7 +1,7 @@
 const config = require('config')
 const logger = require('../util/logger')
 // const moment = require('moment')
-// const { toNumber } = require('lodash')
+const { concat, slice, uniq } = require('lodash')
 const challengeSyncStatusService = require('../services/challengeSyncStatusService')
 const challengeSyncHistoryService = require('../services/challengeSyncHistoryService')
 const syncService = require('../services/syncService')
@@ -60,30 +60,38 @@ async function autoQueueChallenges () {
 async function queueChallenges (filter) {
   // find challenges in es status
   let page = 1
-  const perPage = 100
+  const perPage = 50
   let running = true
-  let totalChallengesCount = 0
   let queuedCount = 0
-  while (running) {
-    // logger.debug(`queueChallenges ${JSON.stringify(filter)} - Processing Sync Batch - ${page}`)
 
-    // returns [id]
-    const { total, ids: v4IdArray } = await challengeService.getChallengeIDsFromV4(filter, perPage, page)
-    totalChallengesCount = total
-    if (v4IdArray.length === 0) {
+  // get active challenges from v4
+  const { ids: v4IdArray } = await syncService.getV4ChallengeIds(filter)
+
+  // get active challenges from v5
+  const { ids: v5IdArray } = await syncService.getV5LegacyChallengeIds(filter)
+
+  // combine arrays, return unique
+  const combinedArray = uniq(concat(v4IdArray, v5IdArray))
+  const totalChallengesCount = combinedArray.length
+
+  logger.debug(`Total to Sync ${totalChallengesCount}`)
+  // logger.debug(`Combined Array ${combinedArray}`)
+
+  while (running) {
+    if ((page * perPage) > combinedArray.length) {
+      // if the index is off the page, this is the last run
       running = false
-      // logger.debug(`queueChallenges ${JSON.stringify(filter)} - 0 Challenges found in sync queue on batch ${page}`)
-    } else {
-      // loop through challenges and queue in updates table
-      const startIndex = (page - 1) * perPage
-      const endIndex = startIndex + v4IdArray.length
-      logger.info(`Processing ${startIndex} to ${endIndex} of ${total} Challenges for Sync`)
-      await Promise.all(v4IdArray.map((id) => queueChallengeById(id, false, filter.force).then(e => { if (e !== false) queuedCount += 1 })))
-      page += 1
     }
+    const startIndex = (page - 1) * perPage
+    const endIndex = Math.min(page * perPage, combinedArray.length)
+    const arr = slice(combinedArray, startIndex, endIndex)
+    logger.info(`Processing ${startIndex} to ${endIndex} of ${combinedArray.length} Challenges for Sync`)
+    await Promise.all(arr.map((id) => queueChallengeById(id, false, filter.force).then(e => { if (e !== false) queuedCount += 1 })))
+    // await Promise.all(arr.map((id) => { logger.debug(`Queueing Challenge ${id}`) }))
+
+    page += 1
   }
   logger.info(`Sync Queueing completed, ${queuedCount} of ${totalChallengesCount} challenges need to be synced`)
-  // logger.info(`Sync Count ${JSON.stringify({ total: totalChallengesCount, updated: queuedCount })}`)
   return { total: totalChallengesCount, updated: queuedCount }
 }
 
@@ -110,7 +118,7 @@ async function queueChallengeById (legacyId, withLogging = false, force = false)
   if (existingQueuedList && existingQueuedList.total >= 1) {
     existingQueued = existingQueuedList.items[0]
     if (existingQueued.status === config.MIGRATION_PROGRESS_STATUSES.QUEUED) {
-      logger.warn(`Legacy ID ${legacyId} already queued`)
+      logger.warn(`Legacy ID ${legacyId} already queued ${JSON.stringify(existingQueued)}`)
       return false
     }
   }
@@ -122,12 +130,12 @@ async function queueChallengeById (legacyId, withLogging = false, force = false)
   // logger.debug(`v4Listing: ${v4Listing.version} - ${existingQueued.v4ListingVersion}`)
   // logger.debug(`v4Detail: ${v4Detail.version} - ${existingQueued.v4DetailVersion}`)
 
-  if (existingQueued && existingQueued.v4ListingVersion && existingQueued.v4DetailVersion) {
+  if (existingQueued && existingQueued.v4ListingVersion) {
     if (v4Listing.version !== existingQueued.v4ListingVersion) {
       // listing versions don't match, sync it
       logger.info(`Sync of ${legacyId} - Listing Versions do not match: ${v4Listing.version} - syncQueue Version: ${existingQueued.v4ListingVersion}`)
       return challengeSyncStatusService.queueForSync(legacyId)
-    } else if (v4Detail.version !== existingQueued.v4DetailVersion) {
+    } else if (v4Detail.version && v4Detail.version !== existingQueued.v4DetailVersion) {
       // detail versions don't match, sync it
       logger.info(`Sync of ${legacyId} - Detail Versions do not match: ${v4Detail.version} - syncQueue Version: ${existingQueued.v4DetailVersion}`)
       return challengeSyncStatusService.queueForSync(legacyId)
