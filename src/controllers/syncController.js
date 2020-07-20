@@ -1,7 +1,7 @@
 const config = require('config')
 const logger = require('../util/logger')
 // const moment = require('moment')
-const { union, slice } = require('lodash')
+const { concat, slice, uniq } = require('lodash')
 const challengeSyncStatusService = require('../services/challengeSyncStatusService')
 const challengeSyncHistoryService = require('../services/challengeSyncHistoryService')
 const syncService = require('../services/syncService')
@@ -60,7 +60,7 @@ async function autoQueueChallenges () {
 async function queueChallenges (filter) {
   // find challenges in es status
   let page = 1
-  const perPage = 100
+  const perPage = 50
   let running = true
   let queuedCount = 0
 
@@ -71,7 +71,7 @@ async function queueChallenges (filter) {
   const { ids: v5IdArray } = await syncService.getV5LegacyChallengeIds(filter)
 
   // combine arrays, return unique
-  const combinedArray = union(v4IdArray, v5IdArray)
+  const combinedArray = uniq(concat(v4IdArray, v5IdArray))
   const totalChallengesCount = combinedArray.length
 
   logger.debug(`Total to Sync ${totalChallengesCount}`)
@@ -147,7 +147,6 @@ async function queueChallengeById (legacyId, withLogging = false, force = false)
     const [v5] = await challengeService.getChallengeFromV5API(legacyId)
     if (v5) {
       // v5 exists, sync it
-      // TODO Check to see if queue record exists
       const queuedRecord = await challengeSyncStatusService.getSyncProgress({ legacyId })
       if (queuedRecord.total >= 1 && queuedRecord.items[0].status === config.MIGRATION_PROGRESS_STATUSES.QUEUED) {
         logger.debug(`Challenge Found in V5 but no sync queue version logged for ${legacyId}, Already Queued`)
