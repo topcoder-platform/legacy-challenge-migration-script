@@ -30,9 +30,14 @@ async function syncQueuedChallenges () {
       } else {
         logger.debug(`Syncing [${queuedChallenges.items.length}] Challenges`)
         // await Promise.all(queuedChallenges.items.map(item => syncLegacyId(item.legacyId, item.force)))
-        for (let i = 0; i < queuedChallenges.items.length; i += 1) {
-          const item = queuedChallenges.items[i]
-          await syncService.syncLegacyId(item.legacyId, item.force)
+        try {
+          for (let i = 0; i < queuedChallenges.items.length; i += 1) {
+            const item = queuedChallenges.items[i]
+            await syncService.syncLegacyId(item.legacyId, item.force)
+          }
+        } catch (e) {
+          logger.error(`Caught Error: ${JSON.stringify(e)} - Resetting Sync}`)
+          running = false
         }
         page += 1
       }
