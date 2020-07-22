@@ -87,7 +87,7 @@ async function queueChallenges (filter) {
     const startIndex = (page - 1) * perPage
     const endIndex = Math.min(page * perPage, combinedArray.length)
     const arr = slice(combinedArray, startIndex, endIndex)
-    logger.info(`Processing ${startIndex} to ${endIndex} of ${combinedArray.length} Challenges for Sync`)
+    // logger.info(`Processing ${startIndex} to ${endIndex} of ${combinedArray.length} Challenges for Sync`)
     await Promise.all(arr.map((id) => queueChallengeById(id, false, filter.force).then(e => { if (e !== false) queuedCount += 1 })))
     // await Promise.all(arr.map((id) => { logger.debug(`Queueing Challenge ${id}`) }))
 
@@ -135,11 +135,11 @@ async function queueChallengeById (legacyId, withLogging = false, force = false)
   if (existingQueued && existingQueued.v4ListingVersion) {
     if (v4Listing.version !== existingQueued.v4ListingVersion) {
       // listing versions don't match, sync it
-      logger.info(`Sync of ${legacyId} - Listing Versions do not match: ${v4Listing.version} - syncQueue Version: ${existingQueued.v4ListingVersion}`)
+      // logger.info(`Sync of ${legacyId} - Listing Versions do not match: ${v4Listing.version} - syncQueue Version: ${existingQueued.v4ListingVersion}`)
       return challengeSyncStatusService.queueForSync(legacyId)
     } else if (v4Detail.version && v4Detail.version !== existingQueued.v4DetailVersion) {
       // detail versions don't match, sync it
-      logger.info(`Sync of ${legacyId} - Detail Versions do not match: ${v4Detail.version} - syncQueue Version: ${existingQueued.v4DetailVersion}`)
+      // logger.info(`Sync of ${legacyId} - Detail Versions do not match: ${v4Detail.version} - syncQueue Version: ${existingQueued.v4DetailVersion}`)
       return challengeSyncStatusService.queueForSync(legacyId)
     }
     // logger.warn(`Versions Match - No Need to Sync. Listing:${v4Listing.version}  Detail: ${v4Detail.version}`)
@@ -151,19 +151,19 @@ async function queueChallengeById (legacyId, withLogging = false, force = false)
       // v5 exists, sync it
       const queuedRecord = await challengeSyncStatusService.getSyncProgress({ legacyId })
       if (queuedRecord.total >= 1 && queuedRecord.items[0].status === config.MIGRATION_PROGRESS_STATUSES.QUEUED) {
-        logger.debug(`Challenge Found in V5 but no sync queue version logged for ${legacyId}, Already Queued`)
+        // logger.debug(`Challenge Found in V5 but no sync queue version logged for ${legacyId}, Already Queued`)
         return false
       } else {
-        logger.info(`Challenge Found in V5 but no sync queue version logged for ${legacyId}, syncing challenge`)
+        // logger.info(`Challenge Found in V5 but no sync queue version logged for ${legacyId}, syncing challenge`)
         return challengeSyncStatusService.queueForSync(legacyId)
       }
     } else {
       // v5 doesn't exist, migrate it
-      logger.warn(`Challenge ID ${legacyId} doesn't exist in v5, queueing for migration`)
+      // logger.warn(`Challenge ID ${legacyId} doesn't exist in v5, queueing for migration`)
       try {
         await migrationService.queueForMigration(legacyId)
       } catch (e) {
-        logger.debug(`Challenge ID ${legacyId} already queued for migration. Wait for migration service to complete.`)
+        // logger.debug(`Challenge ID ${legacyId} already queued for migration. Wait for migration service to complete.`)
       }
       return false // false because this isn't synced, it needs to be migrated
     }
