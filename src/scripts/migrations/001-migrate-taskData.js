@@ -28,8 +28,8 @@ const migrationFunction = {
           _.set(challenge, 'legacy.isTask', v4Listing.isTask || false)
           if (v4Listing.isTask) {
             challenge.typeId = config.TASK_TYPE_IDS[challenge.legacy.track.toUpperCase()]
-            await challengeService.save(challenge)
           }
+          await challengeService.save(challenge)
         }
       } else {
         finish = true
