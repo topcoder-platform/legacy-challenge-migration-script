@@ -201,5 +201,12 @@ module.exports = {
   },
 
   SUBMITTER_ROLE_ID: process.env.SUBMITTER_ROLE_ID || '732339e7-8e30-49d7-9198-cccf9451e221',
-  SUBMISSION_TYPE: process.env.SUBMISSION_TYPE || 'Contest Submission'
+  SUBMISSION_TYPE: process.env.SUBMISSION_TYPE || 'Contest Submission',
+
+  TASK_TYPE_IDS: {
+    DEVELOP: process.env.DEVELOP_TASK_TYPE_ID || 'e885273d-aeda-42c0-917d-bfbf979afbba',
+    DESIGN: process.env.DESIGN_TASK_TYPE_ID || '149a2013-92b9-4ca9-b35d-c337d47a2490',
+    QA: process.env.QA_TASK_TYPE_ID || 'a91e69fd-6240-4227-8484-66b8defc4ca9',
+    DATA_SCENCE: process.env.DATA_SCENCE_TASK_TYPE_ID || 'b3b60e22-e302-4db8-bef8-4eaff965565f'
+  }
 }
