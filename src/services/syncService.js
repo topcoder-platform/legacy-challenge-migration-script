@@ -1,4 +1,4 @@
-const { find, omit, toNumber, concat } = require('lodash')
+const _ = require('lodash')
 const config = require('config')
 const logger = require('../util/logger')
 const challengeService = require('./challengeService')
@@ -44,11 +44,11 @@ async function processChallenge (legacyId, challengeListing, challengeDetails) {
   const v5ChallengeObjectFromV4 = await challengeService.buildV5Challenge(legacyId, challengeListing, challengeDetails)
   const [v5ChallengeFromAPI] = await challengeService.getChallengeFromV5API(legacyId)
 
-  const challengeObj = omit(v5ChallengeObjectFromV4, ['type'])
+  const challengeObj = _.omit(v5ChallengeObjectFromV4, ['type'])
 
   try {
     const registrants = await resourceService.getResourcesFromV5API(v5ChallengeFromAPI.id, config.SUBMITTER_ROLE_ID)
-    challengeObj.numOfRegistrants = toNumber(registrants.total)
+    challengeObj.numOfRegistrants = _.toNumber(registrants.total)
   } catch (e) {
     logger.error(`Failed to load resources for challenge ${v5ChallengeFromAPI.id}`)
     logger.logFullError(e)
@@ -56,12 +56,13 @@ async function processChallenge (legacyId, challengeListing, challengeDetails) {
 
   try {
     const submissions = await challengeService.getChallengeSubmissionsFromV5API(legacyId, config.SUBMISSION_TYPE)
-    challengeObj.numOfSubmissions = toNumber(submissions.total) || 0
+    challengeObj.numOfSubmissions = _.toNumber(submissions.total) || 0
   } catch (e) {
     logger.error(`Failed to load submissions for challenge ${legacyId}`)
     logger.logFullError(e)
   }
   challengeObj.id = v5ChallengeFromAPI.id
+  _.set(challengeObj, 'legacy.track', _.get(v5ChallengeFromAPI, 'legacy.track'), _.get(challengeObj, 'legacy.track'))
 
   return challengeService.save(challengeObj)
 }
@@ -83,7 +84,7 @@ async function processResources (legacyId, challengeId, force) {
     const v4Obj = currentV4Array[i]
     // v5 memberId is a string
     // logger.debug(`Find resource in V5 ${JSON.stringify(v4Obj)}`)
-    if (!find(currentV5Array.result, { memberId: v4Obj.memberId, roleId: v4Obj.roleId })) {
+    if (!_.find(currentV5Array.result, { memberId: v4Obj.memberId, roleId: v4Obj.roleId })) {
       logger.debug(` ++ Resource Not Found, adding ${JSON.stringify({ memberId: v4Obj.memberId, roleId: v4Obj.roleId })}`)
       await resourceService.saveResource(v4Obj)
       resourcesAdded += 1
@@ -92,7 +93,7 @@ async function processResources (legacyId, challengeId, force) {
   for (let i = 0; i < currentV5Array.result.length; i += 1) {
     const v5Obj = currentV5Array.result[i]
     // v4 memberId is a number
-    if (!find(currentV4Array, { memberId: v5Obj.memberId, roleId: v5Obj.roleId })) {
+    if (!_.find(currentV4Array, { memberId: v5Obj.memberId, roleId: v5Obj.roleId })) {
       logger.debug(` -- Resource Found, removing ${JSON.stringify({ memberId: v5Obj.memberId, roleId: v5Obj.roleId })}`)
       await resourceService.deleteResource(v5Obj.id)
       resourcesRemoved += 1
@@ -114,7 +115,7 @@ async function getV4ChallengeIds (filter) {
     const { total, ids } = await challengeService.getChallengeIDsFromV4(filter, perPage, page)
     if (ids && ids.length > 0) {
       combinedTotal = total
-      v4Ids = concat(v4Ids, ids)
+      v4Ids = _.concat(v4Ids, ids)
       page += 1
     } else {
       running = false
@@ -136,7 +137,7 @@ async function getV5LegacyChallengeIds (filter) {
     const { total, ids } = await challengeService.getChallengeIDsFromV5(filter, perPage, page)
     if (ids && ids.length > 0) {
       combinedTotal = total
-      v5Ids = concat(v5Ids, ids)
+      v5Ids = _.concat(v5Ids, ids)
       page += 1
     } else {
       running = false

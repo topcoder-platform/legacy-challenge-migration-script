@@ -63,7 +63,11 @@ npm i
 ### Command for API
 - Inside the docker container, start the express server: `npm start`
 
-This command also run a schedule to execute the migration periodically at an interval which is defined by `SCHEDULE_INTERVAL`.
+## Migrations
+- To run a migration, the command should be:
+`MIGRATION=<name-of-migration-file> nf run npm run migrate`
+Example: 
+`MIGRATION=001-migrate-taskData nf run npm run migrate`
 
 ## Production deployment
 - TBD

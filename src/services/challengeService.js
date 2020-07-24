@@ -658,7 +658,8 @@ async function buildV5Challenge (legacyId, challengeListing, challengeDetails) {
       informixModified: moment(challengeListing.updatedAt).utc().format(),
       reviewType: challengeListing.reviewType || 'COMMUNITY',
       screeningScorecardId: challengeListing.screeningScorecardId,
-      reviewScorecardId: challengeListing.reviewScorecardId
+      reviewScorecardId: challengeListing.reviewScorecardId,
+      isTask: challengeListing.isTask
     },
     name: challengeListing.challengeTitle,
     description: detailRequirement || '',
@@ -675,6 +676,10 @@ async function buildV5Challenge (legacyId, challengeListing, challengeDetails) {
     startDate: moment().utc().format(),
     numOfSubmissions: _.toNumber(challengeListing.numberOfSubmissions),
     numOfRegistrants: _.toNumber(challengeListing.numberOfRegistrants)
+  }
+
+  if (newChallenge.legacy.isTask) {
+    newChallenge.typeId = config.TASK_TYPE_IDS[newChallenge.legacy.track.toUpperCase()]
   }
 
   // console.log('CHALLENGE DESCRIPTION', newChallenge.description)
