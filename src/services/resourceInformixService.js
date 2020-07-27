@@ -1,7 +1,7 @@
 // const _ = require('lodash')
 // const moment = require('moment')
 const { executeQueryAsync } = require('../util/informixWrapper')
-const logger = require('../util/logger')
+// const logger = require('../util/logger')
 
 /**
  * Get resource from informix
@@ -9,31 +9,20 @@ const logger = require('../util/logger')
  * @param {Number} legacyChallengeId
  */
 function getResourcesForChallengeFromIfx (legacyChallengeId) {
+  if (!legacyChallengeId) {
+    throw new Error(`getResourcesForChallengeFromIfx = Legacy ID is Undefined: ${legacyChallengeId}`)
+  }
   const sql = `
-      SELECT
-            r.resource_id as id,
-            r.project_id as challenge_id,
-            r.resource_role_id as resource_role_id,
-            rr.name as resource_role_name,
-            r.user_id as member_id,
-            u.handle as member_handle,
-            u2.handle as created_by,
-            r.create_date as created,
-            u3.handle as updated_by,
-            r.modify_date as updated
-        FROM
-            resource r
-        INNER JOIN resource_role_lu rr on
-            r.resource_role_id = rr.resource_role_id
-        INNER JOIN user u on
-            r.user_id = u.user_id
-            , user u2
-            , user u3
-        WHERE 1=1 
-          AND r.create_user = u2.user_id
-          AND r.modify_user = u3.user_id
-          AND r.project_id = ${legacyChallengeId}
-    `
+  SELECT r.resource_id as id, r.project_id as challenge_id, r.resource_role_id as resource_role_id, rr.name as resource_role_name,
+        r.user_id as member_id, u.handle as member_handle,
+        (SELECT handle FROM user u4 WHERE r.create_user = u4.user_id) as created_by,
+        r.create_date as created,
+        (SELECT handle FROM user u5 WHERE r.modify_user = u5.user_id) as updated_by,
+        r.modify_date as updated 
+FROM resource r 
+        INNER JOIN resource_role_lu rr on r.resource_role_id = rr.resource_role_id 
+        INNER JOIN user u on r.user_id = u.user_id
+WHERE r.project_id = ${legacyChallengeId}`
   return execQuery(sql)
 }
 
