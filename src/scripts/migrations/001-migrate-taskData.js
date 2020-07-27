@@ -24,11 +24,14 @@ const migrationFunction = {
       logger.info(`Found ${challenges.length} challenges`)
       if (challenges.length > 0) {
         for (const challenge of challenges) {
-          const v4Listing = await challengeService.getChallengeListingFromV4ES(challenge.legacyId)
-          _.set(challenge, 'legacy.isTask', v4Listing.isTask || false)
-          if (v4Listing.isTask) {
+          const challengeListingObj = await challengeService.getChallengeListingFromV4ES(challenge.legacyId)
+          const challengeListing = challengeListingObj.data
+          _.set(challenge, 'legacy.isTask', challengeListing.isTask || false)
+          if (challengeListing.isTask) {
             challenge.typeId = config.TASK_TYPE_IDS[challenge.legacy.track.toUpperCase()]
           }
+          challenge.legacy.migration = 1
+          // if (challenge.legacy.isTask === true) console.log(challenge)
           await challengeService.save(challenge)
         }
       } else {
@@ -51,7 +54,7 @@ async function getChallengesMissingData (page = 0, perPage = 10) {
         bool: {
           must_not: {
             exists: {
-              field: 'legacy.isTask'
+              field: 'legacy.migration'
             }
           }
         }

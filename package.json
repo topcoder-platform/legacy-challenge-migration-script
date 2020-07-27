@@ -35,10 +35,7 @@
     "lint": "standard",
     "lint:fix": "standard --fix",
     "init-es": "node src/scripts/init-es.js",
-    "migrate": "node src/scripts/migrationDISABLED.js -- $MIGRATION",
-    "migrate-groups": "node src/scripts/migrate-groupsDISABLED.js",
-    "migrate-types": "node src/scripts/migrate-typesDISABLED.js",
-    "populate-progress-table": "node src/scripts/populate-progress-tableDISABLED.js"
+    "migrate": "node src/scripts/migration.js -- $MIGRATION"
   },
   "author": "TCSCODER",
   "license": ""

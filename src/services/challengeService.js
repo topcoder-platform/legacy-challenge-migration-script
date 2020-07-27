@@ -729,7 +729,7 @@ async function buildV5Challenge (legacyId, challengeListing, challengeDetails) {
     })
   }
 
-  newChallenge.startDate = challengeListing.registrationStartDate
+  newChallenge.startDate = moment(challengeListing.registrationStartDate).utc().format()
   let challengeEndDate = newChallenge.startDate
   const phases = _.map(challengeListing.phases, phase => {
     // console.log(phase.scheduled_start_time, Date.parse(phase.scheduled_start_time), phase.duration, (phase.duration / 1000 / 60 / 60))
@@ -739,10 +739,10 @@ async function buildV5Challenge (legacyId, challengeListing, challengeDetails) {
       name: phase.type,
       phaseId: _.get(_.find(config.get('PHASE_NAME_MAPPINGS'), { name: phase.type }), 'phaseId'),
       duration: v5duration,
-      scheduledStartDate: phase.scheduledStartTime,
-      scheduledEndDate: phase.scheduledEndTime,
-      actualStartDate: phase.actualStartTime,
-      actualEndDate: phase.actualEndTime
+      scheduledStartDate: moment(phase.scheduledStartTime).utc().format(),
+      scheduledEndDate: moment(phase.scheduledEndTime).utc().format(),
+      actualStartDate: moment(phase.actualStartTime).utc().format(),
+      actualEndDate: moment(phase.actualEndTime).utc().format()
     }
     // logger.warn(`Original Date: ${phase.scheduledStartTime}`)
     // logger.warn(`Parsed UTC Formatted Date: ${moment(phase.scheduledStartTime).utc().format()}`)
