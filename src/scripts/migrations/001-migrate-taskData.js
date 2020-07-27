@@ -24,15 +24,19 @@ const migrationFunction = {
       logger.info(`Found ${challenges.length} challenges`)
       if (challenges.length > 0) {
         for (const challenge of challenges) {
-          const challengeListingObj = await challengeService.getChallengeListingFromV4ES(challenge.legacyId)
-          const challengeListing = challengeListingObj.data
-          _.set(challenge, 'legacy.isTask', challengeListing.isTask || false)
-          if (challengeListing.isTask) {
-            challenge.typeId = config.TASK_TYPE_IDS[challenge.legacy.track.toUpperCase()]
+          if (challenge.legacyId) {
+            const challengeListingObj = await challengeService.getChallengeListingFromV4ES(challenge.legacyId)
+            const challengeListing = challengeListingObj.data
+            _.set(challenge, 'legacy.isTask', challengeListing.isTask || false)
+            if (challengeListing.isTask) {
+              challenge.typeId = config.TASK_TYPE_IDS[challenge.legacy.track.toUpperCase()]
+            }
+            challenge.legacy.migration = 1
+            // if (challenge.legacy.isTask === true) console.log(challenge)
+            await challengeService.save(challenge)
+          } else {
+            logger.error(`Challenge has no legacy id: ${challenge.id}`)
           }
-          challenge.legacy.migration = 1
-          // if (challenge.legacy.isTask === true) console.log(challenge)
-          await challengeService.save(challenge)
         }
       } else {
         finish = true
@@ -53,8 +57,8 @@ async function getChallengesMissingData (page = 0, perPage = 10) {
       query: {
         bool: {
           must_not: {
-            exists: {
-              field: 'legacy.migration'
+            match_phrase: {
+              'legacy.migration': 1
             }
           }
         }

@@ -1,11 +1,8 @@
 const { map } = require('lodash')
 const config = require('config')
-// const moment = require('moment')
 const logger = require('../util/logger')
 const challengeService = require('./challengeService')
-// const challengeInformixService = require('./challengeInformixService')
 const challengeMigrationStatusService = require('./challengeMigrationStatusService')
-// const resourceInformixService = require('./resourceInformixService')
 const resourceService = require('./resourceService')
 
 async function processChallenge (legacyId, forceMigrate = false) {

@@ -535,7 +535,7 @@ async function getChallengeListingFromV4ES (legacyId) {
     docs = await getV4ESClient().search(esQuery)
   } catch (e) {
     // Catch error when the ES is fresh and has no data
-    logger.error(e)
+    // logger.error(e)
     docs = {
       hits: {
         total: 0,
