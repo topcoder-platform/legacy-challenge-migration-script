@@ -69,7 +69,7 @@ async function processChallenge (legacyId, challengeListing, challengeDetails) {
 
 async function processResources (legacyId, challengeId, force) {
   if (force === true) {
-    logger.warn('Force Deleting Resources')
+    logger.warn(`Force Deleting Resources for LegacyID: ${legacyId} ChallengeID: ${challengeId}`)
     await resourceService.deleteAllResourcesForChallenge(challengeId)
   }
   let resourcesAdded = 0
@@ -136,6 +136,7 @@ async function getV5LegacyChallengeIds (filter) {
     // logger.debug(`V5 Challenge IDs - Getting ${page}`)
     const { total, ids } = await challengeService.getChallengeIDsFromV5(filter, perPage, page)
     if (ids && ids.length > 0) {
+      // logger.warn(`IDs ${JSON.stringify(ids)}`)
       combinedTotal = total
       v5Ids = _.concat(v5Ids, ids)
       page += 1

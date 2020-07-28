@@ -1,4 +1,3 @@
-// const config = require('config')
 const _ = require('lodash')
 const logger = require('../util/logger')
 const helper = require('../util/helper')
@@ -25,8 +24,15 @@ async function queueForMigration (req, res) {
     if (legacyIds.length > 0) {
       logger.info(`Queueing ${legacyIds.length} of ${total} challenges for migration`)
       for (let i = 0; i < legacyIds.length; i += 1) {
-        const result = await migrationService.queueForMigration(legacyIds[i].id)
-        if (result === true) count += 1
+        // console.log(legacyIds)
+        let result = false
+        try {
+          result = await migrationService.queueForMigration(legacyIds[i])
+          // console.log(result)
+        } catch (e) {
+          logger.error(`Cannot Queue ${e}`)
+        }
+        if (result) count += 1
         if (result === false) skipped += 1
       }
     } else {
@@ -99,10 +105,35 @@ async function queueSync (req, res) {
   return res.json({ success: true })
 }
 
+/**
+ * Delete a challenge's migration record, sync record, challenge entry, and resources
+ * @param {Object} req {query: {uuid}}
+ * @param {Object} res
+ */
+async function destroyChallenge (req, res) {
+  const uuid = _.get(req, 'params.uuid')
+  if (!uuid) {
+    return res.status(400).json({ message: `Invalid uuid: ${uuid}` })
+  }
+
+  try {
+    // delete migration on challenge uuid
+    await challengeMigrationStatusService.deleteProgressRecord(uuid)
+    // delete challenge on uuid
+    await challengeService.deleteChallenge(uuid)
+
+    return res.json({ success: true })
+  } catch (e) {
+    logger.debug(`Error in Deletion: ${e}`)
+    return res.status(400).json({ message: `Unable to Delete: ${JSON.stringify(e)}` })
+  }
+}
+
 module.exports = {
   queueForMigration,
   getMigrationStatus,
   retryFailed,
   queueSync,
-  getSyncStatus
+  getSyncStatus,
+  destroyChallenge
 }

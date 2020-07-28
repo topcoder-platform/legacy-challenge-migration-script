@@ -104,22 +104,23 @@ async function updateChallenge (challenge) {
  */
 async function deleteChallenge (challengeId) {
   try {
+    await resourceService.deleteAllResourcesForChallenge(challengeId)
     // logger.warn('Delete Challenge From Dynamo')
     await Challenge.delete({ id: challengeId })
     // logger.warn('Delete Challenge From ES')
-    await getESClient().deleteByQuery({
+    return getESClient().deleteByQuery({
       index: config.get('ES.CHALLENGE_ES_INDEX'),
       type: config.get('ES.CHALLENGE_ES_TYPE'),
+      refresh: config.get('ES.ES_REFRESH'),
       body: {
         query: {
-          match: {
+          match_phrase: {
             id: challengeId
           }
         }
       }
     })
     // logger.warn('Delete Challenge Resources')
-    return resourceService.deleteResourcesForChallenge(challengeId)
   } catch (e) {
     throw Error(`updateChallenge Failed ${e}`)
   }
@@ -132,6 +133,7 @@ async function getChallengesFromES (legacyIds) {
   const esQuery = {
     index: config.get('ES.CHALLENGE_ES_INDEX'),
     type: config.get('ES.CHALLENGE_ES_TYPE'),
+    // refresh: config.get('ES.ES_REFRESH'),
     size: _.get(legacyIds, 'length', 1),
     from: 0, // Es Index starts from 0
     body: {
@@ -178,6 +180,7 @@ async function getChallengeFromES (legacyId) {
   const esQuery = {
     index: config.get('ES.CHALLENGE_ES_INDEX'),
     type: config.get('ES.CHALLENGE_ES_TYPE'),
+    // refresh: config.get('ES.ES_REFRESH'),
     size: _.get(legacyId, 'length', 1),
     from: 0, // Es Index starts from 0
     body: {
@@ -401,6 +404,7 @@ async function getChallengeIDsFromV4 (filter, perPage, page = 1) {
   const esQuery = {
     index: 'challengeslisting',
     type: 'challenges',
+    // refresh: config.get('ES.ES_REFRESH'),
     size: perPage,
     from: perPage * (page - 1),
     _source: ['id'],
@@ -447,6 +451,7 @@ async function getChallengeIDsFromV4 (filter, perPage, page = 1) {
  * @returns {Object} { total, ids }
  */
 async function getChallengeIDsFromV5 (filter, perPage, page = 1) {
+  logger.warn(`getChallengeIDsFromV5 ${JSON.stringify(filter)} perPage ${perPage} page ${page}`)
   const boolQuery = []
   const mustQuery = []
   if (filter.startDate) {
@@ -471,8 +476,9 @@ async function getChallengeIDsFromV5 (filter, perPage, page = 1) {
   }
 
   const esQuery = {
-    index: config.CHALLENGE_ES_INDEX,
-    type: config.CHALLENGE_ES_TYPE,
+    index: config.get('ES.CHALLENGE_ES_INDEX'),
+    type: config.get('ES.CHALLENGE_ES_TYPE'),
+    // refresh: config.get('ES.ES_REFRESH'),
     size: perPage,
     from: perPage * (page - 1),
     _source: ['legacyId'],
@@ -516,6 +522,7 @@ async function getChallengeListingFromV4ES (legacyId) {
   const esQuery = {
     index: 'challengeslisting',
     type: 'challenges',
+    // refresh: config.get('ES.ES_REFRESH'),
     size: 1,
     from: 0, // Es Index starts from 0
     // id: legacyId
@@ -554,6 +561,7 @@ async function getChallengeDetailFromV4ES (legacyId) {
   const esQuery = {
     index: 'challengesdetail',
     type: 'challenges',
+    // refresh: config.get('ES.ES_REFRESH'),
     size: 1,
     from: 0, // Es Index starts from 0
     // id: legacyId

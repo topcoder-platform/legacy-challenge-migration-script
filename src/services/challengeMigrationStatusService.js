@@ -37,8 +37,9 @@ const moment = require('moment')
  * @param {Object} {status, challengeId, informixModified, migrationStarted, migrationEnded, errorMessage}
  */
 async function updateProgressRecord (legacyId, migrationRecord) {
+  let esQuery
   try {
-    await getESClient().update({
+    esQuery = {
       index: config.get('ES.MIGRATION_ES_INDEX'),
       type: config.get('ES.MIGRATION_ES_TYPE'),
       refresh: config.get('ES.ES_REFRESH'),
@@ -47,10 +48,41 @@ async function updateProgressRecord (legacyId, migrationRecord) {
         doc: migrationRecord,
         doc_as_upsert: true
       }
-    })
+    }
+    return getESClient().update(esQuery)
   } catch (err) {
-    throw Error(`updateProgressRecord failed ${migrationRecord} ${err}`)
-    // logger.error(`updateProgressRecord failed ${migrationRecord} ${err}`)
+    // logger.error(`updateProgressRecord failed ${JSON.stringify(esQuery)}`)
+    throw Error(`updateProgressRecord failed ${JSON.stringify(migrationRecord)} ${err}`)
+  }
+}
+
+/**
+ * Delete challenge Progress Record
+ *
+ * @param {String} uuid v5 challenge id
+ */
+async function deleteProgressRecord (uuid) {
+  try {
+    // logger.warn('Delete Challenge From Dynamo')
+    // await Challenge.delete({ id: challengeId })
+    const esQuery = {
+      index: config.get('ES.MIGRATION_ES_INDEX'),
+      type: config.get('ES.MIGRATION_ES_TYPE'),
+      refresh: config.get('ES.ES_REFRESH'),
+      body: {
+        query: {
+          match_phrase: {
+            challengeId: uuid
+          }
+        }
+      }
+    }
+    // logger.warn(`Delete Challenge From ES ${JSON.stringify(esQuery)}`)
+    return getESClient().deleteByQuery(esQuery)
+    // logger.warn('Delete Challenge Resources')
+    // return resourceService.deleteResourcesForChallenge(challengeId)
+  } catch (e) {
+    throw Error(`updateChallenge Failed ${e}`)
   }
 }
 
@@ -148,7 +180,7 @@ async function getMigrationProgress (filter, perPage = 100, page = 1) {
 }
 
 async function queueForMigration (legacyId) {
-  return updateProgressRecord(legacyId, { status: config.MIGRATION_PROGRESS_STATUSES.QUEUED })
+  return updateProgressRecord(legacyId, { legacyId, status: config.MIGRATION_PROGRESS_STATUSES.QUEUED })
 }
 
 async function startMigration (legacyId, challengeModifiedDate) {
@@ -180,5 +212,6 @@ module.exports = {
   retryFailedMigrations,
   queueForMigration,
   startMigration,
+  deleteProgressRecord,
   endMigration
 }

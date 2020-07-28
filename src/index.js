@@ -17,7 +17,7 @@ const apiController = require('./controllers/apiController')
 const syncController = require('./controllers/syncController')
 
 process.on('unhandledRejection', (reason, p) => {
-  logger.warn(`Unhandled Rejection at: Promise ${JSON.stringify(p)} reason:, ${JSON.stringify(reason)}`)
+  logger.warn(`Unhandled Rejection at: Promise ${p} ${JSON.stringify(p)} reason: ${reason} ${JSON.stringify(reason)}`)
   // application specific logging, throwing an error, or other logic here
 })
 
@@ -82,6 +82,7 @@ app.post(`/${config.API_VERSION}/challenge-migration/sync`, apiController.queueS
 app.get(`/${config.API_VERSION}/challenge-migration`, apiController.getMigrationStatus)
 app.post(`/${config.API_VERSION}/challenge-migration`, apiController.queueForMigration)
 app.put(`/${config.API_VERSION}/challenge-migration`, apiController.retryFailed)
+app.delete(`/${config.API_VERSION}/challenge-migration/:uuid`, apiController.destroyChallenge)
 
 // app.get(`/${config.API_VERSION}/challenge-migration`, controller.checkStatus)
 

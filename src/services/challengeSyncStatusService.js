@@ -1,38 +1,11 @@
-// challenge service
 const config = require('config')
 const { map, toString } = require('lodash')
 const { getESClient } = require('../util/helper')
 const logger = require('../util/logger')
 const moment = require('moment')
-// const getErrorService = require('./errorService')
-// const errorService = getErrorService()
 
 /**
- * Put progress into
- *
- * @param {Number} legacyId
- * @param {Object} {status, challengeId, informixModified, syncStarted, syncEnded, errorMessage}
- * }
- */
-// async function createProgressRecord (legacyId, syncRecord) {
-//   try {
-//     await getESClient().create({
-//       index: config.get('ES.SYNC_ES_INDEX'),
-//       type: config.get('ES.SYNC_ES_TYPE'),
-//       refresh: config.get('ES.ES_REFRESH'),
-//       id: legacyId,
-//       body: syncRecord
-//     })
-//     // console.log('create', legacyId, syncRecord)
-//     return true
-//   } catch (err) {
-//     throw Error(`createProgressRecord failed ${JSON.stringify(syncRecord)} ${err}`)
-//     // return false
-//   }
-// }
-
-/**
- * Update challenge data to new system
+ * Upsert challenge data to new system
  *
  * @param {Number} legacyId challenge data
  * @param {Object} {status, challengeId, informixModified, syncStarted, syncEnded, errorMessage}
@@ -79,6 +52,7 @@ async function getSyncProgress (filter, perPage = 100, page = 1) {
   const esQuery = {
     index: config.get('ES.SYNC_ES_INDEX'),
     type: config.get('ES.SYNC_ES_TYPE'),
+    // refresh: config.get('ES.ES_REFRESH'),
     size: perPage,
     from: perPage * (page - 1), // Es Index starts from 0
     body: {

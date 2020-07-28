@@ -187,6 +187,7 @@ async function deleteResource (resourceId) {
   const esQuery = {
     index: config.get('ES.RESOURCE_ES_INDEX'),
     type: config.get('ES.RESOURCE_ES_TYPE'),
+    refresh: config.get('ES.ES_REFRESH'),
     id: resourceId
   }
   try {
@@ -199,9 +200,13 @@ async function deleteResource (resourceId) {
 
 async function deleteAllResourcesForChallenge (challengeId) {
   const resources = await getResourcesFromV5API(challengeId)
-  // logger.warn(`Resources ${JSON.stringify(resources)}`)
+  // logger.warn(`~~~ Resources ${JSON.stringify(resources.result)}`)
   try {
-    await Promise.all(resources.result.map(r => deleteResource(r.id)))
+    // return Promise.all(resources.result.map(r => deleteResource(r.id)))
+    for (let i = 0; i < resources.result.length; i += 1) {
+      logger.warn(`Deleting Resource ${JSON.stringify(resources.result[i].id)}`)
+      await deleteResource(resources.result[i].id)
+    }
   } catch (e) {
     logger.error(`delete all error ${e}`)
   }
@@ -215,6 +220,7 @@ async function getResourcesFromV5API (challengeId, roleId) {
   }
   let res = null
   try {
+    // logger.debug(`Getting Resources from v5 ${challengeId} - ${roleId} url ${url}`)
     res = await axios.get(url, { headers: { Authorization: `Bearer ${token}` } })
   } catch (e) {
     logger.error(`get from v5 error ${JSON.stringify(e)}`)

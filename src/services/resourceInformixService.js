@@ -1,7 +1,7 @@
 // const _ = require('lodash')
 // const moment = require('moment')
 const { executeQueryAsync } = require('../util/informixWrapper')
-// const logger = require('../util/logger')
+const logger = require('../util/logger')
 
 /**
  * Get resource from informix
@@ -23,6 +23,7 @@ FROM resource r
         INNER JOIN resource_role_lu rr on r.resource_role_id = rr.resource_role_id 
         INNER JOIN user u on r.user_id = u.user_id
 WHERE r.project_id = ${legacyChallengeId}`
+  // logger.info(`Query for Resources: ${sql}`)
   return execQuery(sql)
 }
 
