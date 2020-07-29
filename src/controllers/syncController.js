@@ -45,7 +45,7 @@ async function syncQueuedChallenges () {
     logger.debug('Sync Complete')
     // return true
   } else {
-    logger.debug('Tried to Sync, Already Running')
+    logger.debug('!!!!!!!!!!!! Tried to Sync, Already Running')
   }
 }
 

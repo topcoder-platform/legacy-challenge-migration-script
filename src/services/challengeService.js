@@ -451,7 +451,7 @@ async function getChallengeIDsFromV4 (filter, perPage, page = 1) {
  * @returns {Object} { total, ids }
  */
 async function getChallengeIDsFromV5 (filter, perPage, page = 1) {
-  logger.warn(`getChallengeIDsFromV5 ${JSON.stringify(filter)} perPage ${perPage} page ${page}`)
+  // logger.warn(`getChallengeIDsFromV5 ${JSON.stringify(filter)} perPage ${perPage} page ${page}`)
   const boolQuery = []
   const mustQuery = []
   if (filter.startDate) {

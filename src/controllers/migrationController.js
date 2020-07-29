@@ -41,7 +41,7 @@ async function migrate () {
     logger.debug(' ### Migration Complete')
     // return true
   } else {
-    logger.debug('Tried to Migrate, Already Running')
+    logger.debug('!!!!!!!!!!! Tried to Migrate, Already Running')
   }
 }
 
