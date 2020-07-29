@@ -84,7 +84,7 @@ async function processResources (legacyId, challengeId, force) {
     const v4Obj = currentV4Array[i]
     // v5 memberId is a string
     // logger.debug(`Find resource in V5 ${JSON.stringify(v4Obj)}`)
-    if (!_.find(currentV5Array.result, { memberId: v4Obj.memberId, roleId: v4Obj.roleId })) {
+    if (!_.find(currentV5Array.result, { memberId: _.toString(v4Obj.memberId), roleId: v4Obj.roleId })) {
       logger.debug(` ++ Resource Not Found, adding ${JSON.stringify({ memberId: v4Obj.memberId, roleId: v4Obj.roleId })}`)
       await resourceService.saveResource(v4Obj)
       resourcesAdded += 1
@@ -93,7 +93,7 @@ async function processResources (legacyId, challengeId, force) {
   for (let i = 0; i < currentV5Array.result.length; i += 1) {
     const v5Obj = currentV5Array.result[i]
     // v4 memberId is a number
-    if (!_.find(currentV4Array, { memberId: v5Obj.memberId, roleId: v5Obj.roleId })) {
+    if (!_.find(currentV4Array, { memberId: _.toString(v5Obj.memberId), roleId: v5Obj.roleId })) {
       logger.debug(` -- Resource Found, removing ${JSON.stringify({ memberId: v5Obj.memberId, roleId: v5Obj.roleId })}`)
       await resourceService.deleteResource(v5Obj.id)
       resourcesRemoved += 1
