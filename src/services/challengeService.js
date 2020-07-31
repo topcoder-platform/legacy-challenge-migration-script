@@ -556,10 +556,11 @@ async function buildV5Challenge (legacyId, challengeListing, challengeDetails) {
   const newChallenge = {
     id: null, // this is removed from here and created in the save function
     legacyId,
-    trackId: v5TrackProperties.trackId,
+    status: challengeListing.status,
     track: v5TrackProperties.track,
-    typeId: v5TrackProperties.typeId,
     type: v5TrackProperties.type,
+    trackId: v5TrackProperties.trackId,
+    typeId: v5TrackProperties.typeId,
     legacy: {
       track: challengeListing.track,
       subTrack: challengeListing.subTrack,
@@ -571,18 +572,17 @@ async function buildV5Challenge (legacyId, challengeListing, challengeDetails) {
     },
     task: {
       isTask: challengeListing.isTask || false,
-      isAssigned: (challengeListing.submitters && challengeListing.submitters.length >= 1),
-      memberId: (challengeListing.submitters && challengeListing.submitters.length === 1) ? _.toString(challengeListing.submitters[0]) : ''
+      isAssigned: (challengeListing.submitterIds && challengeListing.submitterIds.length >= 1) || false,
+      memberId: (challengeListing.submitterIds && challengeListing.submitterIds.length === 1) ? _.toString(challengeListing.submitterIds[0]) : ''
     },
     name: challengeListing.challengeTitle,
     description: detailRequirement || '',
     descriptionFormat: 'HTML',
     projectId: connectProjectId,
-    status: challengeListing.status,
     created: moment(challengeListing.createdAt).utc().format(),
-    createdBy: challengeInfoFromIfx.created_by,
+    createdBy: challengeInfoFromIfx ? challengeInfoFromIfx.created_by : 'v5migration',
     updated: moment(challengeListing.updatedAt).utc().format(),
-    updatedBy: challengeInfoFromIfx.updated_by,
+    updatedBy: challengeInfoFromIfx ? challengeInfoFromIfx.updated_by : 'v5migration',
     timelineTemplateId: await mapTimelineTemplateId(v5TrackProperties.trackId, v5TrackProperties.typeId),
     phases: [],
     terms: [],
