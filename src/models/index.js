@@ -34,5 +34,5 @@ module.exports = {
   ResourceRole: dynamoose.model('ResourceRole', require('./resource-role')),
   ChallengeType: dynamoose.model('ChallengeType', require('./ChallengeType')),
   ChallengeTrack: dynamoose.model('ChallengeTrack', require('./ChallengeTrack')),
-  ChallengeTypeTimelineTemplate: dynamoose.model('ChallengeTypeTimelineTemplate', require('./challenge-type-timeline-template'))
+  ChallengeTimelineTemplate: dynamoose.model('ChallengeTimelineTemplate', require('./ChallengeTimelineTemplate'))
 }

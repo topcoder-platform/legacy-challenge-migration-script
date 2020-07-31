@@ -5,7 +5,7 @@ const request = require('superagent')
 const moment = require('moment')
 const axios = require('axios')
 const _ = require('lodash')
-const { Challenge, ChallengeType, ChallengeTypeTimelineTemplate } = require('../models')
+const { Challenge, ChallengeType, ChallengeTimelineTemplate } = require('../models')
 const logger = require('../util/logger')
 const helper = require('../util/helper')
 const { getESClient, getV4ESClient, getM2MToken } = require('../util/helper')
@@ -19,8 +19,6 @@ const resourceService = require('./resourceService')
 const translationService = require('./translationService')
 
 let allV5Terms
-// let challengeTypeMapping
-let challengeTimelineMapping
 
 const groupsUUIDCache = new HashMap()
 const challengePropertiesToOmitFromDynamo = [
@@ -256,24 +254,6 @@ async function getChallengeTypesFromDynamo () {
 }
 
 /**
- * Get challenge timelines from dynamo DB.
- *
- * @returns {Array} the challenge timelines
- */
-async function getChallengeTimelinesFromDynamo () {
-  const result = await ChallengeTypeTimelineTemplate.scan().exec()
-  // console.log('getChallengeTimelinesFromDynamo Result', result)
-  return result
-}
-
-async function cacheTypesAndTimelines () {
-  const challengeTypes = await getChallengeTypesFromDynamo()
-  // challengeTypeMapping = createChallengeTypeMapping(challengeTypes)
-  const challengeTimelines = await getChallengeTimelinesFromDynamo()
-  challengeTimelineMapping = createChallengeTimelineMapping(challengeTimelines, challengeTypes)
-}
-
-/**
  * getChallengeIDsFromV4
  * @param {Object} filter {startDate, endDate, legacyId, status}
  * @param {Number} perPage
@@ -425,7 +405,6 @@ async function getChallengeListingFromV4ES (legacyId) {
   const esQuery = {
     index: 'challengeslisting',
     type: 'challenges',
-    // refresh: config.get('ES.ES_REFRESH'),
     size: 1,
     from: 0, // Es Index starts from 0
     // id: legacyId
@@ -464,7 +443,6 @@ async function getChallengeDetailFromV4ES (legacyId) {
   const esQuery = {
     index: 'challengesdetail',
     type: 'challenges',
-    // refresh: config.get('ES.ES_REFRESH'),
     size: 1,
     from: 0, // Es Index starts from 0
     // id: legacyId
@@ -498,6 +476,19 @@ async function getChallengeDetailFromV4ES (legacyId) {
   }
   return {}
 }
+
+/**
+ * Convert track and type to a timelineTemplateId
+ * @param {String} trackId
+ * @param {String} typeId
+ */
+async function mapTimelineTemplateId (trackId, typeId) {
+  const templates = await ChallengeTimelineTemplate.scan('trackId').contains(trackId).exec()
+  const template = _.find(templates, { typeId })
+  if (template) return template.id
+  throw new Error(`Timeline Template Not found for trackId: ${trackId} typeId: ${typeId}`)
+}
+
 /**
  * Builds a V5 Challenge from V4 ES & Informix
  * @param {Number} legacyId
@@ -563,7 +554,7 @@ async function buildV5Challenge (legacyId, challengeListing, challengeDetails) {
     challengeListing.isTask || false)
 
   const newChallenge = {
-    // id: uuid(), //this is removed from here and created in the save function
+    id: null, // this is removed from here and created in the save function
     legacyId,
     trackId: v5TrackProperties.trackId,
     track: v5TrackProperties.track,
@@ -571,17 +562,17 @@ async function buildV5Challenge (legacyId, challengeListing, challengeDetails) {
     type: v5TrackProperties.type,
     legacy: {
       track: challengeListing.track,
+      subTrack: challengeListing.subTrack,
       forumId: challengeListing.forumId,
       directProjectId: challengeListing.projectId,
       reviewType: challengeListing.reviewType || 'COMMUNITY',
       screeningScorecardId: challengeListing.screeningScorecardId,
-      reviewScorecardId: challengeListing.reviewScorecardId,
-      isTask: challengeListing.isTask
+      reviewScorecardId: challengeListing.reviewScorecardId
     },
     task: {
       isTask: challengeListing.isTask || false,
-      isAssigned: false, // TODO :: find if task is assigned
-      memberId: '' // TODO :: Get assigned member
+      isAssigned: (challengeListing.submitters && challengeListing.submitters.length >= 1),
+      memberId: (challengeListing.submitters && challengeListing.submitters.length === 1) ? _.toString(challengeListing.submitters[0]) : ''
     },
     name: challengeListing.challengeTitle,
     description: detailRequirement || '',
@@ -592,19 +583,13 @@ async function buildV5Challenge (legacyId, challengeListing, challengeDetails) {
     createdBy: challengeInfoFromIfx.created_by,
     updated: moment(challengeListing.updatedAt).utc().format(),
     updatedBy: challengeInfoFromIfx.updated_by,
-    timelineTemplateId: _.get(challengeTimelineMapping, challengeInfoFromIfx.type_id, null), // _.get(challengeTimelineMapping, `[${challengeTypeMapping[challengeInfoFromIfx.type_id]}].id`, null),
+    timelineTemplateId: await mapTimelineTemplateId(v5TrackProperties.trackId, v5TrackProperties.typeId),
     phases: [],
     terms: [],
     startDate: moment().utc().format(),
     numOfSubmissions: _.toNumber(challengeListing.numberOfSubmissions),
     numOfRegistrants: _.toNumber(challengeListing.numberOfRegistrants)
   }
-
-  if (newChallenge.legacy.isTask) {
-    newChallenge.typeId = config.TASK_TYPE_IDS[newChallenge.legacy.track.toUpperCase()]
-  }
-
-  // console.log('CHALLENGE DESCRIPTION', newChallenge.description)
 
   const prizeSet = { type: 'placement', description: 'Challenge Prizes' }
   prizeSet.prizes = _.map(challengeListing.prize, e => ({ value: e, type: 'USD' }))
@@ -656,6 +641,7 @@ async function buildV5Challenge (legacyId, challengeListing, challengeDetails) {
   const phases = _.map(challengeListing.phases, phase => {
     // console.log(phase.scheduled_start_time, Date.parse(phase.scheduled_start_time), phase.duration, (phase.duration / 1000 / 60 / 60))
     const v5duration = _.toInteger(Number(phase.duration) / 1000)
+    // console.log('phase', phase)
     const newPhase = {
       id: uuid(),
       name: phase.type,
@@ -815,7 +801,7 @@ module.exports = {
   save,
   buildV5Challenge,
   migrateChallenge,
-  cacheTypesAndTimelines,
+  // cacheTypesAndTimelines,
   getChallengeFromES,
   getChallengesFromES,
   getChallengeIDsFromV4,
