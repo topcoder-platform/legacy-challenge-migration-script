@@ -135,7 +135,7 @@ async function destroyChallenge (req, res) {
 async function convertV5TrackToV4 (req, res) {
   let trackId = req.query.trackId || ''
   let typeId = req.query.typeId || ''
-  const tags = req.query.tags || ''
+  const tags = req.query.tags || []
 
   if (!trackId) {
     const track = req.query.track || ''
