@@ -16,7 +16,7 @@ async function syncLegacyId (legacyId, force) {
     const v4Detail = await challengeService.getChallengeDetailFromV4ES(legacyId)
     // logger.warn(`v4Listing ${JSON.stringify(v4Listing)}`)
     try {
-      await challengeSyncStatusService.startSync(legacyId, v4Listing.version, v4Detail.version, v5.legacy.informixModified)
+      await challengeSyncStatusService.startSync(legacyId, v4Listing.version, v4Detail.version)
       const { resourcesAdded, resourcesRemoved } = await processResources(legacyId, v5.id, force === true)
       await processChallenge(legacyId, v4Listing.data, v4Detail.data)
       await challengeSyncStatusService.endSync(legacyId, v5.id, config.MIGRATION_PROGRESS_STATUSES.SUCCESS, `Resources: ${resourcesAdded} added, ${resourcesRemoved} removed`)

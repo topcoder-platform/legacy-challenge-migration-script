@@ -8,7 +8,7 @@ const moment = require('moment')
  * Upsert challenge data to new system
  *
  * @param {Number} legacyId challenge data
- * @param {Object} {status, challengeId, informixModified, syncStarted, syncEnded, errorMessage}
+ * @param {Object} {status, challengeId, syncStarted, syncEnded, errorMessage}
  */
 async function updateProgressRecord (legacyId, syncRecord) {
   try {
@@ -87,7 +87,6 @@ async function getSyncProgress (filter, perPage = 100, page = 1) {
     items: map(docs.hits.hits, item => ({
       legacyId: item._id,
       status: item._source.status,
-      informixModified: item._source.informixModified,
       v4ListingVersion: item._source.v4ListingVersion,
       v4DetailVersion: item._source.v4DetailVersion,
       syncStarted: item._source.syncStarted,
@@ -107,7 +106,6 @@ async function startSync (legacyId, v4ListingVersion, v4DetailVersion, challenge
   const syncRecord = {
     legacyId,
     status: config.MIGRATION_PROGRESS_STATUSES.IN_PROGRESS,
-    informixModified: moment(challengeModifiedDate).utc().format(),
     v4ListingVersion,
     v4DetailVersion,
     syncStarted: moment()

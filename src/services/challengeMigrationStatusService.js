@@ -8,33 +8,10 @@ const moment = require('moment')
 // const errorService = getErrorService()
 
 /**
- * Put progress into
- *
- * @param {Number} legacyId
- * @param {Object} {status, challengeId, informixModified, migrationStarted, migrationEnded, errorMessage}
- * }
- */
-// async function createProgressRecord (legacyId, migrationRecord) {
-//   try {
-//     await getESClient().create({
-//       index: config.get('ES.MIGRATION_ES_INDEX'),
-//       type: config.get('ES.MIGRATION_ES_TYPE'),
-//       refresh: config.get('ES.ES_REFRESH'),
-//       id: legacyId,
-//       body: migrationRecord
-//     })
-//     return true
-//   } catch (err) {
-//     throw Error(`createProgressRecord failed ${migrationRecord} ${err}`)
-//     // return false
-//   }
-// }
-
-/**
  * Update challenge data to new system
  *
  * @param {Number} legacyId challenge data
- * @param {Object} {status, challengeId, informixModified, migrationStarted, migrationEnded, errorMessage}
+ * @param {Object} {status, challengeId, migrationStarted, migrationEnded, errorMessage}
  */
 async function updateProgressRecord (legacyId, migrationRecord) {
   let esQuery
@@ -170,7 +147,6 @@ async function getMigrationProgress (filter, perPage = 100, page = 1) {
       legacyId: item._id,
       challengeId: item._source.challengeId,
       status: item._source.status,
-      informixModified: item._source.informixModified,
       migrationStarted: item._source.migrationStarted,
       migrationEnded: item._source.migrationEnded,
       migrationDuration: (moment(item._source.migrationEnded).format('x') - moment(item._source.migrationStarted).format('x')),
@@ -187,7 +163,6 @@ async function startMigration (legacyId, challengeModifiedDate) {
   const migrationRecord = {
     legacyId,
     status: config.MIGRATION_PROGRESS_STATUSES.IN_PROGRESS,
-    informixModified: moment(challengeModifiedDate).utc().format(),
     migrationStarted: moment()
   }
   return updateProgressRecord(legacyId, migrationRecord)

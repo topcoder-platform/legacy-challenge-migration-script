@@ -129,11 +129,63 @@ async function destroyChallenge (req, res) {
   }
 }
 
+async function convertV5TrackToV4 (req, res) {
+  let trackId = req.query.trackId || ''
+  let typeId = req.query.typeId || ''
+  const tags = req.query.tags || ''
+
+  if (!trackId) {
+    const track = req.query.track || ''
+    // api convert track name to trackId
+    if (track) {
+      // api convert type name to typeId
+      trackId = 'PLACEHOLDER'
+      if (!trackId) {
+        return res.status(400).json({ message: `Track ID not passed, and Track ${track} not found` })
+      }
+    } else {
+      return res.status(400).json({ message: 'Must pass trackId or track name' })
+    }
+  }
+
+  if (!typeId) {
+    const type = req.query.type || ''
+    // api convert track name to trackId
+    if (type) {
+      // api convert type name to typeId
+      typeId = 'PLACEHOLDER'
+      if (!typeId) {
+        return res.status(400).json({ message: `Type ID not passed, and Track ${type} not found` })
+      }
+    } else {
+      return res.status(400).json({ message: 'Must pass typeId or type name' })
+    }
+  }
+
+  logger.debug(`Converting track ${trackId}, type ${typeId}, with tags ${tags}`)
+  return res.json(migrationService.convertV5TrackToV4(trackId, typeId, tags))
+}
+
+async function convertV4TrackToV5 (req, res) {
+  const track = req.query.track || ''
+  const subTrack = req.query.subTrack || ''
+  const isTask = req.query.isTask || false
+
+  if (!track || !subTrack) {
+    return res.status(400).json({ message: 'Must pass ?track=&subTrack=&isTask' })
+  }
+
+  logger.debug(`Converting track ${track}, type ${subTrack}, with isTask = ${(isTask === true) ? 'true' : 'false'}`)
+  return res.json(migrationService.convertV4TrackToV5(track, subTrack, isTask))
+}
+
 module.exports = {
   queueForMigration,
   getMigrationStatus,
   retryFailed,
   queueSync,
   getSyncStatus,
-  destroyChallenge
+  destroyChallenge,
+  convertV5TrackToV4,
+  convertV4TrackToV5
 }

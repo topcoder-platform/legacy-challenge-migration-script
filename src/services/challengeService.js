@@ -10,6 +10,7 @@ const logger = require('../util/logger')
 const helper = require('../util/helper')
 const { getESClient, getV4ESClient, getM2MToken } = require('../util/helper')
 const util = require('util')
+const migrationService = require('./migrationService')
 // const getErrorService = require('./errorService')
 // const errorService = getErrorService()
 const HashMap = require('hashmap')
@@ -21,6 +22,15 @@ let challengeTypeMapping
 let challengeTimelineMapping
 
 const groupsUUIDCache = new HashMap()
+const challengePropertiesToOmitFromDynamo = [
+  'numOfSubmissions',
+  'numOfRegistrants',
+  'registrationStartDate',
+  'registrationEndDate',
+  'currentPhaseNames',
+  'submissionStartDate',
+  'submissionEndDate'
+]
 
 async function save (challenge) {
   if (challenge.id) {
@@ -36,15 +46,7 @@ async function save (challenge) {
 async function createChallenge (challenge) {
   challenge.id = uuid()
   // numOfSubmissions and numOfRegistrants are not stored in dynamo, they're calclated by the ES processor
-  const dynamoChallenge = new Challenge(_.omit(challenge, [
-    'numOfSubmissions',
-    'numOfRegistrants',
-    'registrationStartDate',
-    'registrationEndDate',
-    'currentPhaseNames',
-    'submissionStartDate',
-    'submissionEndDate'
-  ]))
+  const dynamoChallenge = new Challenge(_.omit(challenge, challengePropertiesToOmitFromDynamo))
 
   try {
     await dynamoChallenge.save()
@@ -71,15 +73,7 @@ async function createChallenge (challenge) {
 async function updateChallenge (challenge) {
   try {
     // numOfSubmissions and numOfRegistrants are not stored in dynamo, they're calclated by the ES processor
-    await Challenge.update({ id: challenge.id }, _.omit(challenge, [
-      'numOfSubmissions',
-      'numOfRegistrants',
-      'registrationStartDate',
-      'registrationEndDate',
-      'currentPhaseNames',
-      'submissionStartDate',
-      'submissionEndDate'
-    ]))
+    await Challenge.update({ id: challenge.id }, _.omit(challenge, challengePropertiesToOmitFromDynamo))
     await getESClient().update({
       index: config.get('ES.CHALLENGE_ES_INDEX'),
       type: config.get('ES.CHALLENGE_ES_TYPE'),
@@ -165,7 +159,6 @@ async function getChallengesFromES (legacyIds) {
   return _.map(docs.hits.hits, item => ({
     legacyId: item._source.legacyId,
     legacy: {
-      informixModified: _.get(item._source, 'legacy.informixModified'),
       screeningScorecardId: _.get(item._source, 'legacy.screeningScorecardId'),
       reviewScorecardId: _.get(item._source, 'legacy.reviewScorecardId')
     },
@@ -212,7 +205,6 @@ async function getChallengeFromES (legacyId) {
   return _.map(docs.hits.hits, item => ({
     legacyId: item._source.legacyId,
     legacy: {
-      informixModified: _.get(item._source, 'legacy.informixModified'),
       screeningScorecardId: _.get(item._source, 'legacy.screeningScorecardId'),
       reviewScorecardId: _.get(item._source, 'legacy.reviewScorecardId')
     },
@@ -654,20 +646,29 @@ async function buildV5Challenge (legacyId, challengeListing, challengeDetails) {
     throw Error(`Challenge Type ID ${challengeInfoFromIfx.type_id} not found for legacyId ${legacyId}`)
   }
 
+  const v5TrackProperties = migrationService.convertV4TrackToV5(
+    challengeListing.track,
+    challengeListing.subTrack,
+    challengeListing.isTask || false)
+
   const newChallenge = {
     // id: uuid(), //this is removed from here and created in the save function
     legacyId,
-    typeId: challengeTypeMapping[challengeInfoFromIfx.type_id],
+    trackId: v5TrackProperties.trackId,
+    typeId: v5TrackProperties.typeId,
     legacy: {
       track: challengeListing.track,
       forumId: challengeListing.forumId,
-      // confidentialityType: challenge.confidentiality_type,
       directProjectId: challengeListing.projectId,
-      informixModified: moment(challengeListing.updatedAt).utc().format(),
       reviewType: challengeListing.reviewType || 'COMMUNITY',
       screeningScorecardId: challengeListing.screeningScorecardId,
       reviewScorecardId: challengeListing.reviewScorecardId,
       isTask: challengeListing.isTask
+    },
+    task: {
+      isTask: challengeListing.isTask || false,
+      isAssigned: false, // TODO :: find if task is assigned
+      memberId: '' // TODO :: Get assigned member
     },
     name: challengeListing.challengeTitle,
     description: detailRequirement || '',
@@ -706,7 +707,7 @@ async function buildV5Challenge (legacyId, challengeListing, challengeDetails) {
     prizeSets.push(prizeSet)
   }
 
-  const tags = _.uniq(_.compact(_.concat(challengeListing.technologies, challengeListing.platforms)))
+  const tags = _.uniq(_.compact(_.concat(challengeListing.technologies, challengeListing.platforms, v5TrackProperties.tags)))
 
   const winners = _.map(challengeListing.winners, w => {
     return {
