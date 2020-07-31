@@ -5,6 +5,7 @@ const moment = require('moment')
 const syncController = require('./syncController')
 const challengeService = require('../services/challengeService')
 const migrationService = require('../services/migrationService')
+const translationService = require('../services/translationService')
 const challengeMigrationStatusService = require('../services/challengeMigrationStatusService')
 const challengeSyncStatusService = require('../services/challengeSyncStatusService')
 
@@ -164,7 +165,7 @@ async function convertV5TrackToV4 (req, res) {
   }
 
   logger.debug(`Converting track ${trackId}, type ${typeId}, with tags ${tags}`)
-  return res.json(migrationService.convertV5TrackToV4(trackId, typeId, tags))
+  return res.json(translationService.convertV5TrackToV4(trackId, typeId, tags))
 }
 
 async function convertV4TrackToV5 (req, res) {
@@ -177,7 +178,7 @@ async function convertV4TrackToV5 (req, res) {
   }
 
   logger.debug(`Converting track ${track}, type ${subTrack}, with isTask = ${(isTask === true) ? 'true' : 'false'}`)
-  return res.json(migrationService.convertV4TrackToV5(track, subTrack, isTask))
+  return res.json(translationService.convertV4TrackToV5(track, subTrack, isTask))
 }
 
 module.exports = {

@@ -10,12 +10,13 @@ const logger = require('../util/logger')
 const helper = require('../util/helper')
 const { getESClient, getV4ESClient, getM2MToken } = require('../util/helper')
 // const util = require('util')
-const migrationService = require('./migrationService')
+// const MigrationService = require('./migrationService')
 // const getErrorService = require('./errorService')
 // const errorService = getErrorService()
 const HashMap = require('hashmap')
 const challengeInformixService = require('./challengeInformixService')
 const resourceService = require('./resourceService')
+const translationService = require('./translationService')
 
 let allV5Terms
 // let challengeTypeMapping
@@ -214,98 +215,6 @@ async function getChallengeFromES (legacyId) {
   }))
 }
 
-// /**
-//  * Put challenge type data to new system
-//  *
-//  * @param {Object} challengeType new challenge type data
-//  */
-// async function saveChallengeType (challengeType) {
-//   const newChallengeType = new ChallengeType(challengeType)
-//   await newChallengeType.save(async (err) => {
-//     if (err) {
-//       logger.debug('saveChallengeType fail ' + util.inspect(err))
-//       // errorService.put({ challengeType: challengeType.name, type: 'dynamodb', message: err.message })
-//     } else {
-//       // logger.debug('success ' + challengeType.name)
-//       try {
-//         await getESClient().create({
-//           index: config.get('ES.CHALLENGE_TYPE_ES_INDEX'),
-//           type: config.get('ES.CHALLENGE_TYPE_ES_TYPE'),
-//           refresh: config.get('ES.ES_REFRESH'),
-//           id: challengeType.id,
-//           body: challengeType
-//         })
-//       } catch (err) {
-//         logger.error('Challenge ES Write Fail ' + JSON.stringify(err.message))
-//         // errorService.put({ challengeType: challengeType.name, type: 'es', message: err.message })
-//       }
-//     }
-//   })
-// }
-
-// /**
-//  * Save challenge types to dynamodb.
-//  *
-//  * @param {Array} challengeTypes the data
-//  * @returns {undefined}
-//  */
-// async function saveChallengeTypes (challengeTypes) {
-//   await Promise.all(challengeTypes.map(ct => saveChallengeType(ct)))
-// }
-
-// /**
-//  * Create challenge type mapping from challenge types.
-//  *
-//  * @param {Array} challengeTypes a list of challenge types
-//  * @returns {Object} the mapping
-//  */
-// function createChallengeTypeMapping (challengeTypes) {
-//   const challengeTypeMapping = _.reduce(challengeTypes, (mapping, challengeType) => {
-//     if (!_.isUndefined(challengeType.legacyId)) {
-//       mapping[challengeType.legacyId] = challengeType.id
-//     }
-//     return mapping
-//   }, {})
-//   return challengeTypeMapping
-// }
-
-// /**
-//  * Get challenge types from challenge v4 API.
-//  *
-//  * @returns {Array} the challenge types
-//  */
-// async function getChallengeTypes () {
-//   const res = await request.get(config.CHALLENGE_TYPE_API_URL)
-//   const challengeTypes = _.get(res.body, 'result.content')
-//   const existingChallengeTypes = await getChallengeTypesFromDynamo()
-//   const challengeTypeMapping = createChallengeTypeMapping(existingChallengeTypes)
-//   return _.map(
-//     _.filter(challengeTypes, (challengeType) => !challengeTypeMapping[challengeType.id]),
-//     (challengeType) => {
-//       return {
-//         id: uuid(),
-//         legacyId: challengeType.id,
-//         abbreviation: challengeType.subTrack || 'Other', // TODO: Fix this
-//         ..._.omit(challengeType, ['id', 'type', 'subTrack'])
-//       }
-//     }
-//   )
-// }
-
-/**
- * Get challenge timeline from challenge v5 API.
- *
- * @param {String} typeId challenge type id
- * @returns {Object} the challenge timeline
- */
-// async function getChallengeTimeline (typeId) {
-//   const url = `${config.CHALLENGE_TIMELINE_API_URL}?typeId=${typeId}`
-//   const res = await request.get(url)
-//   const timelineTemplate = _.get(res, 'body[0]', 'N/A')
-
-//   return timelineTemplate
-// }
-
 /**
  * Get project from v5 API.
  *
@@ -345,16 +254,6 @@ async function getChallengeTypesFromDynamo () {
   const result = await ChallengeType.scan().exec()
   return result
 }
-
-// /**
-//  * Get challenge tracks from dynamo DB.
-//  *
-//  * @returns {Array} the challenge types
-//  */
-// async function getChallengeTracksFromDynamo () {
-//   const result = await ChallengeTrack.scan().exec()
-//   return result
-// }
 
 /**
  * Get challenge timelines from dynamo DB.
@@ -658,7 +557,7 @@ async function buildV5Challenge (legacyId, challengeListing, challengeDetails) {
   //   throw Error(`Challenge Type ID ${challengeInfoFromIfx.type_id} not found for legacyId ${legacyId}`)
   // }
 
-  const v5TrackProperties = migrationService.convertV4TrackToV5(
+  const v5TrackProperties = translationService.convertV4TrackToV5(
     challengeListing.track,
     challengeListing.subTrack,
     challengeListing.isTask || false)
@@ -667,7 +566,9 @@ async function buildV5Challenge (legacyId, challengeListing, challengeDetails) {
     // id: uuid(), //this is removed from here and created in the save function
     legacyId,
     trackId: v5TrackProperties.trackId,
+    track: v5TrackProperties.track,
     typeId: v5TrackProperties.typeId,
+    type: v5TrackProperties.type,
     legacy: {
       track: challengeListing.track,
       forumId: challengeListing.forumId,
