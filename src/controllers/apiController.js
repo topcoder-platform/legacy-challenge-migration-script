@@ -8,6 +8,7 @@ const migrationService = require('../services/migrationService')
 const translationService = require('../services/translationService')
 const challengeMigrationStatusService = require('../services/challengeMigrationStatusService')
 const challengeSyncStatusService = require('../services/challengeSyncStatusService')
+const convertionMappingHelper = require('../util/conversionMappings')
 
 async function queueForMigration (req, res) {
   const startDate = req.query.startDate || null
@@ -141,7 +142,7 @@ async function convertV5TrackToV4 (req, res) {
     // api convert track name to trackId
     if (track) {
       // api convert type name to typeId
-      trackId = 'PLACEHOLDER'
+      trackId = convertionMappingHelper.V5_TRACK_NAMES_TO_IDS[track.toUpperCase()]
       if (!trackId) {
         return res.status(400).json({ message: `Track ID not passed, and Track ${track} not found` })
       }
@@ -155,7 +156,7 @@ async function convertV5TrackToV4 (req, res) {
     // api convert track name to trackId
     if (type) {
       // api convert type name to typeId
-      typeId = 'PLACEHOLDER'
+      typeId = convertionMappingHelper.V5_TYPE_NAMES_TO_IDS[type.toUpperCase()]
       if (!typeId) {
         return res.status(400).json({ message: `Type ID not passed, and Track ${type} not found` })
       }
