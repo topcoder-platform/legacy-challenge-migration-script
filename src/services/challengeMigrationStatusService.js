@@ -100,6 +100,7 @@ async function getMigrationProgress (filter, perPage = 100, page = 1) {
   if (filter.challengeId) boolQuery.push({ match: { challengeId: filter.challengeId } })
   if (filter.legacyId) boolQuery.push({ match: { _id: filter.legacyId } })
   if (filter.status) boolQuery.push({ match: { status: filter.status } })
+  // console.log(boolQuery)
   if (boolQuery.length > 0) {
     mustQuery.push({
       bool: {

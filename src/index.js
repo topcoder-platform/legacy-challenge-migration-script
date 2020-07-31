@@ -48,7 +48,7 @@ process.on('unhandledRejection', (reason, p) => {
 // }
 
 // syncController.syncQueuedChallenges()
-// migrationController.migrate()
+migrationController.migrate()
 
 // logger.debug([
 //   `migrationInterval: ${config.SCHEDULE_INTERVAL}`,

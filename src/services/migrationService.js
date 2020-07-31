@@ -5,13 +5,13 @@ const challengeService = require('./challengeService')
 const challengeMigrationStatusService = require('./challengeMigrationStatusService')
 const resourceService = require('./resourceService')
 
-async function processChallenge (legacyId, forceMigrate = false) {
+async function processChallenge (legacyId) {
   const legacyChallengeDetailFromV4 = await challengeService.getChallengeListingFromV4ES(legacyId)
   const legacyChallengeLastModified = legacyChallengeDetailFromV4.data.updatedAt || null
 
   let v5ChallengeId = null
   try {
-    await challengeMigrationStatusService.startMigration(legacyId, legacyChallengeLastModified)
+    // await challengeMigrationStatusService.startMigration(legacyId, legacyChallengeLastModified)
     logger.debug(`${legacyId} - Start Challenge Migration`)
     v5ChallengeId = await challengeService.migrateChallenge(legacyId)
     logger.debug(`${legacyId} - Start Resource Migration`)
@@ -20,12 +20,12 @@ async function processChallenge (legacyId, forceMigrate = false) {
     await challengeMigrationStatusService.endMigration(legacyId, v5ChallengeId, config.MIGRATION_PROGRESS_STATUSES.SUCCESS)
     return { challengeId: v5ChallengeId, resourcesMigrated: resourcesMigrated }
   } catch (e) {
-    logger.error(`Migration Failed for ${legacyId} ${JSON.stringify(e)}`)
+    logger.error(`Migration Failed for ${legacyId} ${e} ${JSON.stringify(e)}`)
 
     // TODO : delete challenge id
     // TODO : delete resources for challenge id
 
-    return challengeMigrationStatusService.endMigration(legacyId, v5ChallengeId, config.MIGRATION_PROGRESS_STATUSES.FAILED, e)
+    // return challengeMigrationStatusService.endMigration(legacyId, v5ChallengeId, config.MIGRATION_PROGRESS_STATUSES.FAILED, e)
   }
 }
 
@@ -91,11 +91,11 @@ function convertV5TrackToV4 (v5TrackId, v5TypeId, v5Tags) {
 }
 
 function convertV4TrackToV5 (v4Track, v4SubTrack, v4IsTask) {
-  const trackId = ''
-  const typeId = ''
-  const track = ''
-  const type = ''
-  const tags = []
+  const trackId = 'test'
+  const typeId = 'test'
+  const track = 'test'
+  const type = 'test'
+  const tags = ['test']
   // TODO: translation here
   logger.error('migrationService.convertV4TrackToV5 NOT IMPLEMENTED')
   return { trackId, typeId, track, type, tags }

@@ -21,7 +21,8 @@ async function queueForMigration (req, res) {
   let loop = true
   while (loop) {
     const { total, ids: legacyIds } = await challengeService.getChallengeIDsFromV4({ startDate, endDate, legacyId }, 1000, page)
-    if (legacyIds.length > 0) {
+    // console.log(legacyIds)
+    if (legacyIds && legacyIds.length > 0) {
       logger.info(`Queueing ${legacyIds.length} of ${total} challenges for migration`)
       for (let i = 0; i < legacyIds.length; i += 1) {
         // console.log(legacyIds)

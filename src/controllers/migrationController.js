@@ -1,7 +1,7 @@
 const config = require('config')
 const logger = require('../util/logger')
 const challengeMigrationStatusService = require('../services/challengeMigrationStatusService')
-const challengeService = require('../services/challengeService')
+// const challengeService = require('../services/challengeService')
 const migrationService = require('../services/migrationService')
 
 let running = false
@@ -16,7 +16,7 @@ async function migrate () {
     running = true
     let page = 1
     const perPage = 10
-    await challengeService.cacheTypesAndTimelines()
+    // await challengeService.cacheTypesAndTimelines()
     await migrationService.processResourceRoles()
 
     while (running) {
