@@ -16,7 +16,7 @@ async function syncQueuedChallenges () {
     let page = 1
     const perPage = 100
 
-    await challengeService.cacheTypesAndTimelines()
+    // await challengeService.cacheTypesAndTimelines()
     await migrationService.processResourceRoles()
 
     while (running) {
