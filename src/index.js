@@ -21,34 +21,34 @@ process.on('unhandledRejection', (reason, p) => {
   // application specific logging, throwing an error, or other logic here
 })
 
-// if (config.MIGRATION_ENABLED === true) {
-//   const migrationRule = new schedule.RecurrenceRule()
-//   migrationRule.minute = new schedule.Range(0, 59, config.MIGRATION_INTERVAL)
-//   schedule.scheduleJob(migrationRule, migrationController.migrate)
-//   logger.info(`The migration is scheduled to be executed every ${config.MIGRATION_INTERVAL} minutes`)
-// } else {
-//   logger.info(`Migration Disabled by Config: ${config.MIGRATION_ENABLED}`)
-// }
-// if (config.AUTO_SYNC_ENABLED === true) {
-//   const syncQueueRule = new schedule.RecurrenceRule()
-//   syncQueueRule.minute = new schedule.Range(0, 59, config.SYNC_QUEUE_INTERVAL)
-//   schedule.scheduleJob(syncQueueRule, syncController.autoQueueChallenges)
-//   logger.info(`The sync queue is scheduled to be executed every ${config.SYNC_QUEUE_INTERVAL} minutes`)
-// } else {
-//   logger.info(`Auto Sync Disabled by Config: ${config.AUTO_SYNC_ENABLED}`)
-// }
+if (config.MIGRATION_ENABLED === true) {
+  const migrationRule = new schedule.RecurrenceRule()
+  migrationRule.minute = new schedule.Range(0, 59, config.MIGRATION_INTERVAL)
+  schedule.scheduleJob(migrationRule, migrationController.migrate)
+  logger.info(`The migration is scheduled to be executed every ${config.MIGRATION_INTERVAL} minutes`)
+} else {
+  logger.info(`Migration Disabled by Config: ${config.MIGRATION_ENABLED}`)
+}
+if (config.AUTO_SYNC_ENABLED === true) {
+  const syncQueueRule = new schedule.RecurrenceRule()
+  syncQueueRule.minute = new schedule.Range(0, 59, config.SYNC_QUEUE_INTERVAL)
+  schedule.scheduleJob(syncQueueRule, syncController.autoQueueChallenges)
+  logger.info(`The sync queue is scheduled to be executed every ${config.SYNC_QUEUE_INTERVAL} minutes`)
+} else {
+  logger.info(`Auto Sync Disabled by Config: ${config.AUTO_SYNC_ENABLED}`)
+}
 
-// if (config.SYNC_ENABLED === true) {
-//   const syncRule = new schedule.RecurrenceRule()
-//   syncRule.minute = new schedule.Range(0, 59, config.SYNC_INTERVAL)
-//   schedule.scheduleJob(syncRule, syncController.syncQueuedChallenges)
-//   logger.info(`The sync is scheduled to be executed every ${config.SYNC_INTERVAL} minutes`)
-// } else {
-//   logger.info(`Sync Disabled by Config: ${config.SYNC_ENABLED}`)
-// }
+if (config.SYNC_ENABLED === true) {
+  const syncRule = new schedule.RecurrenceRule()
+  syncRule.minute = new schedule.Range(0, 59, config.SYNC_INTERVAL)
+  schedule.scheduleJob(syncRule, syncController.syncQueuedChallenges)
+  logger.info(`The sync is scheduled to be executed every ${config.SYNC_INTERVAL} minutes`)
+} else {
+  logger.info(`Sync Disabled by Config: ${config.SYNC_ENABLED}`)
+}
 
 // syncController.syncQueuedChallenges()
-migrationController.migrate()
+// migrationController.migrate()
 
 // logger.debug([
 //   `migrationInterval: ${config.SCHEDULE_INTERVAL}`,
