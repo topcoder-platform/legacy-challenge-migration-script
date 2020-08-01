@@ -29,9 +29,9 @@ dynamoose.setDefaults({
 // console.log(JSON.stringify(dynamoose.AWS.config))
 
 module.exports = {
-  Challenge: dynamoose.model('Challenge', require('./Challenge')),
   Resource: dynamoose.model('Resource', require('./resource')),
   ResourceRole: dynamoose.model('ResourceRole', require('./resource-role')),
+  Challenge: dynamoose.model('Challenge', require('./Challenge')),
   ChallengeType: dynamoose.model('ChallengeType', require('./ChallengeType')),
   ChallengeTrack: dynamoose.model('ChallengeTrack', require('./ChallengeTrack')),
   ChallengeTimelineTemplate: dynamoose.model('ChallengeTimelineTemplate', require('./ChallengeTimelineTemplate'))
