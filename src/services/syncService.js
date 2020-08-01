@@ -52,6 +52,7 @@ async function processChallenge (legacyId, challengeListing, challengeDetails) {
     challengeObj = _.omit(challengeObj, ['description', 'privateDescription'])
   }
 
+  // logger.info(`Before V5 Reg Sync: ${challengeObj.numOfRegistrants} ${v5ChallengeFromAPI.numOfRegistrants}`)
   try {
     const registrants = await resourceService.getResourcesFromV5API(v5ChallengeFromAPI.id, config.SUBMITTER_ROLE_ID)
     challengeObj.numOfRegistrants = _.toNumber(registrants.total)
@@ -59,7 +60,8 @@ async function processChallenge (legacyId, challengeListing, challengeDetails) {
     logger.error(`Failed to load resources for challenge ${v5ChallengeFromAPI.id}`)
     logger.logFullError(e)
   }
-
+  // logger.info(`After V5 Reg Sync: ${challengeObj.numOfRegistrants} ${v5ChallengeFromAPI.numOfRegistrants}`)
+  // logger.info(`Before V5 Sub Sync: ${challengeObj.numOfSubmissions} ${v5ChallengeFromAPI.numOfSubmissions}`)
   try {
     const submissions = await challengeService.getChallengeSubmissionsFromV5API(legacyId, config.SUBMISSION_TYPE)
     challengeObj.numOfSubmissions = _.toNumber(submissions.total) || 0
@@ -67,7 +69,7 @@ async function processChallenge (legacyId, challengeListing, challengeDetails) {
     logger.error(`Failed to load submissions for challenge ${legacyId}`)
     logger.logFullError(e)
   }
-
+  // logger.info(`After V5 Sub Sync: ${challengeObj.numOfSubmissions} ${v5ChallengeFromAPI.numOfSubmissions}`)
   challengeObj.id = v5ChallengeFromAPI.id
 
   return challengeService.save(challengeObj)

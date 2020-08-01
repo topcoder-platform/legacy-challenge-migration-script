@@ -568,8 +568,8 @@ async function buildV5Challenge (legacyId, challengeListing, challengeDetails) {
     },
     task: {
       isTask: challengeListing.isTask || false,
-      isAssigned: (challengeListing.submitterIds && challengeListing.submitterIds.length >= 1) || false,
-      memberId: (challengeListing.submitterIds && challengeListing.submitterIds.length === 1) ? _.toString(challengeListing.submitterIds[0]) : ''
+      isAssigned: (challengeListing.isTask && challengeListing.submitterIds && challengeListing.submitterIds.length >= 1) || false,
+      memberId: (challengeListing.isTask && challengeListing.submitterIds && challengeListing.submitterIds.length === 1) ? _.toString(challengeListing.submitterIds[0]) : ''
     },
     name: challengeListing.challengeTitle,
     description: detailRequirement || '',
@@ -586,6 +586,9 @@ async function buildV5Challenge (legacyId, challengeListing, challengeDetails) {
     numOfSubmissions: _.toNumber(challengeListing.numberOfSubmissions),
     numOfRegistrants: _.toNumber(challengeListing.numberOfRegistrants)
   }
+  // console.log('number of reg', challengeListing.numberOfRegistrants)
+  // console.log('number of submissions', challengeListing.numberOfSubmissions)
+  // console.log(newChallenge)
 
   const prizeSet = { type: 'placement', description: 'Challenge Prizes' }
   prizeSet.prizes = _.map(challengeListing.prize, e => ({ value: e, type: 'USD' }))
