@@ -12,19 +12,19 @@ async function processChallenge (legacyId) {
   let v5ChallengeId = null
   try {
     await challengeMigrationStatusService.startMigration(legacyId, legacyChallengeLastModified)
-    logger.debug(`${legacyId} - Start Challenge Migration`)
+    // logger.debug(`${legacyId} - Start Challenge Migration`)
     v5ChallengeId = await challengeService.migrateChallenge(legacyId)
-    logger.debug(`${legacyId} - Start Resource Migration`)
+    // logger.debug(`${legacyId} - Start Resource Migration`)
     const resourcesMigrated = resourceService.migrateResourcesForChallenge(legacyId, v5ChallengeId)
-    logger.debug(`${legacyId} - Completed Resource Migration`)
+    // logger.debug(`${legacyId} - Completed Resource Migration`)
     await challengeMigrationStatusService.endMigration(legacyId, v5ChallengeId, config.MIGRATION_PROGRESS_STATUSES.SUCCESS)
     return { challengeId: v5ChallengeId, resourcesMigrated: resourcesMigrated }
   } catch (e) {
-    logger.error(`Migration Failed for ${legacyId} ${e} ${JSON.stringify(e)}`)
+    logger.error(`Migration :: Failed for ${legacyId} ${e} ${JSON.stringify(e)}`)
 
     // delete challenge id
     if (v5ChallengeId) {
-      logger.error(`Deleting partial challenge information for: ${v5ChallengeId}`)
+      logger.error(`Migration :: Deleting partial challenge information for: ${v5ChallengeId}`)
       await challengeService.deleteChallenge(v5ChallengeId)
     }
 
@@ -67,16 +67,16 @@ async function queueForMigration (legacyId) {
   // logger.debug(`migrateChallenge Record ${JSON.stringify(legacyIdProgress)}`)
   if (legacyIdProgress) {
     if (legacyIdProgress.status === config.MIGRATION_PROGRESS_STATUSES.IN_PROGRESS) {
-      logger.info(`Challenge ${legacyId} in progress...`)
+      logger.info(`Migration :: Challenge ${legacyId} in progress...`)
       return false
     }
     if (legacyIdProgress.status === config.MIGRATION_PROGRESS_STATUSES.SUCCESS) {
-      logger.info(`Challenge ${legacyId} migrated previously.`)
+      logger.info(`Migration :: Challenge ${legacyId} migrated previously.`)
       if (forceMigrate !== true) return false
       // logger.debug('Migrated Previously, but still continuing?')
     }
     if (legacyIdProgress.status === config.MIGRATION_PROGRESS_STATUSES.FAILED) {
-      logger.error(`Challenge ${legacyId} Failed Previously with error: ${legacyIdProgressObj[0].errorMessage}`)
+      logger.error(`Migration :: Challenge ${legacyId} Failed Previously with error: ${legacyIdProgressObj[0].errorMessage}`)
       if (forceMigrate !== true) return false
     }
   }

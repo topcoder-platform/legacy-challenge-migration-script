@@ -12,7 +12,7 @@ async function migrate () {
   // await migrationService.processChallengeTimelineTemplates()
 
   if (!running) {
-    logger.debug(' ### Migration Started')
+    logger.debug('Migration :: ### Migration Started')
     running = true
     let page = 1
     const perPage = 10
@@ -25,10 +25,10 @@ async function migrate () {
       // logger.warn(`queuedChallenges ${JSON.stringify(queuedChallenges)}`)
       if (queuedChallenges.items.length <= 0) {
         running = false
-        logger.info(`0 Challenges with status of ${config.MIGRATION_PROGRESS_STATUSES.QUEUED} for migration`)
+        logger.info(`Migration :: 0 Challenges with status of ${config.MIGRATION_PROGRESS_STATUSES.QUEUED} for migration`)
         // break
       } else {
-        logger.debug(`Migrating [${queuedChallenges.items.length}] Challenges`)
+        logger.debug(`Migration :: Migrating [${queuedChallenges.items.length}] Challenges`)
         for (let i = 0; i < queuedChallenges.items.length; i += 1) {
           const legacyId = queuedChallenges.items[i].legacyId
           // await migrateChallenge(legacyId)
@@ -38,10 +38,10 @@ async function migrate () {
         page += 1
       }
     }
-    logger.debug(' ### Migration Complete')
+    logger.debug('Migration :: ### Migration Complete')
     // return true
   } else {
-    logger.debug('!!!!!!!!!!! Tried to Migrate, Already Running')
+    logger.debug('Migration :: !!!!!!!!!!! Tried to Migrate, Already Running')
   }
 }
 

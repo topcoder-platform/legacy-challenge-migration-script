@@ -21,16 +21,16 @@ async function syncLegacyId (legacyId, force) {
       await processChallenge(legacyId, v4Listing.data, v4Detail.data)
       await challengeSyncStatusService.endSync(legacyId, v5.id, config.MIGRATION_PROGRESS_STATUSES.SUCCESS, `Resources: ${resourcesAdded} added, ${resourcesRemoved} removed`)
     } catch (e) {
-      logger.error(`Sync Failed for ${legacyId} ${JSON.stringify(e)}`)
+      logger.error(`Sync :: Failed for ${legacyId} ${JSON.stringify(e)}`)
       await challengeSyncStatusService.endSync(legacyId, null, config.MIGRATION_PROGRESS_STATUSES.FAILED, e, force === true)
     }
   } else {
     const progress = await challengeMigrationStatusService.getMigrationProgress({ legacyId }, 1, 1)
     if (progress.total < 1) {
-      logger.warn(`Challenge ID ${legacyId} doesn't exist in v5, queueing for migration`)
+      logger.warn(`Sync :: Challenge ID ${legacyId} doesn't exist in v5, queueing for migration`)
       await migrationService.queueForMigration(legacyId)
     } else {
-      logger.debug(`Challenge ID ${legacyId} doesn't exist in v5 and is already queued for migration with a status of ${JSON.stringify(progress.items)}`)
+      logger.debug(`Sync :: Challenge ID ${legacyId} doesn't exist in v5 and is already queued for migration with a status of ${JSON.stringify(progress.items)}`)
     }
   }
 }
@@ -57,7 +57,7 @@ async function processChallenge (legacyId, challengeListing, challengeDetails) {
     const registrants = await resourceService.getResourcesFromV5API(v5ChallengeFromAPI.id, config.SUBMITTER_ROLE_ID)
     challengeObj.numOfRegistrants = _.toNumber(registrants.total)
   } catch (e) {
-    logger.error(`Failed to load resources for challenge ${v5ChallengeFromAPI.id}`)
+    logger.error(`Sync :: Failed to load resources for challenge ${v5ChallengeFromAPI.id}`)
     logger.logFullError(e)
   }
   // logger.info(`After V5 Reg Sync: ${challengeObj.numOfRegistrants} ${v5ChallengeFromAPI.numOfRegistrants}`)
@@ -66,7 +66,7 @@ async function processChallenge (legacyId, challengeListing, challengeDetails) {
     const submissions = await challengeService.getChallengeSubmissionsFromV5API(legacyId, config.SUBMISSION_TYPE)
     challengeObj.numOfSubmissions = _.toNumber(submissions.total) || 0
   } catch (e) {
-    logger.error(`Failed to load submissions for challenge ${legacyId}`)
+    logger.error(`Sync :: Failed to load submissions for challenge ${legacyId}`)
     logger.logFullError(e)
   }
   // logger.info(`After V5 Sub Sync: ${challengeObj.numOfSubmissions} ${v5ChallengeFromAPI.numOfSubmissions}`)
@@ -77,7 +77,7 @@ async function processChallenge (legacyId, challengeListing, challengeDetails) {
 
 async function processResources (legacyId, challengeId, force) {
   if (force === true) {
-    logger.warn(`Force Deleting Resources for LegacyID: ${legacyId} ChallengeID: ${challengeId}`)
+    logger.warn(`Sync :: Force Deleting Resources for LegacyID: ${legacyId} ChallengeID: ${challengeId}`)
     await resourceService.deleteAllResourcesForChallenge(challengeId)
   }
   let resourcesAdded = 0
@@ -93,7 +93,7 @@ async function processResources (legacyId, challengeId, force) {
     // v5 memberId is a string
     // logger.debug(`Find resource in V5 ${JSON.stringify(v4Obj)}`)
     if (!_.find(currentV5Array.result, { memberId: _.toString(v4Obj.memberId), roleId: v4Obj.roleId })) {
-      logger.debug(` ++ Resource Not Found, adding ${JSON.stringify({ memberId: v4Obj.memberId, roleId: v4Obj.roleId })}`)
+      logger.debug(`Sync :: ++ Resource Not Found, adding ${JSON.stringify({ memberId: v4Obj.memberId, roleId: v4Obj.roleId })}`)
       await resourceService.saveResource(v4Obj)
       resourcesAdded += 1
     }
@@ -102,7 +102,7 @@ async function processResources (legacyId, challengeId, force) {
     const v5Obj = currentV5Array.result[i]
     // v4 memberId is a number
     if (!_.find(currentV4Array, { memberId: _.toString(v5Obj.memberId), roleId: v5Obj.roleId })) {
-      logger.debug(` -- Resource Found, removing ${JSON.stringify({ memberId: v5Obj.memberId, roleId: v5Obj.roleId })}`)
+      logger.debug(`Sync :: -- Resource Found, removing ${JSON.stringify({ memberId: v5Obj.memberId, roleId: v5Obj.roleId })}`)
       await resourceService.deleteResource(v5Obj.id)
       resourcesRemoved += 1
     }

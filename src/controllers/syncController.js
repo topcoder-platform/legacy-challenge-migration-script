@@ -25,10 +25,10 @@ async function syncQueuedChallenges () {
       // logger.warn(`queuedChallenges ${JSON.stringify(queuedChallenges)}`)
       if (queuedChallenges.items.length <= 0) {
         running = false
-        logger.info(`0 Challenges with status of ${config.MIGRATION_PROGRESS_STATUSES.QUEUED} for sync`)
+        logger.info(`Sync :: 0 Challenges with status of ${config.MIGRATION_PROGRESS_STATUSES.QUEUED} for sync`)
         // break
       } else {
-        logger.debug(`Syncing [${queuedChallenges.items.length}] Challenges`)
+        logger.debug(`Sync :: Syncing [${queuedChallenges.items.length}] Challenges`)
         // await Promise.all(queuedChallenges.items.map(item => syncLegacyId(item.legacyId, item.force)))
         try {
           for (let i = 0; i < queuedChallenges.items.length; i += 1) {
@@ -36,16 +36,16 @@ async function syncQueuedChallenges () {
             await syncService.syncLegacyId(item.legacyId, item.force)
           }
         } catch (e) {
-          logger.error(`Caught Error: ${JSON.stringify(e)} - Resetting Sync}`)
+          logger.error(`Sync :: Caught Error: ${JSON.stringify(e)} - Resetting Sync}`)
           running = false
         }
         page += 1
       }
     }
-    logger.debug('Sync Complete')
+    logger.debug('Sync :: ## Sync Complete')
     // return true
   } else {
-    logger.debug('!!!!!!!!!!!! Tried to Sync, Already Running')
+    logger.debug('Sync :: !!!!!!!!!!!! Tried to Sync, Already Running')
   }
 }
 
@@ -53,7 +53,7 @@ async function syncQueuedChallenges () {
  * Allow the Scheduler to call, pulls date from the DB
  */
 async function autoQueueChallenges () {
-  logger.info('Queueing existing failed challenges')
+  logger.info('Sync :: Queueing existing failed challenges')
   await challengeSyncStatusService.retryFailed()
   const { total, updated } = await queueChallenges({ status: 'Active', force: false })
   return challengeSyncHistoryService.createHistoryRecord(total, updated)
@@ -81,7 +81,7 @@ async function queueChallenges (filter) {
   const totalChallengesCount = combinedArray.length
   // console.log('union length', combinedArray.length)
 
-  logger.debug(`Total to Sync ${totalChallengesCount}`)
+  // logger.debug(`Sync :: Total to Sync ${totalChallengesCount}`)
   // logger.debug(`Combined Array ${combinedArray}`)
 
   while (running) {
@@ -98,7 +98,7 @@ async function queueChallenges (filter) {
 
     page += 1
   }
-  logger.info(`Sync Queueing completed, ${queuedCount} of ${totalChallengesCount} challenges need to be synced`)
+  logger.info(`Sync :: Sync Queueing completed, ${queuedCount} of ${totalChallengesCount} challenges need to be synced`)
   return { total: totalChallengesCount, updated: queuedCount }
 }
 
@@ -110,12 +110,12 @@ async function queueChallenges (filter) {
  */
 async function queueChallengeById (legacyId, withLogging = false, force = false) {
   if (withLogging) {
-    logger.info(`Queue challenge with ID: ${legacyId}`)
+    logger.info(`Sync :: Queue challenge with ID: ${legacyId}`)
   }
 
   if (force === true) {
     // forced, do it anyway
-    logger.info(`Sync of ${legacyId} is being forced`)
+    logger.info(`Sync :: Sync of ${legacyId} is being forced`)
     return challengeSyncStatusService.queueForSync(legacyId, true)
   }
 
@@ -125,7 +125,7 @@ async function queueChallengeById (legacyId, withLogging = false, force = false)
   if (existingQueuedList && existingQueuedList.total >= 1) {
     existingQueued = existingQueuedList.items[0]
     if (existingQueued.status === config.MIGRATION_PROGRESS_STATUSES.QUEUED) {
-      logger.warn(`Legacy ID ${legacyId} already queued ${JSON.stringify(existingQueued)}`)
+      logger.warn(`Sync :: Legacy ID ${legacyId} already queued ${JSON.stringify(existingQueued)}`)
       return false
     }
   }
