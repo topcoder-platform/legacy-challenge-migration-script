@@ -31,8 +31,8 @@ dynamoose.setDefaults({
 module.exports = {
   Resource: dynamoose.model('Resource', require('./resource')),
   ResourceRole: dynamoose.model('ResourceRole', require('./resource-role')),
-  Challenge: dynamoose.model('Challenge', require('./Challenge')),
-  ChallengeType: dynamoose.model('ChallengeType', require('./ChallengeType')),
-  ChallengeTrack: dynamoose.model('ChallengeTrack', require('./ChallengeTrack')),
-  ChallengeTimelineTemplate: dynamoose.model('ChallengeTimelineTemplate', require('./ChallengeTimelineTemplate'))
+  Challenge: dynamoose.model('Challenge', require('./challenge')),
+  ChallengeType: dynamoose.model('ChallengeType', require('./challengeType')),
+  ChallengeTrack: dynamoose.model('ChallengeTrack', require('./challengeTrack')),
+  ChallengeTimelineTemplate: dynamoose.model('ChallengeTimelineTemplate', require('./challengeTimelineTemplate'))
 }
