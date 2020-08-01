@@ -11,7 +11,7 @@ async function processChallenge (legacyId) {
 
   let v5ChallengeId = null
   try {
-    // await challengeMigrationStatusService.startMigration(legacyId, legacyChallengeLastModified)
+    await challengeMigrationStatusService.startMigration(legacyId, legacyChallengeLastModified)
     logger.debug(`${legacyId} - Start Challenge Migration`)
     v5ChallengeId = await challengeService.migrateChallenge(legacyId)
     logger.debug(`${legacyId} - Start Resource Migration`)
@@ -22,10 +22,13 @@ async function processChallenge (legacyId) {
   } catch (e) {
     logger.error(`Migration Failed for ${legacyId} ${e} ${JSON.stringify(e)}`)
 
-    // TODO : delete challenge id
-    // TODO : delete resources for challenge id
+    // delete challenge id
+    if (v5ChallengeId) {
+      logger.error(`Deleting partial challenge information for: ${v5ChallengeId}`)
+      await challengeService.deleteChallenge(v5ChallengeId)
+    }
 
-    // return challengeMigrationStatusService.endMigration(legacyId, v5ChallengeId, config.MIGRATION_PROGRESS_STATUSES.FAILED, e)
+    return challengeMigrationStatusService.endMigration(legacyId, v5ChallengeId, config.MIGRATION_PROGRESS_STATUSES.FAILED, e)
   }
 }
 

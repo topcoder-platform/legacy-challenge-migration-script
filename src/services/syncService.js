@@ -44,7 +44,13 @@ async function processChallenge (legacyId, challengeListing, challengeDetails) {
   const v5ChallengeObjectFromV4 = await challengeService.buildV5Challenge(legacyId, challengeListing, challengeDetails)
   const [v5ChallengeFromAPI] = await challengeService.getChallengeFromV5API(legacyId)
 
-  const challengeObj = _.omit(v5ChallengeObjectFromV4, ['type'])
+  // omit properties that shouldn't be sync'd
+  // TODO omit other properties?
+  let challengeObj = _.omit(v5ChallengeObjectFromV4, ['type', 'track', 'typeId', 'trackId'])
+
+  if (challengeObj.descriptionFormat !== 'HTML') {
+    challengeObj = _.omit(challengeObj, ['description', 'privateDescription'])
+  }
 
   try {
     const registrants = await resourceService.getResourcesFromV5API(v5ChallengeFromAPI.id, config.SUBMITTER_ROLE_ID)
@@ -61,8 +67,8 @@ async function processChallenge (legacyId, challengeListing, challengeDetails) {
     logger.error(`Failed to load submissions for challenge ${legacyId}`)
     logger.logFullError(e)
   }
+
   challengeObj.id = v5ChallengeFromAPI.id
-  _.set(challengeObj, 'legacy.track', _.get(v5ChallengeFromAPI, 'legacy.track'), _.get(challengeObj, 'legacy.track'))
 
   return challengeService.save(challengeObj)
 }
