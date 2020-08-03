@@ -16,6 +16,7 @@ async function syncQueuedChallenges () {
     let page = 1
     const perPage = 100
 
+    logger.info('Sync :: Started ----------')
     // await challengeService.cacheTypesAndTimelines()
     await migrationService.processResourceRoles()
 
@@ -42,10 +43,10 @@ async function syncQueuedChallenges () {
         page += 1
       }
     }
-    logger.debug('Sync :: ## Sync Complete')
+    logger.info('Sync :: Complete ----------')
     // return true
   } else {
-    logger.debug('Sync :: !!!!!!!!!!!! Tried to Sync, Already Running')
+    logger.info('Sync :: !!!!!!!!!!!! Tried to Sync, Already Running')
   }
 }
 
@@ -53,7 +54,7 @@ async function syncQueuedChallenges () {
  * Allow the Scheduler to call, pulls date from the DB
  */
 async function autoQueueChallenges () {
-  logger.info('Sync :: Queueing existing failed challenges')
+  logger.info('Auto Sync :: Queueing existing failed challenges')
   await challengeSyncStatusService.retryFailed()
   const { total, updated } = await queueChallenges({ status: 'Active', force: false })
   return challengeSyncHistoryService.createHistoryRecord(total, updated)
@@ -125,7 +126,7 @@ async function queueChallengeById (legacyId, withLogging = false, force = false)
   if (existingQueuedList && existingQueuedList.total >= 1) {
     existingQueued = existingQueuedList.items[0]
     if (existingQueued.status === config.MIGRATION_PROGRESS_STATUSES.QUEUED) {
-      logger.warn(`Sync :: Legacy ID ${legacyId} already queued ${JSON.stringify(existingQueued)}`)
+      logger.info(`Sync :: Legacy ID ${legacyId} already queued ${JSON.stringify(existingQueued)}`)
       return false
     }
   }

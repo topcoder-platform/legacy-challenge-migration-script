@@ -12,7 +12,7 @@ async function migrate () {
   // await migrationService.processChallengeTimelineTemplates()
 
   if (!running) {
-    logger.debug('Migration :: ### Migration Started')
+    logger.info('Migration :: Started ----------')
     running = true
     let page = 1
     const perPage = 10
@@ -38,7 +38,7 @@ async function migrate () {
         page += 1
       }
     }
-    logger.debug('Migration :: ### Migration Complete')
+    logger.info('Migration :: Complete ----------')
     // return true
   } else {
     logger.debug('Migration :: !!!!!!!!!!! Tried to Migrate, Already Running')
