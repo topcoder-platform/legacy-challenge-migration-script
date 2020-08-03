@@ -28,6 +28,26 @@ WHERE r.project_id = ${legacyChallengeId}`
 }
 
 /**
+ * Get MemberId from Handle from informix
+ *
+ * @param {Number} legacyChallengeId
+ */
+async function getMemberIdByHandleFromIfx (handle) {
+  const sql = `
+  SELECT limit 1 u.user_id as member_id, u.handle as member_handle
+  FROM  user u 
+  WHERE u.handle = "${handle}"`
+  logger.info(`getMemberIdByHandleFromIfx: ${sql}`)
+  const memberArray = await execQuery(sql)
+  const memberObj = memberArray[0]
+  if (memberObj) {
+    logger.info(`getMemberIdByHandleFromIfx: ${JSON.stringify(memberObj)}`)
+    return memberObj.member_id
+  }
+  return null
+}
+
+/**
  * Get challenge resource from informix
  *
  * @param {Object} filter { challengeId, challengeIds }
@@ -81,5 +101,6 @@ async function execQuery (sql) {
 module.exports = {
   getResourcesForChallengeFromIfx,
   getResourceRolesFromIfx,
-  getChallengeResourcesFromIfx
+  getChallengeResourcesFromIfx,
+  getMemberIdByHandleFromIfx
 }

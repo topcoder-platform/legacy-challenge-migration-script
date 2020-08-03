@@ -12,6 +12,7 @@ const { Challenge, ChallengeType, ChallengeTimelineTemplate } = require('../mode
 const { getESClient, getV4ESClient, getM2MToken } = require('../util/helper')
 const challengeInformixService = require('./challengeInformixService')
 const resourceService = require('./resourceService')
+const resourceInformixService = require('./resourceInformixService')
 const translationService = require('./translationService')
 
 let allV5Terms
@@ -549,6 +550,18 @@ async function buildV5Challenge (legacyId, challengeListing, challengeDetails) {
     challengeListing.subTrack,
     challengeListing.isTask || false)
 
+  let taskIsAssigned = false
+  let taskMemberId = null
+  if (challengeListing.isTask &&
+    challengeDetails.registrants &&
+    challengeDetails.registrants.length >= 1) {
+    taskIsAssigned = true
+    const memberObject = challengeDetails.registrants.pop()
+    if (memberObject && memberObject.handle) {
+      taskMemberId = await resourceInformixService.getMemberIdByHandleFromIfx(memberObject.handle)
+    }
+  }
+
   const newChallenge = {
     id: null, // this is removed from here and created in the save function
     legacyId,
@@ -568,8 +581,8 @@ async function buildV5Challenge (legacyId, challengeListing, challengeDetails) {
     },
     task: {
       isTask: challengeListing.isTask || false,
-      isAssigned: (challengeListing.isTask && challengeListing.submitterIds && challengeListing.submitterIds.length >= 1) || false,
-      memberId: (challengeListing.isTask && challengeListing.submitterIds && challengeListing.submitterIds.length === 1) ? _.toString(challengeListing.submitterIds[0]) : ''
+      isAssigned: taskIsAssigned,
+      memberId: taskMemberId
     },
     name: challengeListing.challengeTitle,
     description: detailRequirement || '',
