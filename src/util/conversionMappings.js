@@ -178,5 +178,6 @@ module.exports = {
     }
   },
   V5_TRACK_NAMES_TO_IDS,
-  V5_TYPE_NAMES_TO_IDS
+  V5_TYPE_NAMES_TO_IDS,
+  V4_TRACKS
 }

@@ -6,6 +6,7 @@ const resourceService = require('./resourceService')
 const challengeSyncStatusService = require('../services/challengeSyncStatusService')
 const challengeMigrationStatusService = require('../services/challengeMigrationStatusService')
 const migrationService = require('../services/migrationService')
+const { V4_TRACKS } = require('../util/conversionMappings')
 
 async function syncLegacyId (legacyId, force) {
   // const legacyId = queuedChallenges.items[i].legacyId
@@ -70,6 +71,15 @@ async function processChallenge (legacyId, challengeListing, challengeDetails) {
     logger.logFullError(e)
   }
   // logger.info(`After V5 Sub Sync: ${challengeObj.numOfSubmissions} ${v5ChallengeFromAPI.numOfSubmissions}`)
+  if (v5ChallengeObjectFromV4.track.toUpperCase() === V4_TRACKS.DESIGN) {
+    try {
+      const submissions = await challengeService.getChallengeSubmissionsFromV5API(legacyId, config.CHECKPOINT_SUBMISSION_TYPE)
+      challengeObj.numOfCheckpointSubmissions = _.toNumber(submissions.total) || 0
+    } catch (e) {
+      logger.error(`Sync :: Failed to load checkpoint submissions for challenge ${legacyId}`)
+      logger.logFullError(e)
+    }
+  }
   challengeObj.id = v5ChallengeFromAPI.id
 
   return challengeService.save(challengeObj)
