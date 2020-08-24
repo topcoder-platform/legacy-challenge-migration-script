@@ -81,13 +81,14 @@ app.get(`/${config.API_VERSION}/challenge-migration/convert-to-v4`, apiControlle
 app.get(`/${config.API_VERSION}/challenge-migration/convert-to-v5`, apiController.convertV4TrackToV5)
 
 app.get(`/${config.API_VERSION}/challenge-migration/sync`, apiController.getSyncStatus)
-app.post(`/${config.API_VERSION}/challenge-migration/sync`, apiController.queueSync)
-app.get(`/${config.API_VERSION}/challenge-migration`, apiController.getMigrationStatus)
-app.post(`/${config.API_VERSION}/challenge-migration`, apiController.queueForMigration)
-app.put(`/${config.API_VERSION}/challenge-migration`, apiController.retryFailed)
-app.delete(`/${config.API_VERSION}/challenge-migration/:uuid`, apiController.destroyChallenge)
 
-// app.get(`/${config.API_VERSION}/challenge-migration`, controller.checkStatus)
+app.get(`/${config.API_VERSION}/challenge-migration`, apiController.getMigrationStatus)
+
+// JMC :: Commented out for security reasons.
+// app.post(`/${config.API_VERSION}/challenge-migration/sync`, apiController.queueSync)
+// app.post(`/${config.API_VERSION}/challenge-migration`, apiController.queueForMigration)
+// app.put(`/${config.API_VERSION}/challenge-migration`, apiController.retryFailed)
+// app.delete(`/${config.API_VERSION}/challenge-migration/:uuid`, apiController.destroyChallenge)
 
 // the topcoder-healthcheck-dropin library returns checksRun count,
 // here it follows that to return such count
