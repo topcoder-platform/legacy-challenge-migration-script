@@ -173,13 +173,14 @@ async function convertV4TrackToV5 (req, res) {
   const track = req.query.track || ''
   const subTrack = req.query.subTrack || ''
   const isTask = req.query.isTask || false
+  const tags = req.query.tags || []
 
   if (!track || !subTrack) {
     return res.status(400).json({ message: 'Must pass ?track=&subTrack=&isTask' })
   }
 
-  logger.debug(`Converting track ${track}, type ${subTrack}, with isTask = ${(isTask === true) ? 'true' : 'false'}`)
-  return res.json(translationService.convertV4TrackToV5(track, subTrack, isTask))
+  logger.debug(`Converting track ${track}, type ${subTrack}, with isTask = ${(isTask === true) ? 'true' : 'false'}, with tags ${tags}`)
+  return res.json(translationService.convertV4TrackToV5(track, subTrack, isTask, tags))
 }
 
 module.exports = {

@@ -548,7 +548,8 @@ async function buildV5Challenge (legacyId, challengeListing, challengeDetails) {
   const v5TrackProperties = translationService.convertV4TrackToV5(
     challengeListing.track,
     challengeListing.subTrack,
-    challengeListing.isTask || false)
+    challengeListing.isTask || false,
+    _.uniq(_.compact(_.concat(challengeListing.technologies, challengeListing.platforms))))
 
   let taskIsAssigned = false
   let taskMemberId = null
