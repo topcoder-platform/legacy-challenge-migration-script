@@ -18,13 +18,14 @@ function convertV5TrackToV4 (v5TrackId, v5TypeId, v5Tags) {
 /**
  * Convert a combination of V4 track/subTrack flag for tasks
  * to the equivalent V5 combination of { trackId, typeId, track, type, tags }
- * @param {String} v5TrackId the V5 track ID
- * @param {String} v5TypeId the V5 type ID
- * @param {Array<String>} v5Tags an array of tags
+ * @param {String} v4TrackId the V5 track ID
+ * @param {String} v4TypeId the V5 type ID
+ * @param {Boolean} v4IsTask the isTask flag
+ * @param {Array<String>} v4Tags an array of tags
  */
-function convertV4TrackToV5 (v4Track, v4SubTrack, v4IsTask) {
+function convertV4TrackToV5 (v4Track, v4SubTrack, v4IsTask, v4Tags) {
   try {
-    return convertionMappingHelper.V4_TO_V5[v4Track][v4SubTrack.toUpperCase()](v4IsTask)
+    return convertionMappingHelper.V4_TO_V5[v4Track][v4SubTrack.toUpperCase()](v4IsTask, v4Tags)
   } catch (e) {
     throw new Error(`Failed to get V4 data with track: ${v4Track}, subTrack: ${v4SubTrack} and isTask: ${v4IsTask}`)
   }
