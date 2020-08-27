@@ -525,7 +525,7 @@ async function buildV5Challenge (legacyId, challengeListing, challengeDetails) {
     if (challengeDetails.introduction && challengeDetails.introduction.trim() !== '') {
       detailRequirement = challengeDetails.introduction + '<br />' + detailRequirement
     }
-    if (challengeDetails.finalSubmissionGuidelines && challengeDetails.finalSubmissionGuidelines.trim() !== '') {
+    if (_.get(challengeDetails, 'finalSubmissionGuidelines', '').trim() !== 'null' && _.get(challengeDetails, 'finalSubmissionGuidelines', '').trim() !== '') {
       detailRequirement += '<br /><br /><h2>Final Submission Guidelines</h2>' + challengeDetails.finalSubmissionGuidelines
     }
   } else {
