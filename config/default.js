@@ -202,6 +202,7 @@ module.exports = {
 
   SUBMITTER_ROLE_ID: process.env.SUBMITTER_ROLE_ID || '732339e7-8e30-49d7-9198-cccf9451e221',
   SUBMISSION_TYPE: process.env.SUBMISSION_TYPE || 'Contest Submission',
+  CHECKPOINT_SUBMISSION_TYPE: process.env.CHECKPOINT_SUBMISSION_TYPE || 'Checkpoint Submission',
 
   TASK_TYPE_IDS: {
     DEVELOP: process.env.DEVELOP_TASK_TYPE_ID || 'e885273d-aeda-42c0-917d-bfbf979afbba',

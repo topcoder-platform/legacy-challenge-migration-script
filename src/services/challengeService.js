@@ -14,11 +14,13 @@ const challengeInformixService = require('./challengeInformixService')
 const resourceService = require('./resourceService')
 const resourceInformixService = require('./resourceInformixService')
 const translationService = require('./translationService')
+const { V4_TRACKS } = require('../util/conversionMappings')
 
 let allV5Terms
 
 const groupsUUIDCache = new HashMap()
 const challengePropertiesToOmitFromDynamo = [
+  'numOfCheckpointSubmissions',
   'numOfSubmissions',
   'numOfRegistrants',
   'registrationStartDate',
@@ -597,7 +599,10 @@ async function buildV5Challenge (legacyId, challengeListing, challengeDetails) {
     terms: [],
     startDate: moment().utc().format(),
     numOfSubmissions: _.toNumber(challengeListing.numberOfSubmissions),
-    numOfRegistrants: _.toNumber(challengeListing.numberOfRegistrants)
+    numOfRegistrants: _.toNumber(challengeListing.numberOfRegistrants),
+    ...(challengeListing.track === V4_TRACKS.DESIGN ? {
+      numOfCheckpointSubmissions: _.toNumber(_.get(challengeDetails, 'numberOfCheckpointSubmissions', 0))
+    } : {})
   }
   // console.log('number of reg', challengeListing.numberOfRegistrants)
   // console.log('number of submissions', challengeListing.numberOfSubmissions)
