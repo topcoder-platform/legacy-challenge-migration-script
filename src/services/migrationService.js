@@ -8,6 +8,10 @@ const resourceService = require('./resourceService')
 async function processChallenge (legacyId) {
   // const legacyChallengeDetailFromV4 = await challengeService.getChallengeListingFromV4ES(legacyId)
   // const legacyChallengeLastModified = legacyChallengeDetailFromV4.data.updatedAt || null
+  if (!isNaN(legacyId)) {
+    logger.error(`processChallenge Not a Number: ${legacyId}`)
+    return false
+  }
 
   let v5ChallengeId = null
   try {
