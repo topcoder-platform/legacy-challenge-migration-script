@@ -157,6 +157,7 @@ async function getMigrationProgress (filter, perPage = 100, page = 1) {
 }
 
 async function queueForMigration (legacyId) {
+  legacyId = legacyId.trim() * 1
   if (isNumber(legacyId)) {
     return updateProgressRecord(legacyId, { legacyId, status: config.MIGRATION_PROGRESS_STATUSES.QUEUED })
   } else {
