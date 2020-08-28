@@ -10,7 +10,7 @@ const logger = require('../../util/logger')
 const challengeService = require('../../services/challengeService')
 const { getV4ESClient } = require('../../util/helper')
 
-const INVALID_DESCRIPTION_CONTENT = '<br /><br /><h2>Final Submission Guidelines</h2>null'
+// const INVALID_DESCRIPTION_CONTENT = '<br /><br /><h2>Final Submission Guidelines</h2>null'
 
 const migrationFunction = {
   run: async () => {
@@ -24,14 +24,21 @@ const migrationFunction = {
       const challenges = await getChallengesMissingData(page, perPage)
       logger.info(`Found ${challenges.length} challenges`)
       if (challenges.length > 0) {
+        // logger.info(`Updating ${challenges}`)
         for (const challenge of challenges) {
-          const v5Challenge = await challengeService.getChallengeFromV5API(challenge.challengeId)
-          if (v5Challenge && _.get(v5Challenge, 'description').indexOf(INVALID_DESCRIPTION_CONTENT) > -1) {
-            v5Challenge.description.replace(INVALID_DESCRIPTION_CONTENT, '')
+          // logger.info(`Updating ${challenge.id}`)
+          const [v5Challenge] = await challengeService.getChallengeFromV5API(challenge.id)
+          if (v5Challenge && v5Challenge.description) {
+            const newV5Challenge = await challengeService.buildV5Challenge(challenge.id)
+            v5Challenge.description = newV5Challenge.description
+            logger.info(`Updating Challenge Spec: ${v5Challenge.id} LegacyID: ${challenge.id}`)
+            v5Challenge.legacy.migration = 3
+            // console.log(v5Challenge)
             await challengeService.save(v5Challenge)
           }
         }
       } else {
+        logger.info('Finished')
         finish = true
       }
       page++
@@ -42,7 +49,7 @@ const migrationFunction = {
 
 async function getChallengesMissingData (page = 0, perPage = 10) {
   const esQuery = {
-    index: 'challengeslisting',
+    index: 'challengesdetail',
     type: 'challenges',
     size: perPage,
     from: page * perPage,

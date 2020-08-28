@@ -29,6 +29,7 @@ const migrationFunction = {
               try {
                 const submissions = await challengeService.getChallengeSubmissionsFromV5API(challenge.legacyId, config.CHECKPOINT_SUBMISSION_TYPE)
                 challenge.numOfCheckpointSubmissions = _.toNumber(submissions.total) || 0
+                challenge.legacy.migration = 2
               } catch (e) {
                 logger.error(`Sync :: Failed to load checkpoint submissions for challenge ${challenge.legacyId}`)
                 logger.logFullError(e)
