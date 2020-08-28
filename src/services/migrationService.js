@@ -6,12 +6,12 @@ const challengeMigrationStatusService = require('./challengeMigrationStatusServi
 const resourceService = require('./resourceService')
 
 async function processChallenge (legacyId) {
-  const legacyChallengeDetailFromV4 = await challengeService.getChallengeListingFromV4ES(legacyId)
-  const legacyChallengeLastModified = legacyChallengeDetailFromV4.data.updatedAt || null
+  // const legacyChallengeDetailFromV4 = await challengeService.getChallengeListingFromV4ES(legacyId)
+  // const legacyChallengeLastModified = legacyChallengeDetailFromV4.data.updatedAt || null
 
   let v5ChallengeId = null
   try {
-    await challengeMigrationStatusService.startMigration(legacyId, legacyChallengeLastModified)
+    await challengeMigrationStatusService.startMigration(legacyId)
     // logger.debug(`${legacyId} - Start Challenge Migration`)
     v5ChallengeId = await challengeService.migrateChallenge(legacyId)
     // logger.debug(`${legacyId} - Start Resource Migration`)

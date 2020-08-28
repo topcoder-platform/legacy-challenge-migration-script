@@ -516,7 +516,7 @@ async function buildV5Challenge (legacyId, challengeListing, challengeDetails) {
   }
 
   // for (const challenge of challenges) {
-  logger.info(`Building Challenge ${challengeListing.id} - Last Modified Date ${moment(challengeListing.updatedAt).utc().format()}`)
+  // logger.info(`Building Challenge ${challengeListing.id} - Last Modified Date ${moment(challengeListing.updatedAt).utc().format()}`)
 
   let detailRequirement = ''
 
@@ -593,7 +593,7 @@ async function buildV5Challenge (legacyId, challengeListing, challengeDetails) {
     projectId: connectProjectId,
     created: moment(challengeListing.createdAt).utc().format(),
     createdBy: challengeInfoFromIfx ? challengeInfoFromIfx.created_by : 'v5migration',
-    updated: moment(challengeListing.updatedAt).utc().format(),
+    updated: moment(challengeListing.updatedAt).utc().format() || null,
     updatedBy: challengeInfoFromIfx ? challengeInfoFromIfx.updated_by : 'v5migration',
     timelineTemplateId: await mapTimelineTemplateId(v5TrackProperties.trackId, v5TrackProperties.typeId),
     phases: [],
