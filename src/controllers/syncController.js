@@ -34,8 +34,8 @@ async function syncQueuedChallenges () {
         try {
           for (let i = 0; i < queuedChallenges.items.length; i += 1) {
             const item = queuedChallenges.items[i]
-            if (isNumber(trim(item.legacyId))) {
-              await syncService.syncLegacyId(trim(item.legacyId), item.force)
+            if (isNumber(item.legacyId)) {
+              await syncService.syncLegacyId(item.legacyId, item.force)
             } else {
               logger.error(`Sync Failed for Bad Legacy ID: ${item.legacyId}`)
             }
