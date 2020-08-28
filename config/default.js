@@ -9,6 +9,8 @@ module.exports = {
   AUTO_SYNC_ENABLED: process.env.AUTO_SYNC_ENABLED ? process.env.AUTO_SYNC_ENABLED === 'true' : false,
   SYNC_ENABLED: process.env.SYNC_ENABLED ? process.env.SYNC_ENABLED === 'true' : false,
 
+  ADMIN_API_ENABLED: process.env.ADMIN_API_ENABLED ? process.env.ADMIN_API_ENABLED === 'true' : false,
+
   // used to get M2M token
   AUTH0_URL: process.env.AUTH0_URL,
   AUTH0_PROXY_SERVER_URL: process.env.AUTH0_PROXY_SERVER_URL,

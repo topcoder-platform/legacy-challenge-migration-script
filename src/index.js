@@ -85,11 +85,12 @@ app.get(`/${config.API_VERSION}/challenge-migration/sync`, apiController.getSync
 app.get(`/${config.API_VERSION}/challenge-migration`, apiController.getMigrationStatus)
 
 // JMC :: Commented out for security reasons.
-// app.post(`/${config.API_VERSION}/challenge-migration/sync`, apiController.queueSync)
-// app.post(`/${config.API_VERSION}/challenge-migration`, apiController.queueForMigration)
-// app.put(`/${config.API_VERSION}/challenge-migration`, apiController.retryFailed)
-// app.delete(`/${config.API_VERSION}/challenge-migration/:uuid`, apiController.destroyChallenge)
-
+if (config.ADMIN_API_ENABLED === true) {
+  app.post(`/${config.API_VERSION}/challenge-migration/sync`, apiController.queueSync)
+  app.post(`/${config.API_VERSION}/challenge-migration`, apiController.queueForMigration)
+  app.put(`/${config.API_VERSION}/challenge-migration`, apiController.retryFailed)
+  app.delete(`/${config.API_VERSION}/challenge-migration/:uuid`, apiController.destroyChallenge)
+}
 // the topcoder-healthcheck-dropin library returns checksRun count,
 // here it follows that to return such count
 // let checksRun = 0
