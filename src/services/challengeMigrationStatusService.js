@@ -1,6 +1,6 @@
 // challenge service
 const config = require('config')
-const { map, toString } = require('lodash')
+const { map, toString, isNumber } = require('lodash')
 const { getESClient } = require('../util/helper')
 const logger = require('../util/logger')
 const moment = require('moment')
@@ -157,7 +157,11 @@ async function getMigrationProgress (filter, perPage = 100, page = 1) {
 }
 
 async function queueForMigration (legacyId) {
-  return updateProgressRecord(legacyId, { legacyId, status: config.MIGRATION_PROGRESS_STATUSES.QUEUED })
+  if (isNumber(legacyId)) {
+    return updateProgressRecord(legacyId, { legacyId, status: config.MIGRATION_PROGRESS_STATUSES.QUEUED })
+  } else {
+    logger.error(`Cannot queue for migration, legacy ID is not a number: ${legacyId} - Skipping....`)
+  }
 }
 
 async function startMigration (legacyId, challengeModifiedDate) {
