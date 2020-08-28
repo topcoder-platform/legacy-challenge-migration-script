@@ -31,7 +31,7 @@ async function syncLegacyId (legacyId, force) {
       logger.warn(`Sync :: Challenge ID ${legacyId} doesn't exist in v5, queueing for migration`)
       await migrationService.queueForMigration(legacyId)
     } else {
-      logger.debug(`Sync :: Challenge ID ${legacyId} doesn't exist in v5 and is already queued for migration with a status of ${JSON.stringify(progress.items)}`)
+      logger.debug(`Sync :: Challenge ID ${legacyId} doesn't exist in v5 and is already queued for migration with a status of ${progress.items[0].status}`)
     }
   }
 }
