@@ -1,6 +1,5 @@
 /**
- * Populate the following properties on the challenges:
- * - numOfCheckpointSubmissions
+ * Fix challenges launched as DEVELOP > CODE
  */
 global.Promise = require('bluebird')
 
@@ -8,8 +7,9 @@ const config = require('config')
 const _ = require('lodash')
 const logger = require('../../util/logger')
 const challengeService = require('../../services/challengeService')
-const { getESClient } = require('../../util/helper')
-const { V4_TRACKS } = require('../../util/conversionMappings')
+const { getV4ESClient } = require('../../util/helper')
+const convertionMappingHelper = require('../../util/conversionMappings')
+const { V4_TRACKS, V4_SUBTRACKS, MARATHON_MATCH_TAG } = require('../../util/conversionMappings')
 
 const migrationFunction = {
   run: async () => {
@@ -23,22 +23,17 @@ const migrationFunction = {
       const challenges = await getChallengesMissingData(page, perPage)
       logger.info(`Found ${challenges.length} challenges`)
       if (challenges.length > 0) {
+        // logger.info(`Updating ${challenges}`)
         for (const challenge of challenges) {
-          if (challenge.legacyId) {
-            try {
-              const submissions = await challengeService.getChallengeSubmissionsFromV5API(challenge.legacyId, config.CHECKPOINT_SUBMISSION_TYPE)
-              challenge.numOfCheckpointSubmissions = _.toNumber(submissions.total) || 0
-              challenge.legacy.migration = 2
-            } catch (e) {
-              logger.error(`Sync :: Failed to load checkpoint submissions for challenge ${challenge.legacyId}`)
-              logger.logFullError(e)
-            }
-            await challengeService.save(challenge)
-          } else {
-            logger.error(`Challenge has no legacy id: ${challenge.id}`)
-          }
+          // logger.info(`Updating ${challenge.challengeId}`)
+          const [v5Challenge] = await challengeService.getChallengeFromV5API(challenge.challengeId)
+          const v5Props = convertionMappingHelper.V4_TO_V5[V4_TRACKS.DEVELOP][V4_SUBTRACKS.CODE](false, [MARATHON_MATCH_TAG])
+          v5Props.tags = _.uniq(_.concat(v5Props.tags, v5Challenge.tags))
+          _.extend(v5Challenge, v5Props)
+          await challengeService.save(v5Challenge)
         }
       } else {
+        logger.info('Finished')
         finish = true
       }
       page++
@@ -49,23 +44,30 @@ const migrationFunction = {
 
 async function getChallengesMissingData (page = 0, perPage = 10) {
   const esQuery = {
-    index: config.get('ES.CHALLENGE_ES_INDEX'),
-    type: config.get('ES.CHALLENGE_ES_TYPE'),
+    index: 'challengesdetail',
+    type: 'challenges',
     size: perPage,
     from: page * perPage,
     body: {
       query: {
         bool: {
-          must_not: {
-            exists: {
-              field: 'numOfCheckpointSubmissions'
+          must: [
+            {
+              match_phrase: {
+                track: V4_TRACKS.DEVELOP
+              }
+            },
+            {
+              match_phrase: {
+                subTrack: V4_SUBTRACKS.CODE
+              }
+            },
+            {
+              match_phrase: {
+                technologies: MARATHON_MATCH_TAG
+              }
             }
-          },
-          must: {
-            match_phrase: {
-              track: V4_TRACKS.DESIGN
-            }
-          }
+          ]
         }
       }
     }
@@ -74,7 +76,7 @@ async function getChallengesMissingData (page = 0, perPage = 10) {
   // Search with constructed query
   let docs
   try {
-    docs = await getESClient().search(esQuery)
+    docs = await getV4ESClient().search(esQuery)
   } catch (e) {
     // Catch error when the ES is fresh and has no data
     docs = {
