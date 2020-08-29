@@ -29,6 +29,12 @@ module.exports = (app) => {
         next()
       })
 
+      actions.push((req, res, next) => {
+        if (def.adminApi && !config.ADMIN_API_ENABLED) {
+          throw new errors.ForbiddenError('Action is disabled')
+        }
+      })
+
       if (def.auth) {
         // add Authenticator/Authorization check if route has auth
         actions.push((req, res, next) => {

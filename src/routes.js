@@ -29,6 +29,7 @@ module.exports = {
     post: {
       controller: 'apiController',
       method: 'queueSync',
+      adminApi: true,
       auth: 'jwt',
       scopes: [CHALLENGES.WRITE, CHALLENGES.ALL]
     }
@@ -41,12 +42,14 @@ module.exports = {
     post: {
       controller: 'apiController',
       method: 'queueForMigration',
+      adminApi: true,
       auth: 'jwt',
       scopes: [CHALLENGES.WRITE, CHALLENGES.ALL]
     },
     put: {
       controller: 'apiController',
       method: 'retryFailed',
+      adminApi: true,
       auth: 'jwt',
       scopes: [CHALLENGES.WRITE, CHALLENGES.ALL]
     }
@@ -55,6 +58,7 @@ module.exports = {
     delete: {
       controller: 'apiController',
       method: 'destroyChallenge',
+      adminApi: true,
       auth: 'jwt',
       scopes: [CHALLENGES.WRITE, CHALLENGES.ALL]
     }
