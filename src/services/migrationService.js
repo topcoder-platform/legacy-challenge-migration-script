@@ -1,4 +1,4 @@
-const { map, isInteger } = require('lodash')
+const { map } = require('lodash')
 const config = require('config')
 const logger = require('../util/logger')
 const challengeService = require('./challengeService')
@@ -8,10 +8,6 @@ const resourceService = require('./resourceService')
 async function processChallenge (legacyId) {
   // const legacyChallengeDetailFromV4 = await challengeService.getChallengeListingFromV4ES(legacyId)
   // const legacyChallengeLastModified = legacyChallengeDetailFromV4.data.updatedAt || null
-  if (!legacyId || !isInteger(legacyId)) {
-    logger.error(`processChallenge :: Not a Number: ${legacyId} ${isInteger(legacyId)}`)
-    return false
-  }
 
   let v5ChallengeId = null
   try {
