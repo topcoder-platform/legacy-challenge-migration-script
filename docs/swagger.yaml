@@ -12,9 +12,15 @@ info:
     url: 'http://www.topcoder.com/support'
     email: support@topcoder.com
 
+basePath: /v5
 schemes:
   - https
   - http
+securityDefinitions:
+  bearer:
+    type: apiKey
+    name: Authorization
+    in: header
 produces:
   - application/json
 consumes:
@@ -74,6 +80,8 @@ paths:
       tags:
         - Migration
       operationId: queueForMigration
+      security:
+        - bearer: []
       responses:
         200:
           description: success
@@ -90,6 +98,33 @@ paths:
       tags:
         - Migration
       operationId: retryFailed
+      security:
+        - bearer: []
+      responses:
+        200:
+          description: success
+        400:
+          $ref: '#/definitions/BadRequest'
+        401:
+          $ref: '#/definitions/Unauthorized'
+        403:
+          $ref: '#/definitions/Forbidden'
+        500:
+          $ref: '#/definitions/ServerError'
+  '/challenge-migration/{uuid}':
+    delete:
+      parameters:
+        - name: uuid
+          in: path
+          description: The uuid of record
+          required: true
+          type: string
+      summary: Delete a challenge's migration record, sync record, challenge entry, and resources
+      tags:
+        - Migration
+      operationId: destroyChallenge
+      security:
+        - bearer: []
       responses:
         200:
           description: success
@@ -150,6 +185,8 @@ paths:
       tags:
         - Sync
       operationId: queueSync
+      security:
+        - bearer: []
       responses:
         200:
           description: success

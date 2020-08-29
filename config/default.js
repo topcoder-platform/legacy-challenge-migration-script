@@ -9,6 +9,8 @@ module.exports = {
   AUTO_SYNC_ENABLED: process.env.AUTO_SYNC_ENABLED ? process.env.AUTO_SYNC_ENABLED === 'true' : false,
   SYNC_ENABLED: process.env.SYNC_ENABLED ? process.env.SYNC_ENABLED === 'true' : false,
 
+  AUTH_SECRET: process.env.AUTH_SECRET || 'mysecret',
+  VALID_ISSUERS: process.env.VALID_ISSUERS || '["https://api.topcoder-dev.com", "https://api.topcoder.com", "https://topcoder-dev.auth0.com/"]',
   // used to get M2M token
   AUTH0_URL: process.env.AUTH0_URL,
   AUTH0_PROXY_SERVER_URL: process.env.AUTH0_PROXY_SERVER_URL,
@@ -208,5 +210,11 @@ module.exports = {
     DESIGN: process.env.DESIGN_TASK_TYPE_ID || '149a2013-92b9-4ca9-b35d-c337d47a2490',
     QA: process.env.QA_TASK_TYPE_ID || 'a91e69fd-6240-4227-8484-66b8defc4ca9',
     DATA_SCENCE: process.env.DATA_SCENCE_TASK_TYPE_ID || 'b3b60e22-e302-4db8-bef8-4eaff965565f'
+  },
+  SCOPES: {
+    CHALLENGES: {
+      WRITE: process.env.SCOPE_CHALLENGES_WRITE || 'write:challenges',
+      ALL: process.env.SCOPE_CHALLENGES_ALL || 'all:challenges'
+    }
   }
 }

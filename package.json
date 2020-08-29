@@ -11,6 +11,7 @@
     "dynamoose": "^1.11.1",
     "elasticsearch": "^16.1.1",
     "express": "^4.17.1",
+    "express-interceptor": "^1.2.0",
     "hashmap": "^2.4.0",
     "http-aws-es": "^6.0.0",
     "informix-wrapper": "git+https://github.com/appirio-tech/informix-wrapper.git#less-logs",

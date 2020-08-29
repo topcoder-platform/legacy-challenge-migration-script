@@ -1,7 +1,7 @@
 // const _ = require('lodash')
 // const moment = require('moment')
 const { executeQueryAsync } = require('../util/informixWrapper')
-const logger = require('../util/logger')
+// const logger = require('../util/logger')
 
 /**
  * Get resource from informix
