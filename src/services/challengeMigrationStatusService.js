@@ -160,7 +160,7 @@ async function queueForMigration (legacyId) {
   return updateProgressRecord(legacyId, { legacyId, status: config.MIGRATION_PROGRESS_STATUSES.QUEUED })
 }
 
-async function startMigration (legacyId, challengeModifiedDate) {
+async function startMigration (legacyId) {
   const migrationRecord = {
     legacyId,
     status: config.MIGRATION_PROGRESS_STATUSES.IN_PROGRESS,

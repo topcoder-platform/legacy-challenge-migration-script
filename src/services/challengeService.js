@@ -14,11 +14,13 @@ const challengeInformixService = require('./challengeInformixService')
 const resourceService = require('./resourceService')
 const resourceInformixService = require('./resourceInformixService')
 const translationService = require('./translationService')
+const { V4_TRACKS } = require('../util/conversionMappings')
 
 let allV5Terms
 
 const groupsUUIDCache = new HashMap()
 const challengePropertiesToOmitFromDynamo = [
+  'numOfCheckpointSubmissions',
   'numOfSubmissions',
   'numOfRegistrants',
   'registrationStartDate',
@@ -514,7 +516,7 @@ async function buildV5Challenge (legacyId, challengeListing, challengeDetails) {
   }
 
   // for (const challenge of challenges) {
-  logger.info(`Building Challenge ${challengeListing.id} - Last Modified Date ${moment(challengeListing.updatedAt).utc().format()}`)
+  // logger.info(`Building Challenge ${challengeListing.id} - Last Modified Date ${moment(challengeListing.updatedAt).utc().format()}`)
 
   let detailRequirement = ''
 
@@ -523,7 +525,7 @@ async function buildV5Challenge (legacyId, challengeListing, challengeDetails) {
     if (challengeDetails.introduction && challengeDetails.introduction.trim() !== '') {
       detailRequirement = challengeDetails.introduction + '<br />' + detailRequirement
     }
-    if (challengeDetails.finalSubmissionGuidelines && challengeDetails.finalSubmissionGuidelines.trim() !== '') {
+    if (_.get(challengeDetails, 'finalSubmissionGuidelines', '').trim() !== 'null' && _.get(challengeDetails, 'finalSubmissionGuidelines', '').trim() !== '') {
       detailRequirement += '<br /><br /><h2>Final Submission Guidelines</h2>' + challengeDetails.finalSubmissionGuidelines
     }
   } else {
@@ -548,7 +550,8 @@ async function buildV5Challenge (legacyId, challengeListing, challengeDetails) {
   const v5TrackProperties = translationService.convertV4TrackToV5(
     challengeListing.track,
     challengeListing.subTrack,
-    challengeListing.isTask || false)
+    challengeListing.isTask || false,
+    _.uniq(_.compact(_.concat(challengeListing.technologies, challengeListing.platforms))))
 
   let taskIsAssigned = false
   let taskMemberId = null
@@ -590,14 +593,17 @@ async function buildV5Challenge (legacyId, challengeListing, challengeDetails) {
     projectId: connectProjectId,
     created: moment(challengeListing.createdAt).utc().format(),
     createdBy: challengeInfoFromIfx ? challengeInfoFromIfx.created_by : 'v5migration',
-    updated: moment(challengeListing.updatedAt).utc().format(),
+    updated: moment(challengeListing.updatedAt).utc().format() || null,
     updatedBy: challengeInfoFromIfx ? challengeInfoFromIfx.updated_by : 'v5migration',
     timelineTemplateId: await mapTimelineTemplateId(v5TrackProperties.trackId, v5TrackProperties.typeId),
     phases: [],
     terms: [],
     startDate: moment().utc().format(),
     numOfSubmissions: _.toNumber(challengeListing.numberOfSubmissions),
-    numOfRegistrants: _.toNumber(challengeListing.numberOfRegistrants)
+    numOfRegistrants: _.toNumber(challengeListing.numberOfRegistrants),
+    ...(challengeListing.track === V4_TRACKS.DESIGN ? {
+      numOfCheckpointSubmissions: _.toNumber(_.get(challengeDetails, 'numberOfCheckpointSubmissions', 0))
+    } : {})
   }
   // console.log('number of reg', challengeListing.numberOfRegistrants)
   // console.log('number of submissions', challengeListing.numberOfSubmissions)
