@@ -86,6 +86,7 @@ const V4_SUBTRACKS = {
 }
 
 const MARATHON_MATCH_TAG = 'Marathon Match'
+const DATA_SCIENCE_TAG = 'Data Science'
 
 const FE_DESIGN_TAG = 'Front-End Design'
 const IDEATION_TAG = 'Ideation'
@@ -156,6 +157,8 @@ module.exports = {
       [V4_SUBTRACKS.FIRST_2_FINISH]: (isTask) => buildV5Data(V5_TRACK_IDS.DEVELOPMENT, isTask ? V5_TYPE_IDS.TASK : V5_TYPE_IDS.FIRST_2_FINISH),
       [V4_SUBTRACKS.CODE]: (isTask, tags) => {
         if (_.includes(tags, MARATHON_MATCH_TAG)) {
+          return buildV5Data(V5_TRACK_IDS.DATA_SCIENCE, V5_TYPE_IDS.CHALLENGE)
+        } else if (_.includes(tags, DATA_SCIENCE_TAG)) {
           return buildV5Data(V5_TRACK_IDS.DATA_SCIENCE, V5_TYPE_IDS.CHALLENGE)
         } else {
           return buildV5Data(V5_TRACK_IDS.DEVELOPMENT, V5_TYPE_IDS.CHALLENGE)
