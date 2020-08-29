@@ -1,7 +1,7 @@
 const config = require('config')
 const logger = require('../util/logger')
 // const moment = require('moment')
-const { slice, union, isNumber, trim } = require('lodash')
+const { slice, union, toString, toNumber } = require('lodash')
 const challengeSyncStatusService = require('../services/challengeSyncStatusService')
 const challengeSyncHistoryService = require('../services/challengeSyncHistoryService')
 const syncService = require('../services/syncService')
@@ -34,8 +34,8 @@ async function syncQueuedChallenges () {
         try {
           for (let i = 0; i < queuedChallenges.items.length; i += 1) {
             const item = queuedChallenges.items[i]
-            if (isNumber(item.legacyId)) {
-              await syncService.syncLegacyId(item.legacyId, item.force)
+            if (toString(item.legacyId) !== 'NaN') {
+              await syncService.syncLegacyId(toNumber(item.legacyId), item.force)
             } else {
               logger.error(`Sync Failed for Bad Legacy ID: ${item.legacyId}`)
             }
