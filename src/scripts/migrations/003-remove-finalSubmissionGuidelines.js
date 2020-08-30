@@ -27,13 +27,14 @@ const migrationFunction = {
         // logger.info(`Updating ${challenges}`)
         for (const challenge of challenges) {
           // logger.info(`Updating ${challenge.id}`)
-          const [v5Challenge] = await challengeService.getChallengeFromV5API(challenge.id)
+          const v5Challenge = await challengeService.getChallengeFromV5API(challenge.id)
+          // logger.info(`Updating ${JSON.stringify(v5Challenge)}`)
           if (v5Challenge && v5Challenge.description) {
             const newV5Challenge = await challengeService.buildV5Challenge(challenge.id)
             v5Challenge.description = newV5Challenge.description
             logger.info(`Updating Challenge Spec: ${v5Challenge.id} LegacyID: ${challenge.id}`)
             v5Challenge.legacy.migration = 3
-            // console.log(v5Challenge)
+            console.log(v5Challenge)
             await challengeService.save(v5Challenge)
           }
         }

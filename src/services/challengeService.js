@@ -807,6 +807,7 @@ async function getChallengeSubmissionsFromV5API (challengeId, type) {
   if (type) {
     url += `&type=${type}`
   }
+  // console.log(url)
   // logger.warn(`Getting Submissions: ${url}`)
   const res = await axios.get(url, { headers: { Authorization: `Bearer ${token}` } })
   // logger.warn(`Getting Submissions Response: ${JSON.stringify(res.data)} ${res.headers['x-total']}`)

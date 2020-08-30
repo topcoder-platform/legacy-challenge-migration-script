@@ -8,8 +8,8 @@ const _ = require('lodash')
 const logger = require('../../util/logger')
 const challengeService = require('../../services/challengeService')
 const { getV4ESClient } = require('../../util/helper')
-const convertionMappingHelper = require('../../util/conversionMappings')
-const { V4_TRACKS, V4_SUBTRACKS, MARATHON_MATCH_TAG } = require('../../util/conversionMappings')
+const conversionMappingHelper = require('../../util/conversionMappings')
+const { V4_TRACKS, V4_SUBTRACKS, DATA_SCIENCE_TAG } = require('../../util/conversionMappings')
 
 const migrationFunction = {
   run: async () => {
@@ -27,10 +27,18 @@ const migrationFunction = {
         for (const challenge of challenges) {
           // logger.info(`Updating ${challenge.challengeId}`)
           const [v5Challenge] = await challengeService.getChallengeFromV5API(challenge.challengeId)
-          const v5Props = convertionMappingHelper.V4_TO_V5[V4_TRACKS.DEVELOP][V4_SUBTRACKS.CODE](false, [MARATHON_MATCH_TAG])
-          v5Props.tags = _.uniq(_.concat(v5Props.tags, v5Challenge.tags))
-          _.extend(v5Challenge, v5Props)
-          await challengeService.save(v5Challenge)
+          if (v5Challenge) {
+            // logger.debug(`Challenge Tags: ${JSON.stringify(v5Challenge)}`)
+            const v5Props = conversionMappingHelper.V4_TO_V5[V4_TRACKS.DEVELOP][V4_SUBTRACKS.CODE](false, [DATA_SCIENCE_TAG])
+            // logger.debug(`Challenge Props: ${JSON.stringify(v5Props)}`)
+            v5Props.tags = _.uniq(_.concat(
+              v5Props.tags,
+              v5Challenge.tags))
+            _.extend(v5Challenge, v5Props)
+            await challengeService.save(v5Challenge)
+          } else {
+            logger.error(`Challenge not found in v5 ${challenge.challengeId}`)
+          }
         }
       } else {
         logger.info('Finished')
@@ -44,7 +52,7 @@ const migrationFunction = {
 
 async function getChallengesMissingData (page = 0, perPage = 10) {
   const esQuery = {
-    index: 'challengesdetail',
+    index: 'challengeslisting',
     type: 'challenges',
     size: perPage,
     from: page * perPage,
@@ -64,7 +72,7 @@ async function getChallengesMissingData (page = 0, perPage = 10) {
             },
             {
               match_phrase: {
-                technologies: MARATHON_MATCH_TAG
+                technologies: DATA_SCIENCE_TAG
               }
             }
           ]
@@ -72,7 +80,7 @@ async function getChallengesMissingData (page = 0, perPage = 10) {
       }
     }
   }
-  // logger.debug(`ES Query ${JSON.stringify(esQuery)}`)
+  logger.debug(`ES Query ${JSON.stringify(esQuery)}`)
   // Search with constructed query
   let docs
   try {
