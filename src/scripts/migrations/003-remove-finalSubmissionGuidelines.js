@@ -9,6 +9,7 @@ const _ = require('lodash')
 const logger = require('../../util/logger')
 const challengeService = require('../../services/challengeService')
 const { getV4ESClient } = require('../../util/helper')
+// const syncController = require('../../controllers/syncController')
 
 // const INVALID_DESCRIPTION_CONTENT = '<br /><br /><h2>Final Submission Guidelines</h2>null'
 
@@ -26,16 +27,17 @@ const migrationFunction = {
       if (challenges.length > 0) {
         // logger.info(`Updating ${challenges}`)
         for (const challenge of challenges) {
-          // logger.info(`Updating ${challenge.id}`)
-          const v5Challenge = await challengeService.getChallengeFromV5API(challenge.id)
-          // logger.info(`Updating ${JSON.stringify(v5Challenge)}`)
+          const [v5Challenge] = await challengeService.getChallengeFromV5API(challenge.challengeId)
           if (v5Challenge && v5Challenge.description) {
-            const newV5Challenge = await challengeService.buildV5Challenge(challenge.id)
+            const newV5Challenge = await challengeService.buildV5Challenge(challenge.challengeId)
             v5Challenge.description = newV5Challenge.description
-            logger.info(`Updating Challenge Spec: ${v5Challenge.id} LegacyID: ${challenge.id}`)
+            logger.info(`Updating Challenge Spec: ${v5Challenge.id} LegacyID: ${challenge.challengeId}`)
             v5Challenge.legacy.migration = 3
-            console.log(v5Challenge)
+            // console.log(v5Challenge)
             await challengeService.save(v5Challenge)
+          } else {
+            logger.info(`Challenge Doesn't Exist ${challenge.challengeId}`)
+            // syncController.queueChallengeById(challenge.challengeId)
           }
         }
       } else {
@@ -50,18 +52,15 @@ const migrationFunction = {
 
 async function getChallengesMissingData (page = 0, perPage = 10) {
   const esQuery = {
-    index: 'challengesdetail',
+    index: 'challengeslisting',
     type: 'challenges',
     size: perPage,
     from: page * perPage,
     body: {
       query: {
-        bool: {
-          must: {
-            match_phrase: {
-              finalSubmissionGuidelines: 'null'
-            }
-          }
+        match_phrase: {
+          track: 'DATA_SCIENCE'
+          // id: '30129332'
         }
       }
     }
