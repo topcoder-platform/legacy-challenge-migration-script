@@ -22,6 +22,71 @@ AWS.config.update({
 })
 
 /**
+ * Wrap async function to standard express function
+ * @param {Function} fn the async function
+ * @returns {Function} the wrapped function
+ */
+function wrapExpress (fn) {
+  return function (req, res, next) {
+    fn(req, res, next).catch(next)
+  }
+}
+
+/**
+ * Wrap all functions from object
+ * @param obj the object (controller exports)
+ * @returns {Object|Array} the wrapped object
+ */
+function autoWrapExpress (obj) {
+  if (_.isArray(obj)) {
+    return obj.map(autoWrapExpress)
+  }
+  if (_.isFunction(obj)) {
+    if (obj.constructor.name === 'AsyncFunction') {
+      return wrapExpress(obj)
+    }
+    return obj
+  }
+  _.each(obj, (value, key) => {
+    obj[key] = autoWrapExpress(value)
+  })
+  return obj
+}
+
+/**
+ * Check if exists.
+ *
+ * @param {Array} source the array in which to search for the term
+ * @param {Array | String} term the term to search
+ * @returns {Boolean} whether the term is in the source
+ */
+function checkIfExists (source, term) {
+  let terms
+
+  if (!_.isArray(source)) {
+    throw new Error('Source argument should be an array')
+  }
+
+  source = source.map(s => s.toLowerCase())
+
+  if (_.isString(term)) {
+    terms = term.toLowerCase().split(' ')
+  } else if (_.isArray(term)) {
+    terms = term.map(t => t.toLowerCase())
+  } else {
+    throw new Error('Term argument should be either a string or an array')
+  }
+
+  for (let i = 0; i < terms.length; i++) {
+    if (source.includes(terms[i])) {
+      return true
+    }
+  }
+
+  return false
+}
+
+/**
  * Get ES Client
  * @return {Object} Elasticsearch Client Instance
  */
@@ -89,17 +154,6 @@ function getV4ESClient () {
  */
 function generateInformxDate (date) {
   return moment(date).tz('America/New_York').format('YYYY-MM-DD HH:mm:ss.SSS')
-}
-
-/**
- * Wrap async function to standard express function
- * @param {Function} fn the async function
- * @returns {Function} the wrapped function
- */
-function wrapRouter (fn) {
-  return function (req, res, next) {
-    fn(req, res, next).catch(next)
-  }
 }
 
 /**
@@ -175,7 +229,9 @@ function setResHeaders (req, res, result) {
 }
 
 module.exports = {
-  wrapRouter,
+  wrapExpress,
+  autoWrapExpress,
+  checkIfExists,
   getESClient,
   getV4ESClient,
   scanDynamoModelByProperty,

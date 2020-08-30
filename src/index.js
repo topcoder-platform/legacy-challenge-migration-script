@@ -7,13 +7,13 @@ const schedule = require('node-schedule')
 const express = require('express')
 const cors = require('cors')
 // const _ = require('lodash')
+const interceptor = require('express-interceptor')
 const logger = require('./util/logger')
 const YAML = require('yamljs')
 const swaggerUi = require('swagger-ui-express')
 const apiSwaggerDoc = YAML.load('./docs/swagger.yaml')
 const migrationController = require('./controllers/migrationController')
 // const syncService = require('./services/syncService')
-const apiController = require('./controllers/apiController')
 const syncController = require('./controllers/syncController')
 
 process.on('unhandledRejection', (reason, p) => {
@@ -77,20 +77,34 @@ const swaggerRoute = '/v5/challenge-migration/docs'
 app.use(swaggerRoute, swaggerUi.serve, swaggerUi.setup(apiSwaggerDoc))
 logger.info(`Swagger doc is available at ${swaggerRoute}`)
 
-app.get(`/${config.API_VERSION}/challenge-migration/convert-to-v4`, apiController.convertV5TrackToV4)
-app.get(`/${config.API_VERSION}/challenge-migration/convert-to-v5`, apiController.convertV4TrackToV5)
+// intercept the response body from jwtAuthenticator
+app.use(interceptor((req, res) => {
+  return {
+    isInterceptable: () => {
+      return res.statusCode === 403
+    },
 
-app.get(`/${config.API_VERSION}/challenge-migration/sync`, apiController.getSyncStatus)
+    intercept: (body, send) => {
+      let obj
+      try {
+        obj = JSON.parse(body)
+      } catch (e) {
+        logger.error('Invalid response body.')
+      }
+      if (obj && obj.result && obj.result.content && obj.result.content.message) {
+        const ret = { message: obj.result.content.message }
+        res.statusCode = 401
+        send(JSON.stringify(ret))
+      } else {
+        send(body)
+      }
+    }
+  }
+}))
 
-app.get(`/${config.API_VERSION}/challenge-migration`, apiController.getMigrationStatus)
+// Register routes
+require('./app-routes')(app)
 
-// JMC :: Commented out for security reasons.
-if (config.ADMIN_API_ENABLED === true) {
-  app.post(`/${config.API_VERSION}/challenge-migration/sync`, apiController.queueSync)
-  app.post(`/${config.API_VERSION}/challenge-migration`, apiController.queueForMigration)
-  app.put(`/${config.API_VERSION}/challenge-migration`, apiController.retryFailed)
-  app.delete(`/${config.API_VERSION}/challenge-migration/:uuid`, apiController.destroyChallenge)
-}
 // the topcoder-healthcheck-dropin library returns checksRun count,
 // here it follows that to return such count
 // let checksRun = 0
