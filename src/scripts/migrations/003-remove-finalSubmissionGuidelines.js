@@ -59,7 +59,7 @@ async function getChallengesMissingData (page = 0, perPage = 10) {
     body: {
       query: {
         match_phrase: {
-          track: 'DATA_SCIENCE'
+          subTrack: 'DEVELOP_MARATHON_MATCH'
           // id: '30129332'
         }
       }
