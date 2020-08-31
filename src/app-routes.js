@@ -32,6 +32,8 @@ module.exports = (app) => {
       actions.push((req, res, next) => {
         if (def.adminApi && !config.ADMIN_API_ENABLED) {
           throw new errors.ForbiddenError('Action is disabled')
+        } else {
+          next()
         }
       })
 
