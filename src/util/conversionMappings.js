@@ -97,7 +97,12 @@ const TEST_SCENARIOS_TAG = 'Test Scenarios'
 const TESTING_COMPETITION_TAG = 'Testing Competition'
 
 // Helper methodS to simply avoid writing too much
-const buildV4Data = (track, subTrack, isTask) => ({ track, subTrack, isTask })
+const buildV4Data = (track, subTrack, isTask, technologies) => ({
+  track,
+  subTrack,
+  isTask,
+  ...(technologies ? { technologies } : {})
+})
 const buildV5Data = (trackId, typeId, tags = []) => ({
   trackId,
   typeId,
@@ -113,7 +118,7 @@ module.exports = {
         if (_.includes(tags, MARATHON_MATCH_TAG)) {
           return buildV4Data(V4_TRACKS.DATA_SCIENCE, V4_SUBTRACKS.MARATHON_MATCH, false)
         } else {
-          return buildV4Data(V4_TRACKS.DEVELOP, V4_SUBTRACKS.CODE, false)
+          return buildV4Data(V4_TRACKS.DEVELOP, V4_SUBTRACKS.CODE, false, [DATA_SCIENCE_TAG])
         }
       },
       [V5_TYPE_IDS.FIRST_2_FINISH]: () => buildV4Data(V4_TRACKS.DEVELOP, V4_SUBTRACKS.FIRST_2_FINISH, false),
