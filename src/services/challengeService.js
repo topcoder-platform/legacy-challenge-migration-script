@@ -801,6 +801,20 @@ async function getChallengeFromV5API (legacyId) {
   return res.data || null
 }
 
+async function getMMatchFromV4API (legacyId) {
+  const token = await getM2MToken()
+  const url = `${config.V4_CHALLENGE_API_URL}/${legacyId}`
+  console.log(url)
+  let res = null
+  try {
+    res = await axios.get(url, { headers: { Authorization: `Bearer ${token}` } })
+  } catch (e) {
+    logger.error(`Axios Error: ${JSON.stringify(e)}`)
+  }
+  // console.log(res.data)
+  return res.data.result.content || null
+}
+
 async function getChallengeSubmissionsFromV5API (challengeId, type) {
   const token = await getM2MToken()
   let url = `${config.SUBMISSIONS_API_URL}?challengeId=${challengeId}&perPage=1`
@@ -832,6 +846,7 @@ module.exports = {
   deleteChallenge,
   createChallengeTimelineMapping,
   getChallengeFromV5API,
+  getMMatchFromV4API,
   getChallengeTypesFromDynamo,
   getChallengeSubmissionsFromV5API
 }
