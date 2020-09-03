@@ -843,6 +843,7 @@ module.exports = {
   getChallengeDetailFromV4ES,
   // getChallengeTypes,
   // saveChallengeTypes,
+  getProjectFromV5,
   deleteChallenge,
   createChallengeTimelineMapping,
   getChallengeFromV5API,

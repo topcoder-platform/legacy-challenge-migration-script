@@ -2,14 +2,19 @@
  * Fix challenges launched as DEVELOP > CODE
  */
 global.Promise = require('bluebird')
+const uuid = require('uuid/v4')
 const moment = require('moment')
 const config = require('config')
+const request = require('superagent')
+const HashMap = require('hashmap')
 const _ = require('lodash')
 const logger = require('../../util/logger')
 const challengeService = require('../../services/challengeService')
-const { getV4ESClient } = require('../../util/helper')
+const { getV4ESClient, getM2MToken } = require('../../util/helper')
 const translationService = require('../../services/translationService')
-const resourceService = require('../../services/resourceService')
+// const resourceService = require('../../services/resourceService')
+
+const memberHandleCache = new HashMap()
 
 const migrationFunction = {
   run: async () => {
@@ -48,7 +53,7 @@ const migrationFunction = {
               track: 'DATA_SCIENCE',
               subTrack: c.subTrack,
               forumId: c.forumId,
-              // TODO :: directProjectId: challengeListing.projectId,
+              directProjectId: config.MM_DIRECT_PROJECT_ID,
               reviewType: c.reviewType || 'COMMUNITY'
               // screeningScorecardId: challengeListing.screeningScorecardId,
               // reviewScorecardId: challengeListing.reviewScorecardId
@@ -61,18 +66,28 @@ const migrationFunction = {
             name: c.challengeTitle,
             description: c.detailedRequirements || '',
             descriptionFormat: 'HTML',
-            // TODO :: projectId: connectProjectId,
-            // created: moment(challengeListing.createdAt).utc().format(),
-            // createdBy: challengeInfoFromIfx ? challengeInfoFromIfx.created_by : 'v5migration',
-            // updated: moment(challengeListing.updatedAt).utc().format() || null,
-            // updatedBy: challengeInfoFromIfx ? challengeInfoFromIfx.updated_by : 'v5migration',
-            // timelineTemplateId: await mapTimelineTemplateId(v5TrackProperties.trackId, v5TrackProperties.typeId), // TODO :: Hardcode marathon match timeline? or leave null?
+            projectId: config.MM_CONNECT_PROJECT_ID,
+            created: null, // pull from phase info
+            createdBy: 'applications',
+            updated: null, // pull from phase info
+            updatedBy: 'applications',
+            timelineTemplateId: null,
             phases: [], // TODO :: process phases
             terms: [], // leave empty
-            // startDate: moment().utc().format(),
+            startDate: null, // pull from phase info
             numOfSubmissions: _.toNumber(c.numberOfSubmissions),
             numOfRegistrants: _.toNumber(c.numberOfRegistrants)
           }
+
+          // "registrationEndDate": "2012-03-29T17:00:00.000Z",
+          // "submissionEndDate": "2012-03-29T17:00:00.000Z",
+
+          const { phases, challengeStartDate, challengeEndDate } = convertPhases(c.phases)
+
+          newChallenge.phases = phases
+          newChallenge.startDate = challengeStartDate
+          newChallenge.created = challengeStartDate
+          newChallenge.updated = challengeEndDate
 
           const winners = _.map(c.winners, w => {
             return {
@@ -83,21 +98,42 @@ const migrationFunction = {
           })
           newChallenge.winners = winners
 
-          const savedChallenge = await challengeService.save(newChallenge)
+          // const savedChallenge = await challengeService.save(newChallenge)
+          // logger.debug(`Challenge: ${JSON.stringify(newChallenge)}`)
+          const savedChallenge = { id: uuid() }
+
+          let handlesToLookup = []
           for (const registrant of c.registrants) {
+            // build cache
+            if (!getMemberIdFromCache(registrant.handle)) {
+              handlesToLookup.push(registrant.handle)
+            }
+            if (handlesToLookup.length >= 25) {
+              await cacheHandles(handlesToLookup)
+              handlesToLookup = []
+            }
+          }
+          await cacheHandles(handlesToLookup)
+
+          logger.debug(`Final Cache: ${JSON.stringify(memberHandleCache)}`)
+
+          for (const registrant of c.registrants) {
+            const memberId = await getMemberIdFromCache(registrant.handle)
             const newResource = {
               // legacyId: resource.id,
               created: moment(registrant.registrationDate).utc().format(),
               createdBy: registrant.handle,
               updated: moment(registrant.registrationDate).utc().format(),
               updatedBy: registrant.handle,
-              // memberId: _.toString(resource.member_id), //need to look this up
+              memberId: _.toString(memberId),
               memberHandle: registrant.handle,
               challengeId: savedChallenge.id,
               roleId: config.SUBMITTER_ROLE_ID
             }
-            await resourceService.save(newResource)
+            // await resourceService.save(newResource)
+            logger.debug(`Resource: ${JSON.stringify(newResource)}`)
           }
+          return
         }
       } else {
         logger.info('Finished')
@@ -110,6 +146,64 @@ const migrationFunction = {
   }
 }
 
+function getMemberIdFromCache (handle) {
+  if (memberHandleCache.get(handle)) {
+    return memberHandleCache.get(handle)
+  }
+  return false
+}
+
+function cacheMemberIdForHandle (handle, memberId) {
+  memberHandleCache.set(handle, memberId)
+}
+
+async function cacheHandles (handles) {
+  logger.debug(`Caching ${handles.length} handles`)
+  // curl --location --request GET 'https://api.topcoder-dev.com/v3/members/_search/?fields=userId%2Chandle%2CfirstName%2Cemail%2ClastName&query=handleLower:upbeat%20OR%20handleLower:tonyj'
+  const ids = _.map(handles, h => `handleLower:${h}`)
+  const query = ids.join('%20OR%20')
+  const token = await getM2MToken()
+  const url = `https://api.topcoder-dev.com/v3/members/_search?fields=userId%2Chandle&query=${query}` // TODO COnfig
+  const res = await request.get(url).set({ Authorization: `Bearer ${token}` })
+  const handleArray = _.get(res.body, 'result.content')
+  for (const h of handleArray) {
+    cacheMemberIdForHandle(h.handle, h.userId)
+  }
+}
+
+function convertPhases (v4PhasesArray) {
+  let challengeEndDate = moment()
+  let challengeStartDate = null
+  const phases = _.map(v4PhasesArray, phase => {
+    const start = moment(phase.actualStartTime)
+    const end = moment(phase.actualEndTime)
+    const v5duration = start.diff(end, 'seconds')
+    if (challengeStartDate === null) {
+      challengeStartDate = moment(phase.actualStartTime).utc().format()
+    }
+    // console.log('phase', phase)
+    const newPhase = {
+      id: uuid(),
+      name: phase.type,
+      phaseId: _.get(_.find(config.get('PHASE_NAME_MAPPINGS'), { name: phase.type }), 'phaseId'),
+      duration: v5duration,
+      scheduledStartDate: moment(phase.scheduledStartTime).utc().format(),
+      scheduledEndDate: moment(phase.scheduledEndTime).utc().format(),
+      actualStartDate: moment(phase.actualStartTime).utc().format(),
+      actualEndDate: moment(phase.actualEndTime).utc().format()
+    }
+
+    challengeEndDate = moment(phase.scheduledEndTime).utc().format()
+    if (phase.status === 'Open') {
+      newPhase.isOpen = true
+    } else {
+      newPhase.isOpen = false
+    }
+    return newPhase
+  })
+
+  return { phases, challengeEndDate, challengeStartDate }
+}
 async function getMatchesFromES (page = 0, perPage = 10) {
   const esQuery = {
     index: 'mmatches',

@@ -205,6 +205,8 @@ module.exports = {
     SUCCESS: 'Success'
   },
 
+  MM_DIRECT_PROJECT_ID: process.env.MM_DIRECT_PROJECT_ID || 23650,
+  MM_CONNECT_PROJECT_ID: process.env.MM_CONNECT_PROJECT_ID || 16612,
   SUBMITTER_ROLE_ID: process.env.SUBMITTER_ROLE_ID || '732339e7-8e30-49d7-9198-cccf9451e221',
   SUBMISSION_TYPE: process.env.SUBMISSION_TYPE || 'Contest Submission',
   CHECKPOINT_SUBMISSION_TYPE: process.env.CHECKPOINT_SUBMISSION_TYPE || 'Checkpoint Submission',
