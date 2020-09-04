@@ -72,7 +72,7 @@ const migrationFunction = {
             updated: null, // pull from phase info
             updatedBy: 'applications',
             timelineTemplateId: null,
-            phases: [], // TODO :: process phases
+            phases: [],
             terms: [], // leave empty
             startDate: null, // pull from phase info
             numOfSubmissions: _.toNumber(c.numberOfSubmissions),
@@ -89,19 +89,6 @@ const migrationFunction = {
           newChallenge.created = challengeStartDate
           newChallenge.updated = challengeEndDate
 
-          const winners = _.map(c.winners, w => {
-            return {
-              handle: w.submitter
-              // placement: w.rank // TODO :: missing placement?
-              // TODO :: missing points as an object property
-            }
-          })
-          newChallenge.winners = winners
-
-          // const savedChallenge = await challengeService.save(newChallenge)
-          // logger.debug(`Challenge: ${JSON.stringify(newChallenge)}`)
-          const savedChallenge = { id: uuid() }
-
           let handlesToLookup = []
           for (const registrant of c.registrants) {
             // build cache
@@ -115,7 +102,18 @@ const migrationFunction = {
           }
           await cacheHandles(handlesToLookup)
 
-          logger.debug(`Final Cache: ${JSON.stringify(memberHandleCache)}`)
+          const winners = _.map(c.winners, w => {
+            return {
+              handle: w.submitter
+              // placement: w.rank // TODO :: missing placement?
+              // TODO :: missing points as an object property
+            }
+          })
+          newChallenge.winners = winners
+
+          // const savedChallenge = await challengeService.save(newChallenge)
+          const savedChallenge = { id: uuid() }
+          logger.debug(`Challenge: ${JSON.stringify(newChallenge)}`)
 
           for (const registrant of c.registrants) {
             const memberId = await getMemberIdFromCache(registrant.handle)
@@ -131,7 +129,7 @@ const migrationFunction = {
               roleId: config.SUBMITTER_ROLE_ID
             }
             // await resourceService.save(newResource)
-            logger.debug(`Resource: ${JSON.stringify(newResource)}`)
+            // logger.debug(`Resource: ${JSON.stringify(newResource)}`)
           }
           return
         }
@@ -177,7 +175,7 @@ function convertPhases (v4PhasesArray) {
   const phases = _.map(v4PhasesArray, phase => {
     const start = moment(phase.actualStartTime)
     const end = moment(phase.actualEndTime)
-    const v5duration = start.diff(end, 'seconds')
+    const v5duration = end.diff(start, 'seconds')
     if (challengeStartDate === null) {
       challengeStartDate = moment(phase.actualStartTime).utc().format()
     }
