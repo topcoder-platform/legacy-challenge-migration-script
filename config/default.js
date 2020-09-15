@@ -32,6 +32,7 @@ module.exports = {
   GROUPS_API_URL: process.env.GROUPS_API_URL || 'https://api.topcoder-dev.com/v5/groups',
   TERMS_API_URL: process.env.TERMS_API_URL || 'https://api.topcoder-dev.com/v5/terms',
   V4_CHALLENGE_API_URL: process.env.V4_CHALLENGE_API_URL || 'https://api.topcoder-dev.com/v4/challenges',
+  V3_MEMBER_API_URL: process.env.V3_MEMBER_API_URL || 'https://api.topcoder-dev.com/v3/members',
   CREATED_DATE_BEGIN: process.env.CREATED_DATE_BEGIN,
   POPULATE_MIGRATION_TABLE_DATE_BEGIN: process.env.POPULATE_MIGRATION_TABLE_DATE_BEGIN || process.env.CREATED_DATE_BEGIN || new Date(),
 

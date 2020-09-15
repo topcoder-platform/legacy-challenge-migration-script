@@ -12,7 +12,10 @@ const logger = require('../../util/logger')
 const challengeService = require('../../services/challengeService')
 const { getV4ESClient, getM2MToken } = require('../../util/helper')
 const translationService = require('../../services/translationService')
-// const resourceService = require('../../services/resourceService')
+// const csv = require('csv-parser')
+const fs = require('fs')
+const resourceService = require('../../services/resourceService')
+const { v5 } = require('uuid')
 
 const memberHandleCache = new HashMap()
 
@@ -23,6 +26,8 @@ const migrationFunction = {
     let page = 0
     let batch = 1
 
+    const challengeJson = { challenges: [] }
+
     while (!finish) {
       logger.info(`Batch-${batch} - Loading challenges`)
       const challenges = await getMatchesFromES(page, perPage)
@@ -31,8 +36,23 @@ const migrationFunction = {
       //   // logger.info(`Updating ${challenges}`)
         for (const challenge of challenges) {
           logger.debug(`Loading challenge ${challenge.id}`)
-          // get challenge from v4 api
           const c = await challengeService.getMMatchFromV4API(challenge.id)
+          if (!c) {
+            logger.error(`Challenge Not Found - ID: ${challenge.id}, RoundID: ${challenge.roundId}`)
+            continue
+          }
+
+          const v5ChallengeLookup = await challengeService.getChallengeIDsFromV5({ legacyId: challenge.id }, 10)
+          // logger.debug(JSON.stringify(v5ChallengeLookup))
+          if (v5ChallengeLookup && v5ChallengeLookup.v5Ids && v5ChallengeLookup.v5Ids[0]) {
+            logger.debug('Skipping!')
+            continue
+
+            // for (const id of v5ChallengeLookup.v5Ids) {
+            //   logger.warn(`Deleting Entry for ${id}`)
+            //   await challengeService.deleteChallenge(id)
+            // }
+          }
 
           const v5TrackProperties = translationService.convertV4TrackToV5(
             'DATA_SCIENCE',
@@ -90,48 +110,88 @@ const migrationFunction = {
           newChallenge.updated = challengeEndDate
 
           let handlesToLookup = []
-          for (const registrant of c.registrants) {
-            // build cache
-            if (!getMemberIdFromCache(registrant.handle)) {
-              handlesToLookup.push(registrant.handle)
+          if (c.registrants && c.registrants.length > 0) {
+            for (const registrant of c.registrants) {
+              // build cache
+              if (!getMemberIdFromCache(registrant.handle)) {
+                handlesToLookup.push(registrant.handle)
+              } else {
+                // logger.debug(`Handle Found in Cache ${registrant.handle}`)
+              }
+              if (handlesToLookup.length >= 15) {
+                await cacheHandles(handlesToLookup)
+                handlesToLookup = []
+              }
             }
-            if (handlesToLookup.length >= 25) {
-              await cacheHandles(handlesToLookup)
-              handlesToLookup = []
+            await cacheHandles(handlesToLookup)
+
+            // csv
+            // challenge id, member id, member handle, submission id, score
+            const winners = _.map(c.winners, w => {
+              return {
+                handle: w.submitter,
+                userId: getMemberIdFromCache(w.submitter),
+                points: w.points,
+                submissionId: w.submissionId
+              }
+            })
+
+            const sortedWinners = _.orderBy(winners, ['points'], ['desc'])
+
+            // console.log('Sorted Winners', JSON.stringify(sortedWinners))
+            let placement = 1
+            let counter = 1
+            let lastPointsValue = null
+            const calculatedWinners = []
+            for (const winner of sortedWinners) {
+              // calculate rank
+              if (lastPointsValue && lastPointsValue > winner.points) {
+                placement = counter
+              }
+              const calculatedWinner = {}
+              calculatedWinner.handle = _.toString(winner.handle)
+              calculatedWinner.userId = _.toString(winner.userId)
+              calculatedWinner.placement = placement
+              lastPointsValue = winner.points
+              counter += 1
+
+              calculatedWinners.push(calculatedWinner)
             }
+            // console.log('Calculated Winners', JSON.stringify(calculatedWinners))
+
+            newChallenge.winners = calculatedWinners
+
+            const savedChallengeId = await challengeService.save(newChallenge)
+            // const savedChallengeId = uuid() // FOR TESTING
+            // logger.debug(`Challenge: ${JSON.stringify(c.submissions)}`)
+
+            const thisChallenge = {
+              challengeId: challenge.id,
+              submissions: c.submissions
+            }
+            challengeJson.challenges.push(thisChallenge)
+            fs.writeFileSync('src/scripts/files/challenges.json', JSON.stringify(challengeJson))
+
+            for (const registrant of c.registrants) {
+              const memberId = await getMemberIdFromCache(registrant.handle)
+              const newResource = {
+                // legacyId: resource.id,
+                created: moment(registrant.registrationDate).utc().format(),
+                createdBy: registrant.handle,
+                updated: moment(registrant.registrationDate).utc().format(),
+                updatedBy: registrant.handle,
+                memberId: _.toString(memberId),
+                memberHandle: registrant.handle,
+                challengeId: savedChallengeId,
+                roleId: config.SUBMITTER_ROLE_ID
+              }
+              await resourceService.saveResource(newResource)
+              // logger.debug(`Resource: ${JSON.stringify(newResource)}`)
+            }
+          } else {
+            logger.warn(`No Registrants for Challenge ${challenge.id}`)
           }
-          await cacheHandles(handlesToLookup)
-
-          const winners = _.map(c.winners, w => {
-            return {
-              handle: w.submitter
-              // placement: w.rank // TODO :: missing placement?
-              // TODO :: missing points as an object property
-            }
-          })
-          newChallenge.winners = winners
-
-          // const savedChallenge = await challengeService.save(newChallenge)
-          const savedChallenge = { id: uuid() }
-          logger.debug(`Challenge: ${JSON.stringify(newChallenge)}`)
-
-          for (const registrant of c.registrants) {
-            const memberId = await getMemberIdFromCache(registrant.handle)
-            const newResource = {
-              // legacyId: resource.id,
-              created: moment(registrant.registrationDate).utc().format(),
-              createdBy: registrant.handle,
-              updated: moment(registrant.registrationDate).utc().format(),
-              updatedBy: registrant.handle,
-              memberId: _.toString(memberId),
-              memberHandle: registrant.handle,
-              challengeId: savedChallenge.id,
-              roleId: config.SUBMITTER_ROLE_ID
-            }
-            // await resourceService.save(newResource)
-            // logger.debug(`Resource: ${JSON.stringify(newResource)}`)
-          }
-          return
+          // return
         }
       } else {
         logger.info('Finished')
@@ -159,14 +219,27 @@ async function cacheHandles (handles) {
   logger.debug(`Caching ${handles.length} handles`)
   // curl --location --request GET 'https://api.topcoder-dev.com/v3/members/_search/?fields=userId%2Chandle%2CfirstName%2Cemail%2ClastName&query=handleLower:upbeat%20OR%20handleLower:tonyj'
   const ids = _.map(handles, h => `handleLower:${h}`)
-  const query = ids.join('%20OR%20')
+  const query = encodeURIComponent(escapeChars(ids.join('%20OR%20')))
   const token = await getM2MToken()
-  const url = `https://api.topcoder-dev.com/v3/members/_search?fields=userId%2Chandle&query=${query}` // TODO COnfig
+  const url = `${config.V3_MEMBER_API_URL}/_search?fields=userId%2Chandle&query=${query}`
   const res = await request.get(url).set({ Authorization: `Bearer ${token}` })
   const handleArray = _.get(res.body, 'result.content')
   for (const h of handleArray) {
     cacheMemberIdForHandle(h.handle, h.userId)
   }
+}
+
+// + - && || ! ( ) { } [ ] ^ " ~ * ? : \
+function escapeChars (str) {
+  str = str.replace(/]/g, '\\]')
+  str = str.replace(/\[/g, '\\[')
+  str = str.replace(/-/g, '\\-')
+  str = str.replace(/{/g, '\\{')
+  str = str.replace(/}/g, '\\}')
+  str = str.replace(/\)/g, '\\)')
+  str = str.replace(/\(/g, '\\(')
+  str = str.replace(/\//g, '\\/')
+  return str
 }
 
 function convertPhases (v4PhasesArray) {
@@ -210,11 +283,12 @@ async function getMatchesFromES (page = 0, perPage = 10) {
     from: page * perPage,
     body: {
       query: {
-        match_all: { }
+        // match_phrase: { id: 16492 }
+        match_all: {}
       }
     }
   }
-  logger.debug(`ES Query ${JSON.stringify(esQuery)}`)
+  // logger.debug(`ES Query ${JSON.stringify(esQuery)}`)
   // Search with constructed query
   let docs
   try {

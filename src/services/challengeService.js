@@ -363,8 +363,8 @@ async function getChallengeIDsFromV5 (filter, perPage, page = 1) {
     // refresh: config.get('ES.ES_REFRESH'),
     size: perPage,
     from: perPage * (page - 1),
-    _source: ['legacyId'],
     body: {
+      _source: ['legacyId', 'id'],
       version: 'true',
       query: mustQuery.length > 0 ? {
         bool: {
@@ -386,7 +386,7 @@ async function getChallengeIDsFromV5 (filter, perPage, page = 1) {
     docs = await getESClient().search(esQuery)
   } catch (e) {
     // Catch error when the ES is fresh and has no data
-    logger.error(e)
+    // logger.error(`V5 Challenge IDs try/catch ${JSON.stringify(e)}`)
     docs = {
       hits: {
         total: 0,
@@ -396,7 +396,13 @@ async function getChallengeIDsFromV5 (filter, perPage, page = 1) {
   }
   // logger.warn(JSON.stringify(docs))
   // Extract data from hits
-  if (docs.hits.total > 0) return { total: docs.hits.total, ids: _.map(docs.hits.hits, hit => _.toNumber(hit._source.legacyId)) }
+  if (docs.hits.total > 0) {
+    return {
+      total: docs.hits.total,
+      ids: _.map(docs.hits.hits, hit => _.toNumber(hit._source.legacyId)),
+      v5Ids: _.map(docs.hits.hits, hit => hit._source.id)
+    }
+  }
   return false
 }
 
@@ -804,15 +810,16 @@ async function getChallengeFromV5API (legacyId) {
 async function getMMatchFromV4API (legacyId) {
   const token = await getM2MToken()
   const url = `${config.V4_CHALLENGE_API_URL}/${legacyId}`
-  console.log(url)
+  // console.log(url)
   let res = null
   try {
     res = await axios.get(url, { headers: { Authorization: `Bearer ${token}` } })
   } catch (e) {
-    logger.error(`Axios Error: ${JSON.stringify(e)}`)
+    // logger.error(`Axios Error: ${JSON.stringify(e)}`)
+    return false
   }
   // console.log(res.data)
-  return res.data.result.content || null
+  return res.data.result.content || false
 }
 
 async function getChallengeSubmissionsFromV5API (challengeId, type) {
