@@ -15,7 +15,9 @@ const translationService = require('../../services/translationService')
 // const csv = require('csv-parser')
 const fs = require('fs')
 const resourceService = require('../../services/resourceService')
-const { v5 } = require('uuid')
+// const { v5 } = require('uuid')
+
+// const APPLICATIONS_USERID = '22770213'
 
 const memberHandleCache = new HashMap()
 
@@ -27,31 +29,36 @@ const migrationFunction = {
     let batch = 1
 
     const challengeJson = { challenges: [] }
+    const challengeIdsToDelete = []
+
+    // logger.warn(await getMemberIdFromCache('TICKET_60375'))
+    // return
 
     while (!finish) {
       logger.info(`Batch-${batch} - Loading challenges`)
       const challenges = await getMatchesFromES(page, perPage)
       logger.info(`Found ${challenges.length} challenges`)
       if (challenges.length > 0) {
-      //   // logger.info(`Updating ${challenges}`)
         for (const challenge of challenges) {
           logger.debug(`Loading challenge ${challenge.id}`)
           const c = await challengeService.getMMatchFromV4API(challenge.id)
           if (!c) {
-            logger.error(`Challenge Not Found - ID: ${challenge.id}, RoundID: ${challenge.roundId}`)
+            logger.warn(`Challenge Not Found in v4 API - ID: ${challenge.id}`)
             continue
           }
 
           const v5ChallengeLookup = await challengeService.getChallengeIDsFromV5({ legacyId: challenge.id }, 10)
           // logger.debug(JSON.stringify(v5ChallengeLookup))
           if (v5ChallengeLookup && v5ChallengeLookup.v5Ids && v5ChallengeLookup.v5Ids[0]) {
-            logger.debug('Skipping!')
-            continue
-
-            // for (const id of v5ChallengeLookup.v5Ids) {
-            //   logger.warn(`Deleting Entry for ${id}`)
-            //   await challengeService.deleteChallenge(id)
-            // }
+            if (_.includes(challengeIdsToDelete, challenge.id)) {
+              for (const id of v5ChallengeLookup.v5Ids) {
+                // logger.warn(`Deleting Entry for ${id}`)
+                await challengeService.deleteChallenge(id)
+              }
+            } else {
+              logger.debug('Already Exists! Skipping!')
+              continue
+            }
           }
 
           const v5TrackProperties = translationService.convertV4TrackToV5(
@@ -99,9 +106,6 @@ const migrationFunction = {
             numOfRegistrants: _.toNumber(c.numberOfRegistrants)
           }
 
-          // "registrationEndDate": "2012-03-29T17:00:00.000Z",
-          // "submissionEndDate": "2012-03-29T17:00:00.000Z",
-
           const { phases, challengeStartDate, challengeEndDate } = convertPhases(c.phases)
 
           newChallenge.phases = phases
@@ -109,68 +113,58 @@ const migrationFunction = {
           newChallenge.created = challengeStartDate
           newChallenge.updated = challengeEndDate
 
-          let handlesToLookup = []
+          const winners = []
+          const calculatedWinners = []
           if (c.registrants && c.registrants.length > 0) {
-            for (const registrant of c.registrants) {
-              // build cache
-              if (!getMemberIdFromCache(registrant.handle)) {
-                handlesToLookup.push(registrant.handle)
-              } else {
-                // logger.debug(`Handle Found in Cache ${registrant.handle}`)
+            if (c.winners && c.winners.length > 0) {
+              for (const w of c.winners) {
+                const userId = await getMemberIdFromCache(w.submitter)
+                winners.push({
+                  handle: w.submitter,
+                  userId,
+                  points: w.points,
+                  submissionId: w.submissionId
+                })
               }
-              if (handlesToLookup.length >= 15) {
-                await cacheHandles(handlesToLookup)
-                handlesToLookup = []
+
+              const sortedWinners = _.orderBy(winners, ['points'], ['desc'])
+
+              let placement = 1
+              let counter = 1
+              let lastPointsValue = null
+              for (const winner of sortedWinners) {
+                // calculate rank
+                if (lastPointsValue && lastPointsValue > winner.points) {
+                  placement = counter
+                }
+                const calculatedWinner = {}
+                calculatedWinner.handle = _.toString(winner.handle)
+                calculatedWinner.userId = _.toString(winner.userId)
+                calculatedWinner.placement = placement
+                lastPointsValue = winner.points
+                counter += 1
+
+                calculatedWinners.push(calculatedWinner)
               }
             }
-            await cacheHandles(handlesToLookup)
-
-            // csv
-            // challenge id, member id, member handle, submission id, score
-            const winners = _.map(c.winners, w => {
-              return {
-                handle: w.submitter,
-                userId: getMemberIdFromCache(w.submitter),
-                points: w.points,
-                submissionId: w.submissionId
-              }
-            })
-
-            const sortedWinners = _.orderBy(winners, ['points'], ['desc'])
-
-            // console.log('Sorted Winners', JSON.stringify(sortedWinners))
-            let placement = 1
-            let counter = 1
-            let lastPointsValue = null
-            const calculatedWinners = []
-            for (const winner of sortedWinners) {
-              // calculate rank
-              if (lastPointsValue && lastPointsValue > winner.points) {
-                placement = counter
-              }
-              const calculatedWinner = {}
-              calculatedWinner.handle = _.toString(winner.handle)
-              calculatedWinner.userId = _.toString(winner.userId)
-              calculatedWinner.placement = placement
-              lastPointsValue = winner.points
-              counter += 1
-
-              calculatedWinners.push(calculatedWinner)
-            }
-            // console.log('Calculated Winners', JSON.stringify(calculatedWinners))
 
             newChallenge.winners = calculatedWinners
 
-            const savedChallengeId = await challengeService.save(newChallenge)
-            // const savedChallengeId = uuid() // FOR TESTING
-            // logger.debug(`Challenge: ${JSON.stringify(c.submissions)}`)
+            let savedChallengeId
+            try {
+              savedChallengeId = await challengeService.save(newChallenge)
+              // savedChallengeId = uuid() // FOR TESTING
+            } catch (e) {
+              logger.error(`Challenge ${challenge.id} Could Not Be Saved ${e}`)
+              continue
+            }
 
             const thisChallenge = {
               challengeId: challenge.id,
               submissions: c.submissions
             }
             challengeJson.challenges.push(thisChallenge)
-            fs.writeFileSync('src/scripts/files/challenges.json', JSON.stringify(challengeJson))
+            // fs.writeFileSync('src/scripts/files/challenges.json', JSON.stringify(challengeJson))
 
             for (const registrant of c.registrants) {
               const memberId = await getMemberIdFromCache(registrant.handle)
@@ -185,13 +179,13 @@ const migrationFunction = {
                 challengeId: savedChallengeId,
                 roleId: config.SUBMITTER_ROLE_ID
               }
-              await resourceService.saveResource(newResource)
-              // logger.debug(`Resource: ${JSON.stringify(newResource)}`)
+              // await resourceService.saveResource(newResource)
+              logger.debug(`Resource: ${JSON.stringify(newResource)}`)
             }
           } else {
             logger.warn(`No Registrants for Challenge ${challenge.id}`)
           }
-          // return
+          return
         }
       } else {
         logger.info('Finished')
@@ -204,32 +198,57 @@ const migrationFunction = {
   }
 }
 
-function getMemberIdFromCache (handle) {
-  if (memberHandleCache.get(handle)) {
-    return memberHandleCache.get(handle)
+async function getMemberIdFromCache (handle) {
+  if (memberHandleCache.get(handle)) return memberHandleCache.get(handle)
+
+  const url = `https://api.topcoder.com/v5/members?handle=${encodeURIComponent(handle)}&fields=handleLower,userId`
+  const token = await getM2MToken()
+  const res = await request.get(url).set({ Authorization: `Bearer ${token}` })
+
+  // const response = _.get(res.body, 'result.content')
+  if (res && res.body[0]) {
+    const memberId = res.body[0].userId
+    memberHandleCache.set(handle, memberId)
+    return memberId
+  } else {
+    logger.warn(`Could not find member id in v5 for handle ${handle}, encoded: ${encodeURIComponent(handle)}`)
+    return getMemberIdFromV3(handle)
   }
-  return false
 }
 
-function cacheMemberIdForHandle (handle, memberId) {
-  memberHandleCache.set(handle, memberId)
-}
-
-async function cacheHandles (handles) {
-  logger.debug(`Caching ${handles.length} handles`)
-  // curl --location --request GET 'https://api.topcoder-dev.com/v3/members/_search/?fields=userId%2Chandle%2CfirstName%2Cemail%2ClastName&query=handleLower:upbeat%20OR%20handleLower:tonyj'
-  const ids = _.map(handles, h => `handleLower:${h}`)
-  const query = encodeURIComponent(escapeChars(ids.join('%20OR%20')))
+async function getMemberIdFromV3 (handle) {
+  const query = encodeURIComponent(escapeChars(`handleLower:${handle}`))
   const token = await getM2MToken()
   const url = `${config.V3_MEMBER_API_URL}/_search?fields=userId%2Chandle&query=${query}`
+  logger.debug(`Getting Handle from v3 ${url}`)
   const res = await request.get(url).set({ Authorization: `Bearer ${token}` })
   const handleArray = _.get(res.body, 'result.content')
-  for (const h of handleArray) {
-    cacheMemberIdForHandle(h.handle, h.userId)
+  if (handleArray && handleArray[0]) {
+    // cacheMemberIdForHandle(h.handle, h.userId)
+    memberHandleCache.set(handleArray[0].handle, handleArray[0].userId)
+    return handleArray[0].userId
   }
+  logger.error(`Handle ${handle} not found in v3, going to user api`)
+  return getMemberIdFromUserAPI(handle)
 }
 
-// + - && || ! ( ) { } [ ] ^ " ~ * ? : \
+async function getMemberIdFromUserAPI (handle) {
+  const query = encodeURIComponent(escapeChars(`${handle}`))
+  const token = await getM2MToken()
+  const url = `https://api.topcoder.com/v3/users?filter=handle=${query}`
+  logger.debug(`Getting Handle from v3 Users API ${url}`)
+  const res = await request.get(url).set({ Authorization: `Bearer ${token}` })
+  const [userObj] = _.get(res.body, 'result.content')
+  if (userObj) {
+    // cacheMemberIdForHandle(h.handle, h.userId)
+    memberHandleCache.set(handle, userObj.id)
+    return userObj.id
+  }
+  logger.error(`Handle ${handle} not found in v3 User API, Giving Up`)
+  return 0
+}
+
+// // + - && || ! ( ) { } [ ] ^ " ~ * ? : \
 function escapeChars (str) {
   str = str.replace(/]/g, '\\]')
   str = str.replace(/\[/g, '\\[')
@@ -239,6 +258,7 @@ function escapeChars (str) {
   str = str.replace(/\)/g, '\\)')
   str = str.replace(/\(/g, '\\(')
   str = str.replace(/\//g, '\\/')
+  str = str.replace(/\./g, '\\.')
   return str
 }
 
