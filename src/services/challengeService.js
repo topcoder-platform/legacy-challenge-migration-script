@@ -490,7 +490,7 @@ async function getChallengeDetailFromV4ES (legacyId) {
 async function mapTimelineTemplateId (trackId, typeId) {
   const templates = await ChallengeTimelineTemplate.scan('trackId').contains(trackId).exec()
   const template = _.find(templates, { typeId })
-  if (template) return template.id
+  if (template) return template.timelineTemplateId
   throw new Error(`Timeline Template Not found for trackId: ${trackId} typeId: ${typeId}`)
 }
 
