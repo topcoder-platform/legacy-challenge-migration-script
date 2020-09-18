@@ -856,5 +856,6 @@ module.exports = {
   getChallengeFromV5API,
   getMMatchFromV4API,
   getChallengeTypesFromDynamo,
-  getChallengeSubmissionsFromV5API
+  getChallengeSubmissionsFromV5API,
+  mapTimelineTemplateId
 }
