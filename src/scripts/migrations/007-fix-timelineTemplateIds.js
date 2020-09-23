@@ -23,6 +23,8 @@ const migrationFunction = {
         for (const challenge of challenges) {
           try {
             challenge.timelineTemplateId = await challengeService.mapTimelineTemplateId(challenge.trackId, challenge.typeId)
+            challenge.legacy.migration = 7
+            logger.debug(`Updating ${JSON.stringify(challenge.id)} with timelineTemplateId ${challenge.timelineTemplateId}`)
             await challengeService.save(challenge)
           } catch (e) {
             logger.warn(`Timeline Template Not found for trackId: ${challenge.trackId} typeId: ${challenge.typeId}`)
@@ -45,7 +47,11 @@ async function getChallengesMissingData (page = 0, perPage = 10) {
     from: page * perPage,
     body: {
       query: {
-        match_all: {}
+        range: {
+          'legacy.migration': {
+            lt: 7
+          }
+        }
       }
     }
   }

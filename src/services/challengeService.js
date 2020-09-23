@@ -509,6 +509,10 @@ async function buildV5Challenge (legacyId, challengeListing, challengeDetails) {
     challengeDetails = challengeDetailObj.data
   }
 
+  if (!challengeListing) {
+    throw Error(`Challenge Listing Not Found in v4 Index ${JSON.stringify(challengeListing)}`)
+  }
+
   const allGroups = challengeListing.groupIds
 
   if (!allV5Terms) {
