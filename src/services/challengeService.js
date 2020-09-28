@@ -535,7 +535,9 @@ async function buildV5Challenge (legacyId, challengeListing, challengeDetails) {
     if (challengeDetails.introduction && challengeDetails.introduction.trim() !== '') {
       detailRequirement = challengeDetails.introduction + '<br />' + detailRequirement
     }
-    if (_.get(challengeDetails, 'finalSubmissionGuidelines', '').trim() !== 'null' && _.get(challengeDetails, 'finalSubmissionGuidelines', '').trim() !== '') {
+    if (_.get(challengeDetails, 'finalSubmissionGuidelines', '').trim() !== 'null' &&
+        _.get(challengeDetails, 'finalSubmissionGuidelines', '').trim() !== '' &&
+        _.get(challengeDetails, 'finalSubmissionGuidelines', '').trim() !== 'Please read above') {
       detailRequirement += '<br /><br /><h2>Final Submission Guidelines</h2>' + challengeDetails.finalSubmissionGuidelines
     }
   } else {
