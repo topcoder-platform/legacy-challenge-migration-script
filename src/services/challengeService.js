@@ -500,16 +500,18 @@ async function mapTimelineTemplateId (trackId, typeId) {
  * @returns {Object} v5ChallengeObject
  */
 async function buildV5Challenge (legacyId, challengeListing, challengeDetails) {
-  if (!challengeListing) {
+  if (!challengeListing || challengeListing === null) {
+    logger.debug(`Challenge listing not passed, pulling from V4ES for ${legacyId}`)
     const challengeListingObj = await getChallengeListingFromV4ES(legacyId)
     challengeListing = challengeListingObj.data
   }
-  if (!challengeDetails) {
+  if (!challengeDetails || challengeDetails === null) {
+    logger.debug(`Challenge details not passed, pulling from V4ES for ${legacyId}`)
     const challengeDetailObj = await getChallengeDetailFromV4ES(legacyId)
     challengeDetails = challengeDetailObj.data
   }
 
-  if (!challengeListing) {
+  if (!challengeListing || challengeListing === null) {
     throw Error(`Challenge Listing Not Found in v4 Index ${JSON.stringify(challengeListing)}`)
   }
 
