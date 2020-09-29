@@ -153,7 +153,7 @@ async function forceV4ESFeeder (legacyId) {
       challengeIds: [legacyId]
     }
   }
-  await request.put(`${config.V4_ES_FEEDER}`).send(body).set({ Authorization: `Bearer ${token}` })
+  await request.put(`${config.V4_ES_FEEDER_API_URL}`).send(body).set({ Authorization: `Bearer ${token}` })
 }
 
 /**
