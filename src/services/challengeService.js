@@ -416,8 +416,8 @@ async function getChallengeListingFromV4ES (legacyId) {
     body: {
       version: 'true',
       query: {
-        match: {
-          id: legacyId
+        match_phrase: {
+          id: _.toString(legacyId)
         }
       }
     }
@@ -454,8 +454,8 @@ async function getChallengeDetailFromV4ES (legacyId) {
     body: {
       version: 'true',
       query: {
-        match: {
-          id: legacyId
+        match_phrase: {
+          id: _.toString(legacyId)
         }
       }
     }
@@ -575,6 +575,7 @@ async function buildV5Challenge (legacyId, challengeListing, challengeDetails) {
   let taskIsAssigned = false
   let taskMemberId = null
   if (challengeListing.isTask &&
+    challengeDetails &&
     challengeDetails.registrants &&
     challengeDetails.registrants.length >= 1) {
     taskIsAssigned = true
