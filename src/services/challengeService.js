@@ -9,7 +9,7 @@ const HashMap = require('hashmap')
 const logger = require('../util/logger')
 const helper = require('../util/helper')
 const { Challenge, ChallengeType, ChallengeTimelineTemplate } = require('../models')
-const { getESClient, getV4ESClient, getM2MToken } = require('../util/helper')
+const { getESClient, getV4ESClient, getM2MToken, forceV4ESFeeder } = require('../util/helper')
 const challengeInformixService = require('./challengeInformixService')
 const resourceService = require('./resourceService')
 const resourceInformixService = require('./resourceInformixService')
@@ -424,7 +424,7 @@ async function getChallengeListingFromV4ES (legacyId) {
   }
   // Search with constructed query
   let docs
-  // console.log('es query', JSON.stringify(esQuery))
+  // console.log('getChallengeListingFromV4ES es query', JSON.stringify(esQuery))
   try {
     docs = await getV4ESClient().search(esQuery)
   } catch (e) {
@@ -501,18 +501,23 @@ async function mapTimelineTemplateId (trackId, typeId) {
  */
 async function buildV5Challenge (legacyId, challengeListing, challengeDetails) {
   if (!challengeListing || challengeListing === null) {
-    logger.debug(`Challenge listing not passed, pulling from V4ES for ${legacyId}`)
+    // logger.debug(`Challenge listing not passed, pulling from V4ES for ${legacyId}`)
     const challengeListingObj = await getChallengeListingFromV4ES(legacyId)
     challengeListing = challengeListingObj.data
   }
   if (!challengeDetails || challengeDetails === null) {
-    logger.debug(`Challenge details not passed, pulling from V4ES for ${legacyId}`)
+    // logger.debug(`Challenge details not passed, pulling from V4ES for ${legacyId}`)
     const challengeDetailObj = await getChallengeDetailFromV4ES(legacyId)
     challengeDetails = challengeDetailObj.data
   }
 
   if (!challengeListing || challengeListing === null) {
-    throw Error(`Challenge Listing Not Found in v4 Index ${JSON.stringify(challengeListing)}`)
+    if (config.FORCE_ES_FEEDER === true) {
+      await forceV4ESFeeder(legacyId)
+      throw Error(`Challenge Listing Not Found in v4 Index - Forcing ES Feeder for ${legacyId}`)
+    } else {
+      throw Error(`Challenge Listing Not Found in v4 Index ${legacyId}`)
+    }
   }
 
   const allGroups = challengeListing.groupIds

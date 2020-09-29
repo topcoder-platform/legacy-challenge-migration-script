@@ -33,6 +33,8 @@ module.exports = {
   TERMS_API_URL: process.env.TERMS_API_URL || 'https://api.topcoder-dev.com/v5/terms',
   V4_CHALLENGE_API_URL: process.env.V4_CHALLENGE_API_URL || 'https://api.topcoder-dev.com/v4/challenges',
   V3_MEMBER_API_URL: process.env.V3_MEMBER_API_URL || 'https://api.topcoder-dev.com/v3/members',
+  V4_ES_FEEDER_API_URL: process.env.V4_ES_FEEDER_API_URL || 'https://api.topcoder-dev.com/v4/esfeeder/challenges',
+  FORCE_ES_FEEDER: process.env.FORCE_ES_FEEDER ? process.env.FORCE_ES_FEEDER === 'true' : false,
   CREATED_DATE_BEGIN: process.env.CREATED_DATE_BEGIN,
   POPULATE_MIGRATION_TABLE_DATE_BEGIN: process.env.POPULATE_MIGRATION_TABLE_DATE_BEGIN || process.env.CREATED_DATE_BEGIN || new Date(),
 
