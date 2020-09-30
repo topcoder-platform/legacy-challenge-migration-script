@@ -76,7 +76,7 @@ async function processChallenge (legacyId, challengeListing, challengeDetails) {
     }
   }
 
-  const ommittedFields = [['id', 'type', 'track', 'typeId', 'trackId', 'prizeSets']]
+  const ommittedFields = ['id', 'type', 'track', 'typeId', 'trackId', 'prizeSets']
 
   if (v5ChallengeObjectFromV4.descriptionFormat !== 'HTML') {
     ommittedFields.push('description')
