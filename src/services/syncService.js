@@ -46,18 +46,12 @@ async function processChallenge (legacyId, challengeListing, challengeDetails) {
   const v5ChallengeObjectFromV4 = await challengeService.buildV5Challenge(legacyId, challengeListing, challengeDetails)
   const [v5ChallengeFromAPI] = await challengeService.getChallengeFromV5API(legacyId)
 
-  // omit properties that shouldn't be sync'd
-  // TODO omit other properties?
-  let challengeObj = _.omit(v5ChallengeObjectFromV4, ['type', 'track', 'typeId', 'trackId'])
-
-  if (challengeObj.descriptionFormat !== 'HTML') {
-    challengeObj = _.omit(challengeObj, ['description', 'privateDescription'])
-  }
+  const additionalInformation = {}
 
   // logger.info(`Before V5 Reg Sync: ${challengeObj.numOfRegistrants} ${v5ChallengeFromAPI.numOfRegistrants}`)
   try {
     const registrants = await resourceService.getResourcesFromV5API(v5ChallengeFromAPI.id, config.SUBMITTER_ROLE_ID)
-    challengeObj.numOfRegistrants = _.toNumber(registrants.total)
+    additionalInformation.numOfRegistrants = _.toNumber(registrants.total)
   } catch (e) {
     logger.error(`Sync :: Failed to load resources for challenge ${v5ChallengeFromAPI.id}`)
     logger.logFullError(e)
@@ -66,7 +60,7 @@ async function processChallenge (legacyId, challengeListing, challengeDetails) {
   // logger.info(`Before V5 Sub Sync: ${challengeObj.numOfSubmissions} ${v5ChallengeFromAPI.numOfSubmissions}`)
   try {
     const submissions = await challengeService.getChallengeSubmissionsFromV5API(legacyId, config.SUBMISSION_TYPE)
-    challengeObj.numOfSubmissions = _.toNumber(submissions.total) || 0
+    additionalInformation.numOfSubmissions = _.toNumber(submissions.total) || 0
   } catch (e) {
     logger.error(`Sync :: Failed to load submissions for challenge ${legacyId}`)
     logger.logFullError(e)
@@ -75,15 +69,29 @@ async function processChallenge (legacyId, challengeListing, challengeDetails) {
   if (v5ChallengeObjectFromV4.track.toUpperCase() === V4_TRACKS.DESIGN) {
     try {
       const submissions = await challengeService.getChallengeSubmissionsFromV5API(legacyId, config.CHECKPOINT_SUBMISSION_TYPE)
-      challengeObj.numOfCheckpointSubmissions = _.toNumber(submissions.total) || 0
+      additionalInformation.numOfCheckpointSubmissions = _.toNumber(submissions.total) || 0
     } catch (e) {
       logger.error(`Sync :: Failed to load checkpoint submissions for challenge ${legacyId}`)
       logger.logFullError(e)
     }
   }
-  challengeObj.id = v5ChallengeFromAPI.id
 
-  return challengeService.save(challengeObj)
+  const ommittedFields = [['id', 'type', 'track', 'typeId', 'trackId', 'prizeSets']]
+
+  if (v5ChallengeObjectFromV4.descriptionFormat !== 'HTML') {
+    ommittedFields.push('description')
+    ommittedFields.push('privateDescription')
+  }
+
+  return challengeService.save({
+    ..._.omit(v5ChallengeFromAPI, ['prizeSets']),
+    ..._.omit(v5ChallengeObjectFromV4, ommittedFields),
+    prizeSets: [
+      ..._.intersectionBy(_.get(v5ChallengeObjectFromV4, 'prizeSets', []).prizeSets, _.get(v5ChallengeFromAPI, 'prizeSets', []).prizeSets, 'type'),
+      ..._.differenceBy(_.get(v5ChallengeFromAPI, 'prizeSets', []).prizeSets, _.get(v5ChallengeObjectFromV4, 'prizeSets', []).prizeSets, 'type')
+    ],
+    ...additionalInformation
+  })
 }
 
 async function processResources (legacyId, challengeId, force) {
