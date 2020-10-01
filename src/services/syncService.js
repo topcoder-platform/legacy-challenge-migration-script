@@ -46,6 +46,9 @@ async function processChallenge (legacyId, challengeListing, challengeDetails) {
   const v5ChallengeObjectFromV4 = await challengeService.buildV5Challenge(legacyId, challengeListing, challengeDetails)
   const [v5ChallengeFromAPI] = await challengeService.getChallengeFromV5API(legacyId)
 
+  logger.debug(`V5 Object Built from V4: ${JSON.stringify(v5ChallengeObjectFromV4)}`)
+  logger.debug(`V5 Object from API: ${JSON.stringify(v5ChallengeFromAPI)}`)
+
   const additionalInformation = {}
 
   // logger.info(`Before V5 Reg Sync: ${challengeObj.numOfRegistrants} ${v5ChallengeFromAPI.numOfRegistrants}`)
@@ -83,7 +86,7 @@ async function processChallenge (legacyId, challengeListing, challengeDetails) {
     ommittedFields.push('privateDescription')
   }
 
-  return challengeService.save({
+  const updatedV5Object = {
     ..._.omit(v5ChallengeFromAPI, ['prizeSets']),
     ..._.omit(v5ChallengeObjectFromV4, ommittedFields),
     prizeSets: [
@@ -91,7 +94,9 @@ async function processChallenge (legacyId, challengeListing, challengeDetails) {
       ..._.differenceBy(_.get(v5ChallengeFromAPI, 'prizeSets', []).prizeSets, _.get(v5ChallengeObjectFromV4, 'prizeSets', []).prizeSets, 'type')
     ],
     ...additionalInformation
-  })
+  }
+  logger.debug(`new V5 Object: ${JSON.stringify(updatedV5Object)}`)
+  return challengeService.save(updatedV5Object)
 }
 
 async function processResources (legacyId, challengeId, force) {
