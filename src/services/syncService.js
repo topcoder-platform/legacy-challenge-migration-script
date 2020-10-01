@@ -85,14 +85,20 @@ async function processChallenge (legacyId, challengeListing, challengeDetails) {
     ommittedFields.push('description')
     ommittedFields.push('privateDescription')
   }
+  const challengeV4Prizes = _.get(v5ChallengeObjectFromV4, 'prizeSets', [])
+  logger.debug(`v4 prizes: ${JSON.stringify(challengeV4Prizes)}`)
+  const challengeV5APIPrizes = _.get(v5ChallengeFromAPI, 'prizeSets', [])
+  logger.debug(`v5 prizes: ${JSON.stringify(challengeV5APIPrizes)}`)
+  const prizeSets = [
+    ..._.intersectionBy(challengeV4Prizes, challengeV5APIPrizes, 'type'),
+    ..._.differenceBy(challengeV5APIPrizes, challengeV4Prizes, 'type')
+  ]
+  logger.debug(`intersection: ${JSON.stringify(prizeSets)}`)
 
   const updatedV5Object = {
     ..._.omit(v5ChallengeFromAPI, ['prizeSets']),
     ..._.omit(v5ChallengeObjectFromV4, ommittedFields),
-    prizeSets: [
-      ..._.intersectionBy(_.get(v5ChallengeObjectFromV4, 'prizeSets', []).prizeSets, _.get(v5ChallengeFromAPI, 'prizeSets', []).prizeSets, 'type'),
-      ..._.differenceBy(_.get(v5ChallengeFromAPI, 'prizeSets', []).prizeSets, _.get(v5ChallengeObjectFromV4, 'prizeSets', []).prizeSets, 'type')
-    ],
+    prizeSets,
     ...additionalInformation
   }
   logger.debug(`new V5 Object: ${JSON.stringify(updatedV5Object)}`)
