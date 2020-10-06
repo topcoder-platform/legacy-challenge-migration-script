@@ -6,6 +6,7 @@ const resourceService = require('./resourceService')
 const challengeSyncStatusService = require('../services/challengeSyncStatusService')
 const challengeMigrationStatusService = require('../services/challengeMigrationStatusService')
 const migrationService = require('../services/migrationService')
+const challengeIfxService = require('../services/challengeInformixService')
 const { V4_TRACKS } = require('../util/conversionMappings')
 
 async function syncLegacyId (legacyId, force) {
@@ -89,11 +90,24 @@ async function processChallenge (legacyId, challengeListing, challengeDetails) {
   logger.debug(`v4 prizes: ${JSON.stringify(challengeV4Prizes)}`)
   const challengeV5APIPrizes = _.get(v5ChallengeFromAPI, 'prizeSets', [])
   logger.debug(`v5 prizes: ${JSON.stringify(challengeV5APIPrizes)}`)
-  const prizeSets = [
+  const prizeSets = _.filter([
     ..._.intersectionBy(challengeV4Prizes, challengeV5APIPrizes, 'type'),
     ..._.differenceBy(challengeV5APIPrizes, challengeV4Prizes, 'type')
-  ]
+  ], entry => entry.type !== config.COPILOT_PAYMENT_TYPE)
   logger.debug(`intersection: ${JSON.stringify(prizeSets)}`)
+
+  const copilotPayment = await challengeIfxService.getCopilotPaymentFromIfx(legacyId)
+  if (copilotPayment) {
+    prizeSets.push({
+      prizes: [
+        {
+          type: 'USD',
+          value: copilotPayment.value
+        }
+      ],
+      type: config.COPILOT_PAYMENT_TYPE
+    })
+  }
 
   const updatedV5Object = {
     ..._.omit(v5ChallengeFromAPI, ['prizeSets']),
