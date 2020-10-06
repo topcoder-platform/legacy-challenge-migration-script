@@ -7,6 +7,7 @@ const config = require('config')
 const _ = require('lodash')
 const logger = require('../../util/logger')
 const challengeIfxService = require('../../services/challengeInformixService')
+const challengeService = require('../../services/challengeService')
 const { getESClient } = require('../../util/helper')
 
 const migrationFunction = {
@@ -34,6 +35,8 @@ const migrationFunction = {
           } else {
             await challengeIfxService.createCopilotPaymentInIfx(legacyId, copilotPayment, challenge.createdBy)
           }
+          challenge.legacy.migration = 8
+          challengeService.save(challenge)
         }
       } else {
         finish = true
@@ -56,6 +59,11 @@ async function getChallengesMissingData (page = 0, perPage = 10) {
           must: {
             exists: {
               field: 'prizeSets'
+            }
+          },
+          must_not: {
+            match_phrase: {
+              'legacy.migration': 8
             }
           }
         }
