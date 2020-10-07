@@ -30,6 +30,7 @@ const migrationFunction = {
 
     const challengeJson = { challenges: [] }
     const challengeIdsToDelete = []
+    const missingIds = []
 
     // logger.warn(await getMemberIdFromCache('TICKET_60375'))
     // return
@@ -40,12 +41,14 @@ const migrationFunction = {
       logger.info(`Found ${challenges.length} challenges`)
       if (challenges.length > 0) {
         for (const challenge of challenges) {
-          logger.debug(`Loading challenge ${challenge.id}`)
+          // logger.debug(`Loading challenge ${challenge.id}`)
           const c = await challengeService.getMMatchFromV4API(challenge.id)
           if (!c) {
             logger.warn(`Challenge Not Found in v4 API - ID: ${challenge.id}`)
+            missingIds.push(challenge.id)
             continue
           }
+          continue
 
           const v5ChallengeLookup = await challengeService.getChallengeIDsFromV5({ legacyId: challenge.id }, 10)
           // logger.debug(JSON.stringify(v5ChallengeLookup))
@@ -195,6 +198,7 @@ const migrationFunction = {
       page++
       batch++
     }
+    console.log('Missing IDs', missingIds)
   }
 }
 

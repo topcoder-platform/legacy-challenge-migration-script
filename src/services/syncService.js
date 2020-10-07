@@ -47,8 +47,8 @@ async function processChallenge (legacyId, challengeListing, challengeDetails) {
   const v5ChallengeObjectFromV4 = await challengeService.buildV5Challenge(legacyId, challengeListing, challengeDetails)
   const [v5ChallengeFromAPI] = await challengeService.getChallengeFromV5API(legacyId)
 
-  logger.debug(`V5 Object Built from V4: ${JSON.stringify(v5ChallengeObjectFromV4)}`)
-  logger.debug(`V5 Object from API: ${JSON.stringify(v5ChallengeFromAPI)}`)
+  // logger.debug(`V5 Object Built from V4: ${JSON.stringify(v5ChallengeObjectFromV4)}`)
+  // logger.debug(`V5 Object from API: ${JSON.stringify(v5ChallengeFromAPI)}`)
 
   const additionalInformation = {}
 
@@ -87,14 +87,23 @@ async function processChallenge (legacyId, challengeListing, challengeDetails) {
     ommittedFields.push('privateDescription')
   }
   const challengeV4Prizes = _.get(v5ChallengeObjectFromV4, 'prizeSets', [])
-  logger.debug(`v4 prizes: ${JSON.stringify(challengeV4Prizes)}`)
+  // logger.debug(`v4 prizes: ${JSON.stringify(challengeV4Prizes)}`)
   const challengeV5APIPrizes = _.get(v5ChallengeFromAPI, 'prizeSets', [])
+<<<<<<< Updated upstream
   logger.debug(`v5 prizes: ${JSON.stringify(challengeV5APIPrizes)}`)
   const prizeSets = _.filter([
     ..._.intersectionBy(challengeV4Prizes, challengeV5APIPrizes, 'type'),
     ..._.differenceBy(challengeV5APIPrizes, challengeV4Prizes, 'type')
   ], entry => entry.type !== config.COPILOT_PAYMENT_TYPE)
   logger.debug(`intersection: ${JSON.stringify(prizeSets)}`)
+=======
+  // logger.debug(`v5 prizes: ${JSON.stringify(challengeV5APIPrizes)}`)
+  const prizeSets = [
+    ..._.intersectionBy(challengeV4Prizes, challengeV5APIPrizes, 'type'),
+    ..._.differenceBy(challengeV5APIPrizes, challengeV4Prizes, 'type')
+  ]
+  // logger.debug(`intersection: ${JSON.stringify(prizeSets)}`)
+>>>>>>> Stashed changes
 
   const copilotPayment = await challengeIfxService.getCopilotPaymentFromIfx(legacyId)
   if (copilotPayment) {
@@ -115,7 +124,7 @@ async function processChallenge (legacyId, challengeListing, challengeDetails) {
     prizeSets,
     ...additionalInformation
   }
-  logger.debug(`new V5 Object: ${JSON.stringify(updatedV5Object)}`)
+  // logger.debug(`new V5 Object: ${JSON.stringify(updatedV5Object)}`)
   return challengeService.save(updatedV5Object)
 }
 
