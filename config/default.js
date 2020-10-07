@@ -225,5 +225,7 @@ module.exports = {
       WRITE: process.env.SCOPE_CHALLENGES_WRITE || 'write:challenges',
       ALL: process.env.SCOPE_CHALLENGES_ALL || 'all:challenges'
     }
-  }
+  },
+
+  COPILOT_PAYMENT_TYPE: process.env.COPILOT_PAYMENT_TYPE || 'copilot'
 }
