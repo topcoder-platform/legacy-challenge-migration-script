@@ -89,21 +89,12 @@ async function processChallenge (legacyId, challengeListing, challengeDetails) {
   const challengeV4Prizes = _.get(v5ChallengeObjectFromV4, 'prizeSets', [])
   // logger.debug(`v4 prizes: ${JSON.stringify(challengeV4Prizes)}`)
   const challengeV5APIPrizes = _.get(v5ChallengeFromAPI, 'prizeSets', [])
-<<<<<<< Updated upstream
   logger.debug(`v5 prizes: ${JSON.stringify(challengeV5APIPrizes)}`)
   const prizeSets = _.filter([
     ..._.intersectionBy(challengeV4Prizes, challengeV5APIPrizes, 'type'),
     ..._.differenceBy(challengeV5APIPrizes, challengeV4Prizes, 'type')
   ], entry => entry.type !== config.COPILOT_PAYMENT_TYPE)
   logger.debug(`intersection: ${JSON.stringify(prizeSets)}`)
-=======
-  // logger.debug(`v5 prizes: ${JSON.stringify(challengeV5APIPrizes)}`)
-  const prizeSets = [
-    ..._.intersectionBy(challengeV4Prizes, challengeV5APIPrizes, 'type'),
-    ..._.differenceBy(challengeV5APIPrizes, challengeV4Prizes, 'type')
-  ]
-  // logger.debug(`intersection: ${JSON.stringify(prizeSets)}`)
->>>>>>> Stashed changes
 
   const copilotPayment = await challengeIfxService.getCopilotPaymentFromIfx(legacyId)
   if (copilotPayment) {
