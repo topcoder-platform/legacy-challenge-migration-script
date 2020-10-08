@@ -23,20 +23,43 @@ const migrationFunction = {
       logger.info(`Found ${challenges.length} challenges`)
       if (challenges.length > 0) {
         for (const challenge of challenges) {
-          const copilotPayment = _.get(_.find(_.get(challenge, 'prizeSets', []), p => p.type === config.COPILOT_PAYMENT_TYPE), 'prizes[0].value', null)
+          // for some reason they're still coming back with migration number 8.2
+          if (challenge.legacy && challenge.legacy.migration && _.toString(challenge.legacy.migration) === '8.2') {
+            logger.error(`Right Version ${challenge.legacyId} ${challenge.legacy.migration}`)
+            continue
+          }
           const legacyId = _.get(challenge, 'legacyId')
-          const existing = await challengeIfxService.getCopilotPaymentFromIfx(legacyId)
-          if (existing) {
-            if (!copilotPayment) {
-              await challengeIfxService.deleteCopilotPaymentFromIfx(legacyId)
-            } else if (_.toString(existing.value) !== _.toString(copilotPayment)) {
-              await challengeIfxService.updateCopilotPaymentInIfx(legacyId, copilotPayment, challenge.updatedBy)
+          if (!legacyId) {
+            logger.error(`No Legacy ID on challenge ${challenge.id}`)
+            continue
+          }
+          const legacyCopilotPayment = await challengeIfxService.getCopilotPaymentFromIfx(legacyId)
+          if (legacyCopilotPayment && legacyCopilotPayment.value > 0) {
+            let updatedChallenge
+            try {
+              [updatedChallenge] = await challengeService.getChallengeFromV5API(legacyId)
+            } catch (e) {
+              logger.debug('Unable to get challenge from v5... Skipping')
+              continue
+            }
+            if (updatedChallenge) {
+              // const copilotPayment = await challengeIfxService.getCopilotPaymentFromIfx(legacyId)
+              const prizeSet = { type: 'copilot', description: 'Copilot Payment' }
+              prizeSet.prizes = []
+              prizeSet.prizes.push({ value: legacyCopilotPayment.value, type: 'USD' })
+              updatedChallenge.prizeSets.push(prizeSet)
+              updatedChallenge.legacy.migration = 8.2
+              await challengeService.save(updatedChallenge)
             }
           } else {
-            await challengeIfxService.createCopilotPaymentInIfx(legacyId, copilotPayment, challenge.createdBy)
+            if (!challenge.legacy) {
+              challenge.legacy = { migration: 8.2 }
+            } else {
+              challenge.legacy.migration = 8.2
+            }
+            // logger.debug(`No Change - Saving Challenge ${challenge.legacy.migration}`)
+            await challengeService.save(challenge)
           }
-          challenge.legacy.migration = 8
-          challengeService.save(challenge)
         }
       } else {
         finish = true
@@ -55,22 +78,15 @@ async function getChallengesMissingData (page = 0, perPage = 10) {
     from: page * perPage,
     body: {
       query: {
-        bool: {
-          must: {
-            exists: {
-              field: 'prizeSets'
-            }
-          },
-          must_not: {
-            match_phrase: {
-              'legacy.migration': 8
-            }
+        range: {
+          'legacy.migration': {
+            lt: 8.2
           }
         }
       }
     }
   }
-  // logger.debug(`ES Query ${JSON.stringify(esQuery)}`)
+  logger.debug(`ES Query ${JSON.stringify(esQuery)}`)
   // Search with constructed query
   let docs
   try {

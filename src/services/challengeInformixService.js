@@ -9,8 +9,10 @@ const { executeQueryAsync } = require('../util/informixWrapper')
  * @param {Number} legacyId the legacy ID
  */
 async function getCopilotPaymentFromIfx (legacyId) {
-  const sql = `SELECT limit 1 * FROM project_info WHERE project_info_type_id = 49 AND project_id = ${legacyId}`
-  return execQuery(sql)
+  const sql = `SELECT limit 1 * FROM project_info WHERE project_id = ${_.toInteger(legacyId)} AND project_info_type_id = 49`
+  const result = await execQuery(sql)
+  if (result && result[0]) return result[0]
+  return false
 }
 
 /**
@@ -32,7 +34,7 @@ async function createCopilotPaymentInIfx (legacyId, amount, createdBy) {
         modify_date
       )
     VALUES
-      (${legacyId}, 49, ${amount}, ${createdBy}, CURRENT, ${createdBy}, CURRENT)`
+      (${_.toInteger(legacyId)}, 49, ${amount}, ${createdBy}, CURRENT, ${createdBy}, CURRENT)`
   return execQuery(sql)
 }
 
@@ -43,7 +45,7 @@ async function createCopilotPaymentInIfx (legacyId, amount, createdBy) {
  * @param {String} updatedBy the update user handle
  */
 async function updateCopilotPaymentInIfx (legacyId, newValue, updatedBy) {
-  const sql = `UPDATE project_info SET value = ${newValue}, modify_user = ${updatedBy}, modify_date = CURRENT WHERE project_info_type_id = 49 AND project_id = ${legacyId}`
+  const sql = `UPDATE project_info SET value = ${newValue}, modify_user = ${updatedBy}, modify_date = CURRENT WHERE project_info_type_id = 49 AND project_id = ${_.toInteger(legacyId)}`
   return execQuery(sql)
 }
 
@@ -52,7 +54,7 @@ async function updateCopilotPaymentInIfx (legacyId, newValue, updatedBy) {
  * @param {Number} legacyId the legacy challenge id
  */
 async function deleteCopilotPaymentFromIfx (legacyId) {
-  const sql = `DELETE FROM project_info WHERE project_info_type_id = 49 AND project_id = ${legacyId}`
+  const sql = `DELETE FROM project_info WHERE project_info_type_id = 49 AND project_id = ${_.toInteger(legacyId)}`
   return execQuery(sql)
 }
 

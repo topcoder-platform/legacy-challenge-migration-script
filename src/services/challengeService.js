@@ -15,6 +15,7 @@ const resourceService = require('./resourceService')
 const resourceInformixService = require('./resourceInformixService')
 const translationService = require('./translationService')
 const { V4_TRACKS } = require('../util/conversionMappings')
+const { getCopilotPaymentFromIfx } = require('./challengeInformixService')
 
 let allV5Terms
 
@@ -34,9 +35,12 @@ const challengePropertiesToOmitFromDynamo = [
 
 async function save (challenge) {
   if (challenge.id) {
-    // logger.warn(`Updating Challenge ${JSON.stringify(challenge)}`)
+    // logger.debug(`Update Challenge ${challenge.id}`)
+    // return
     return updateChallenge(challenge)
   }
+  // logger.debug(`Create Challenge ${challenge.id}`)
+  // return
   return createChallenge(challenge)
 }
 /**
@@ -641,6 +645,14 @@ async function buildV5Challenge (legacyId, challengeListing, challengeDetails) {
     for (let i = 0; i < challengeListing.numberOfCheckpointPrizes; i += 1) {
       prizeSet.prizes.push({ value: challengeListing.topCheckPointPrize, type: 'USD' })
     }
+    prizeSets.push(prizeSet)
+  }
+
+  const copilotPayment = await getCopilotPaymentFromIfx(legacyId)
+  if (copilotPayment && copilotPayment.value > 0) {
+    const prizeSet = { type: 'copilot', description: 'Copilot Payment' }
+    prizeSet.prizes = []
+    prizeSet.prizes.push({ value: copilotPayment.value, type: 'USD' })
     prizeSets.push(prizeSet)
   }
 
