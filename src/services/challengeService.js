@@ -9,12 +9,13 @@ const HashMap = require('hashmap')
 const logger = require('../util/logger')
 const helper = require('../util/helper')
 const { Challenge, ChallengeType, ChallengeTimelineTemplate } = require('../models')
-const { getESClient, getV4ESClient, getM2MToken } = require('../util/helper')
+const { getESClient, getV4ESClient, getM2MToken, forceV4ESFeeder } = require('../util/helper')
 const challengeInformixService = require('./challengeInformixService')
 const resourceService = require('./resourceService')
 const resourceInformixService = require('./resourceInformixService')
 const translationService = require('./translationService')
 const { V4_TRACKS } = require('../util/conversionMappings')
+const { getCopilotPaymentFromIfx } = require('./challengeInformixService')
 
 let allV5Terms
 
@@ -34,9 +35,12 @@ const challengePropertiesToOmitFromDynamo = [
 
 async function save (challenge) {
   if (challenge.id) {
-    // logger.warn(`Updating Challenge ${JSON.stringify(challenge)}`)
+    // logger.debug(`Update Challenge ${challenge.id}`)
+    // return
     return updateChallenge(challenge)
   }
+  // logger.debug(`Create Challenge ${challenge.id}`)
+  // return
   return createChallenge(challenge)
 }
 /**
@@ -72,8 +76,9 @@ async function createChallenge (challenge) {
  */
 async function updateChallenge (challenge) {
   try {
+    const updateChallenge = new Challenge(_.omit(challenge, ['created', 'createdBy']))
     // numOfSubmissions and numOfRegistrants are not stored in dynamo, they're calclated by the ES processor
-    await Challenge.update({ id: challenge.id }, _.omit(challenge, challengePropertiesToOmitFromDynamo))
+    await Challenge.update({ id: challenge.id }, _.omit(updateChallenge, challengePropertiesToOmitFromDynamo))
     await getESClient().update({
       index: config.get('ES.CHALLENGE_ES_INDEX'),
       type: config.get('ES.CHALLENGE_ES_TYPE'),
@@ -363,8 +368,8 @@ async function getChallengeIDsFromV5 (filter, perPage, page = 1) {
     // refresh: config.get('ES.ES_REFRESH'),
     size: perPage,
     from: perPage * (page - 1),
-    _source: ['legacyId'],
     body: {
+      _source: ['legacyId', 'id'],
       version: 'true',
       query: mustQuery.length > 0 ? {
         bool: {
@@ -386,7 +391,7 @@ async function getChallengeIDsFromV5 (filter, perPage, page = 1) {
     docs = await getESClient().search(esQuery)
   } catch (e) {
     // Catch error when the ES is fresh and has no data
-    logger.error(e)
+    // logger.error(`V5 Challenge IDs try/catch ${JSON.stringify(e)}`)
     docs = {
       hits: {
         total: 0,
@@ -396,7 +401,13 @@ async function getChallengeIDsFromV5 (filter, perPage, page = 1) {
   }
   // logger.warn(JSON.stringify(docs))
   // Extract data from hits
-  if (docs.hits.total > 0) return { total: docs.hits.total, ids: _.map(docs.hits.hits, hit => _.toNumber(hit._source.legacyId)) }
+  if (docs.hits.total > 0) {
+    return {
+      total: docs.hits.total,
+      ids: _.map(docs.hits.hits, hit => _.toNumber(hit._source.legacyId)),
+      v5Ids: _.map(docs.hits.hits, hit => hit._source.id)
+    }
+  }
   return false
 }
 
@@ -410,15 +421,15 @@ async function getChallengeListingFromV4ES (legacyId) {
     body: {
       version: 'true',
       query: {
-        match: {
-          id: legacyId
+        match_phrase: {
+          id: _.toString(legacyId)
         }
       }
     }
   }
   // Search with constructed query
   let docs
-  // console.log('es query', JSON.stringify(esQuery))
+  // console.log('getChallengeListingFromV4ES es query', JSON.stringify(esQuery))
   try {
     docs = await getV4ESClient().search(esQuery)
   } catch (e) {
@@ -448,8 +459,8 @@ async function getChallengeDetailFromV4ES (legacyId) {
     body: {
       version: 'true',
       query: {
-        match: {
-          id: legacyId
+        match_phrase: {
+          id: _.toString(legacyId)
         }
       }
     }
@@ -484,7 +495,7 @@ async function getChallengeDetailFromV4ES (legacyId) {
 async function mapTimelineTemplateId (trackId, typeId) {
   const templates = await ChallengeTimelineTemplate.scan('trackId').contains(trackId).exec()
   const template = _.find(templates, { typeId })
-  if (template) return template.id
+  if (template) return template.timelineTemplateId
   throw new Error(`Timeline Template Not found for trackId: ${trackId} typeId: ${typeId}`)
 }
 
@@ -494,13 +505,24 @@ async function mapTimelineTemplateId (trackId, typeId) {
  * @returns {Object} v5ChallengeObject
  */
 async function buildV5Challenge (legacyId, challengeListing, challengeDetails) {
-  if (!challengeListing) {
+  if (!challengeListing || challengeListing === null) {
+    // logger.debug(`Challenge listing not passed, pulling from V4ES for ${legacyId}`)
     const challengeListingObj = await getChallengeListingFromV4ES(legacyId)
     challengeListing = challengeListingObj.data
   }
-  if (!challengeDetails) {
+  if (!challengeDetails || challengeDetails === null) {
+    // logger.debug(`Challenge details not passed, pulling from V4ES for ${legacyId}`)
     const challengeDetailObj = await getChallengeDetailFromV4ES(legacyId)
     challengeDetails = challengeDetailObj.data
+  }
+
+  if (!challengeListing || challengeListing === null) {
+    if (config.FORCE_ES_FEEDER === true) {
+      await forceV4ESFeeder(legacyId)
+      throw Error(`Challenge Listing Not Found in v4 Index - Forcing ES Feeder for ${legacyId}`)
+    } else {
+      throw Error(`Challenge Listing Not Found in v4 Index ${legacyId}`)
+    }
   }
 
   const allGroups = challengeListing.groupIds
@@ -525,7 +547,9 @@ async function buildV5Challenge (legacyId, challengeListing, challengeDetails) {
     if (challengeDetails.introduction && challengeDetails.introduction.trim() !== '') {
       detailRequirement = challengeDetails.introduction + '<br />' + detailRequirement
     }
-    if (_.get(challengeDetails, 'finalSubmissionGuidelines', '').trim() !== 'null' && _.get(challengeDetails, 'finalSubmissionGuidelines', '').trim() !== '') {
+    if (_.get(challengeDetails, 'finalSubmissionGuidelines', '').trim() !== 'null' &&
+        _.get(challengeDetails, 'finalSubmissionGuidelines', '').trim() !== '' &&
+        _.get(challengeDetails, 'finalSubmissionGuidelines', '').trim() !== 'Please read above') {
       detailRequirement += '<br /><br /><h2>Final Submission Guidelines</h2>' + challengeDetails.finalSubmissionGuidelines
     }
   } else {
@@ -556,6 +580,7 @@ async function buildV5Challenge (legacyId, challengeListing, challengeDetails) {
   let taskIsAssigned = false
   let taskMemberId = null
   if (challengeListing.isTask &&
+    challengeDetails &&
     challengeDetails.registrants &&
     challengeDetails.registrants.length >= 1) {
     taskIsAssigned = true
@@ -620,6 +645,14 @@ async function buildV5Challenge (legacyId, challengeListing, challengeDetails) {
     for (let i = 0; i < challengeListing.numberOfCheckpointPrizes; i += 1) {
       prizeSet.prizes.push({ value: challengeListing.topCheckPointPrize, type: 'USD' })
     }
+    prizeSets.push(prizeSet)
+  }
+
+  const copilotPayment = await getCopilotPaymentFromIfx(legacyId)
+  if (copilotPayment && copilotPayment.value > 0) {
+    const prizeSet = { type: 'copilot', description: 'Copilot Payment' }
+    prizeSet.prizes = []
+    prizeSet.prizes.push({ value: copilotPayment.value, type: 'USD' })
     prizeSets.push(prizeSet)
   }
 
@@ -801,6 +834,21 @@ async function getChallengeFromV5API (legacyId) {
   return res.data || null
 }
 
+async function getMMatchFromV4API (legacyId) {
+  const token = await getM2MToken()
+  const url = `${config.V4_CHALLENGE_API_URL}/${legacyId}`
+  // console.log(url)
+  let res = null
+  try {
+    res = await axios.get(url, { headers: { Authorization: `Bearer ${token}` } })
+  } catch (e) {
+    // logger.error(`Axios Error: ${JSON.stringify(e)}`)
+    return false
+  }
+  // console.log(res.data)
+  return res.data.result.content || false
+}
+
 async function getChallengeSubmissionsFromV5API (challengeId, type) {
   const token = await getM2MToken()
   let url = `${config.SUBMISSIONS_API_URL}?challengeId=${challengeId}&perPage=1`
@@ -829,9 +877,12 @@ module.exports = {
   getChallengeDetailFromV4ES,
   // getChallengeTypes,
   // saveChallengeTypes,
+  getProjectFromV5,
   deleteChallenge,
   createChallengeTimelineMapping,
   getChallengeFromV5API,
+  getMMatchFromV4API,
   getChallengeTypesFromDynamo,
-  getChallengeSubmissionsFromV5API
+  getChallengeSubmissionsFromV5API,
+  mapTimelineTemplateId
 }

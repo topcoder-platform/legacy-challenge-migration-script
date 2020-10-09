@@ -3,6 +3,7 @@
  */
 const _ = require('lodash')
 const querystring = require('querystring')
+const request = require('superagent')
 const config = require('config')
 const elasticsearch = require('elasticsearch')
 const moment = require('moment-timezone')
@@ -145,6 +146,16 @@ function getV4ESClient () {
   return v4esClient
 }
 
+async function forceV4ESFeeder (legacyId) {
+  const token = await getM2MToken()
+  const body = {
+    param: {
+      challengeIds: [legacyId]
+    }
+  }
+  await request.put(`${config.V4_ES_FEEDER_API_URL}`).send(body).set({ Authorization: `Bearer ${token}` })
+}
+
 /**
  * Generate informx-flavor date from date string.
  * Also, changes the timezone to EST
@@ -229,6 +240,7 @@ function setResHeaders (req, res, result) {
 }
 
 module.exports = {
+  forceV4ESFeeder,
   wrapExpress,
   autoWrapExpress,
   checkIfExists,

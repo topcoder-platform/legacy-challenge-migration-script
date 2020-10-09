@@ -6,6 +6,7 @@ const resourceService = require('./resourceService')
 const challengeSyncStatusService = require('../services/challengeSyncStatusService')
 const challengeMigrationStatusService = require('../services/challengeMigrationStatusService')
 const migrationService = require('../services/migrationService')
+const challengeIfxService = require('../services/challengeInformixService')
 const { V4_TRACKS } = require('../util/conversionMappings')
 
 async function syncLegacyId (legacyId, force) {
@@ -15,7 +16,8 @@ async function syncLegacyId (legacyId, force) {
   if (v5) {
     const v4Listing = await challengeService.getChallengeListingFromV4ES(legacyId)
     const v4Detail = await challengeService.getChallengeDetailFromV4ES(legacyId)
-    // logger.warn(`v4Listing ${JSON.stringify(v4Listing)}`)
+    logger.warn(`Sync :: v4Listing ${JSON.stringify(v4Listing)}`)
+    logger.warn(`Sync :: v4Detail ${JSON.stringify(v4Detail)}`)
     try {
       await challengeSyncStatusService.startSync(legacyId, v4Listing.version, v4Detail.version)
       const { resourcesAdded, resourcesRemoved } = await processResources(legacyId, v5.id, force === true)
@@ -45,18 +47,15 @@ async function processChallenge (legacyId, challengeListing, challengeDetails) {
   const v5ChallengeObjectFromV4 = await challengeService.buildV5Challenge(legacyId, challengeListing, challengeDetails)
   const [v5ChallengeFromAPI] = await challengeService.getChallengeFromV5API(legacyId)
 
-  // omit properties that shouldn't be sync'd
-  // TODO omit other properties?
-  let challengeObj = _.omit(v5ChallengeObjectFromV4, ['type', 'track', 'typeId', 'trackId'])
+  // logger.debug(`V5 Object Built from V4: ${JSON.stringify(v5ChallengeObjectFromV4)}`)
+  // logger.debug(`V5 Object from API: ${JSON.stringify(v5ChallengeFromAPI)}`)
 
-  if (challengeObj.descriptionFormat !== 'HTML') {
-    challengeObj = _.omit(challengeObj, ['description', 'privateDescription'])
-  }
+  const additionalInformation = {}
 
   // logger.info(`Before V5 Reg Sync: ${challengeObj.numOfRegistrants} ${v5ChallengeFromAPI.numOfRegistrants}`)
   try {
     const registrants = await resourceService.getResourcesFromV5API(v5ChallengeFromAPI.id, config.SUBMITTER_ROLE_ID)
-    challengeObj.numOfRegistrants = _.toNumber(registrants.total)
+    additionalInformation.numOfRegistrants = _.toNumber(registrants.total)
   } catch (e) {
     logger.error(`Sync :: Failed to load resources for challenge ${v5ChallengeFromAPI.id}`)
     logger.logFullError(e)
@@ -65,7 +64,7 @@ async function processChallenge (legacyId, challengeListing, challengeDetails) {
   // logger.info(`Before V5 Sub Sync: ${challengeObj.numOfSubmissions} ${v5ChallengeFromAPI.numOfSubmissions}`)
   try {
     const submissions = await challengeService.getChallengeSubmissionsFromV5API(legacyId, config.SUBMISSION_TYPE)
-    challengeObj.numOfSubmissions = _.toNumber(submissions.total) || 0
+    additionalInformation.numOfSubmissions = _.toNumber(submissions.total) || 0
   } catch (e) {
     logger.error(`Sync :: Failed to load submissions for challenge ${legacyId}`)
     logger.logFullError(e)
@@ -74,15 +73,50 @@ async function processChallenge (legacyId, challengeListing, challengeDetails) {
   if (v5ChallengeObjectFromV4.track.toUpperCase() === V4_TRACKS.DESIGN) {
     try {
       const submissions = await challengeService.getChallengeSubmissionsFromV5API(legacyId, config.CHECKPOINT_SUBMISSION_TYPE)
-      challengeObj.numOfCheckpointSubmissions = _.toNumber(submissions.total) || 0
+      additionalInformation.numOfCheckpointSubmissions = _.toNumber(submissions.total) || 0
     } catch (e) {
       logger.error(`Sync :: Failed to load checkpoint submissions for challenge ${legacyId}`)
       logger.logFullError(e)
     }
   }
-  challengeObj.id = v5ChallengeFromAPI.id
 
-  return challengeService.save(challengeObj)
+  const ommittedFields = ['id', 'type', 'track', 'typeId', 'trackId', 'prizeSets']
+
+  if (v5ChallengeObjectFromV4.descriptionFormat !== 'HTML') {
+    ommittedFields.push('description')
+    ommittedFields.push('privateDescription')
+  }
+  const challengeV4Prizes = _.get(v5ChallengeObjectFromV4, 'prizeSets', [])
+  // logger.debug(`v4 prizes: ${JSON.stringify(challengeV4Prizes)}`)
+  const challengeV5APIPrizes = _.get(v5ChallengeFromAPI, 'prizeSets', [])
+  logger.debug(`v5 prizes: ${JSON.stringify(challengeV5APIPrizes)}`)
+  const prizeSets = _.filter([
+    ..._.intersectionBy(challengeV4Prizes, challengeV5APIPrizes, 'type'),
+    ..._.differenceBy(challengeV5APIPrizes, challengeV4Prizes, 'type')
+  ], entry => entry.type !== config.COPILOT_PAYMENT_TYPE)
+  logger.debug(`intersection: ${JSON.stringify(prizeSets)}`)
+
+  const copilotPayment = await challengeIfxService.getCopilotPaymentFromIfx(legacyId)
+  if (copilotPayment) {
+    prizeSets.push({
+      prizes: [
+        {
+          type: 'USD',
+          value: copilotPayment.value
+        }
+      ],
+      type: config.COPILOT_PAYMENT_TYPE
+    })
+  }
+
+  const updatedV5Object = {
+    ..._.omit(v5ChallengeFromAPI, ['prizeSets']),
+    ..._.omit(v5ChallengeObjectFromV4, ommittedFields),
+    prizeSets,
+    ...additionalInformation
+  }
+  // logger.debug(`new V5 Object: ${JSON.stringify(updatedV5Object)}`)
+  return challengeService.save(updatedV5Object)
 }
 
 async function processResources (legacyId, challengeId, force) {

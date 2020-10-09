@@ -220,7 +220,7 @@ async function getResourcesFromV5API (challengeId, roleId) {
   }
   let res = null
   try {
-    // logger.debug(`Getting Resources from v5 ${challengeId} - ${roleId} url ${url}`)
+    logger.debug(`Getting Resources from v5 ${challengeId} - ${roleId} url ${url}`)
     res = await axios.get(url, { headers: { Authorization: `Bearer ${token}` } })
   } catch (e) {
     logger.error(`get from v5 error ${JSON.stringify(e)}`)

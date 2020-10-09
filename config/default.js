@@ -31,6 +31,10 @@ module.exports = {
   RESOURCES_API_URL: process.env.RESOURCES_API_URL || 'https://api.topcoder-dev.com/v5/resources',
   GROUPS_API_URL: process.env.GROUPS_API_URL || 'https://api.topcoder-dev.com/v5/groups',
   TERMS_API_URL: process.env.TERMS_API_URL || 'https://api.topcoder-dev.com/v5/terms',
+  V4_CHALLENGE_API_URL: process.env.V4_CHALLENGE_API_URL || 'https://api.topcoder-dev.com/v4/challenges',
+  V3_MEMBER_API_URL: process.env.V3_MEMBER_API_URL || 'https://api.topcoder-dev.com/v3/members',
+  V4_ES_FEEDER_API_URL: process.env.V4_ES_FEEDER_API_URL || 'https://api.topcoder-dev.com/v4/esfeeder/challenges',
+  FORCE_ES_FEEDER: process.env.FORCE_ES_FEEDER ? process.env.FORCE_ES_FEEDER === 'true' : false,
   CREATED_DATE_BEGIN: process.env.CREATED_DATE_BEGIN,
   POPULATE_MIGRATION_TABLE_DATE_BEGIN: process.env.POPULATE_MIGRATION_TABLE_DATE_BEGIN || process.env.CREATED_DATE_BEGIN || new Date(),
 
@@ -204,6 +208,8 @@ module.exports = {
     SUCCESS: 'Success'
   },
 
+  MM_DIRECT_PROJECT_ID: process.env.MM_DIRECT_PROJECT_ID || 23650,
+  MM_CONNECT_PROJECT_ID: process.env.MM_CONNECT_PROJECT_ID || 16612,
   SUBMITTER_ROLE_ID: process.env.SUBMITTER_ROLE_ID || '732339e7-8e30-49d7-9198-cccf9451e221',
   SUBMISSION_TYPE: process.env.SUBMISSION_TYPE || 'Contest Submission',
   CHECKPOINT_SUBMISSION_TYPE: process.env.CHECKPOINT_SUBMISSION_TYPE || 'Checkpoint Submission',
@@ -219,5 +225,7 @@ module.exports = {
       WRITE: process.env.SCOPE_CHALLENGES_WRITE || 'write:challenges',
       ALL: process.env.SCOPE_CHALLENGES_ALL || 'all:challenges'
     }
-  }
+  },
+
+  COPILOT_PAYMENT_TYPE: process.env.COPILOT_PAYMENT_TYPE || 'copilot'
 }

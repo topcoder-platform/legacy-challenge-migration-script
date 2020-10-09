@@ -3,6 +3,61 @@ const logger = require('../util/logger')
 const helper = require('../util/helper')
 // const getErrorService = require('./errorService')
 const { executeQueryAsync } = require('../util/informixWrapper')
+
+/**
+ * Gets the copilot payment for a legacyId
+ * @param {Number} legacyId the legacy ID
+ */
+async function getCopilotPaymentFromIfx (legacyId) {
+  const sql = `SELECT limit 1 * FROM project_info WHERE project_id = ${_.toInteger(legacyId)} AND project_info_type_id = 49`
+  const result = await execQuery(sql)
+  if (result && result[0]) return result[0]
+  return false
+}
+
+/**
+ * Create the copilot payment record
+ * @param {Number} legacyId the legacy challenge id
+ * @param {Number} amount the $ amount of the copilot payment
+ * @param {String} createdBy the create user handle
+ */
+async function createCopilotPaymentInIfx (legacyId, amount, createdBy) {
+  const sql = `
+    INSERT INTO project_info
+      (
+        project_id,
+        project_info_type_id,
+        value,
+        create_user,
+        create_date,
+        modify_user,
+        modify_date
+      )
+    VALUES
+      (${_.toInteger(legacyId)}, 49, ${amount}, ${createdBy}, CURRENT, ${createdBy}, CURRENT)`
+  return execQuery(sql)
+}
+
+/**
+ * Update the existing copilot payment for a legacyId
+ * @param {Number} legacyId the legacy challenge id
+ * @param {Number} newValue the new value
+ * @param {String} updatedBy the update user handle
+ */
+async function updateCopilotPaymentInIfx (legacyId, newValue, updatedBy) {
+  const sql = `UPDATE project_info SET value = ${newValue}, modify_user = ${updatedBy}, modify_date = CURRENT WHERE project_info_type_id = 49 AND project_id = ${_.toInteger(legacyId)}`
+  return execQuery(sql)
+}
+
+/**
+ * Delete the existing copilot payment for a legacyId
+ * @param {Number} legacyId the legacy challenge id
+ */
+async function deleteCopilotPaymentFromIfx (legacyId) {
+  const sql = `DELETE FROM project_info WHERE project_info_type_id = 49 AND project_id = ${_.toInteger(legacyId)}`
+  return execQuery(sql)
+}
+
 /**
  * Get challenge scorecard information from informix
  * @param {Object} filter {id, ids}
@@ -623,5 +678,9 @@ module.exports = {
   getPhaseFromIfx,
   getTermsFromIfx,
   getChallengeSubmissions,
-  getChallengeRegistrants
+  getChallengeRegistrants,
+  getCopilotPaymentFromIfx,
+  createCopilotPaymentInIfx,
+  updateCopilotPaymentInIfx,
+  deleteCopilotPaymentFromIfx
 }
