@@ -89,12 +89,12 @@ async function processChallenge (legacyId, challengeListing, challengeDetails) {
   const challengeV4Prizes = _.get(v5ChallengeObjectFromV4, 'prizeSets', [])
   // logger.debug(`v4 prizes: ${JSON.stringify(challengeV4Prizes)}`)
   const challengeV5APIPrizes = _.get(v5ChallengeFromAPI, 'prizeSets', [])
-  logger.debug(`v5 prizes: ${JSON.stringify(challengeV5APIPrizes)}`)
+  // logger.debug(`v5 prizes: ${JSON.stringify(challengeV5APIPrizes)}`)
   const prizeSets = _.filter([
     ..._.intersectionBy(challengeV4Prizes, challengeV5APIPrizes, 'type'),
     ..._.differenceBy(challengeV5APIPrizes, challengeV4Prizes, 'type')
   ], entry => entry.type !== config.COPILOT_PAYMENT_TYPE)
-  logger.debug(`intersection: ${JSON.stringify(prizeSets)}`)
+  // logger.debug(`intersection: ${JSON.stringify(prizeSets)}`)
 
   const copilotPayment = await challengeIfxService.getCopilotPaymentFromIfx(legacyId)
   if (copilotPayment) {
@@ -108,6 +108,8 @@ async function processChallenge (legacyId, challengeListing, challengeDetails) {
       type: config.COPILOT_PAYMENT_TYPE
     })
   }
+
+  logger.debug(`Syncing Prize Sets for Challenge ${legacyId}, ${JSON.stringify(prizeSets)}`)
 
   const updatedV5Object = {
     ..._.omit(v5ChallengeFromAPI, ['prizeSets']),
@@ -137,7 +139,7 @@ async function processResources (legacyId, challengeId, force) {
     // v5 memberId is a string
     // logger.debug(`Find resource in V5 ${JSON.stringify(v4Obj)}`)
     if (!_.find(currentV5Array.result, { memberId: _.toString(v4Obj.memberId), roleId: v4Obj.roleId })) {
-      logger.debug(`Sync :: ++ Resource Not Found, adding ${JSON.stringify({ memberId: v4Obj.memberId, roleId: v4Obj.roleId })}`)
+      logger.debug(`Sync :: ++ Resource Not Found, adding ${JSON.stringify({ memberHandle: v4Obj.memberHandle, roleId: v4Obj.roleId })}`)
       await resourceService.saveResource(v4Obj)
       resourcesAdded += 1
     }
@@ -146,7 +148,7 @@ async function processResources (legacyId, challengeId, force) {
     const v5Obj = currentV5Array.result[i]
     // v4 memberId is a number
     if (!_.find(currentV4Array, { memberId: _.toString(v5Obj.memberId), roleId: v5Obj.roleId })) {
-      logger.debug(`Sync :: -- Resource Found, removing ${JSON.stringify({ memberId: v5Obj.memberId, roleId: v5Obj.roleId })}`)
+      logger.debug(`Sync :: -- Resource Found, removing ${JSON.stringify({ memberHandle: v5Obj.memberHandle, roleId: v5Obj.roleId })}`)
       await resourceService.deleteResource(v5Obj.id)
       resourcesRemoved += 1
     }
