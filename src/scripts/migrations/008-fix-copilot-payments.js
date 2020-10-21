@@ -46,7 +46,7 @@ const migrationFunction = {
               // const copilotPayment = await challengeIfxService.getCopilotPaymentFromIfx(legacyId)
               const prizeSet = { type: 'copilot', description: 'Copilot Payment' }
               prizeSet.prizes = []
-              prizeSet.prizes.push({ value: legacyCopilotPayment.value, type: 'USD' })
+              prizeSet.prizes.push({ value: _.toNumber(legacyCopilotPayment.value), type: 'USD' })
               updatedChallenge.prizeSets.push(prizeSet)
               updatedChallenge.legacy.migration = 8.2
               await challengeService.save(updatedChallenge)
