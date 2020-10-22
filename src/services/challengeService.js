@@ -652,7 +652,7 @@ async function buildV5Challenge (legacyId, challengeListing, challengeDetails) {
   if (copilotPayment && copilotPayment.value > 0) {
     const prizeSet = { type: 'copilot', description: 'Copilot Payment' }
     prizeSet.prizes = []
-    prizeSet.prizes.push({ value: copilotPayment.value, type: 'USD' })
+    prizeSet.prizes.push({ value: _.toNumber(copilotPayment.value), type: 'USD' })
     prizeSets.push(prizeSet)
   }
 
