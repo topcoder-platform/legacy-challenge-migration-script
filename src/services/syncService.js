@@ -16,8 +16,8 @@ async function syncLegacyId (legacyId, force) {
   if (v5) {
     const v4Listing = await challengeService.getChallengeListingFromV4ES(legacyId)
     const v4Detail = await challengeService.getChallengeDetailFromV4ES(legacyId)
-    logger.warn(`Sync :: v4Listing ${JSON.stringify(v4Listing)}`)
-    logger.warn(`Sync :: v4Detail ${JSON.stringify(v4Detail)}`)
+    // logger.warn(`Sync :: v4Listing ${JSON.stringify(v4Listing)}`)
+    // logger.warn(`Sync :: v4Detail ${JSON.stringify(v4Detail)}`)
     try {
       await challengeSyncStatusService.startSync(legacyId, v4Listing.version, v4Detail.version)
       const { resourcesAdded, resourcesRemoved } = await processResources(legacyId, v5.id, force === true)
@@ -144,15 +144,16 @@ async function processResources (legacyId, challengeId, force) {
       resourcesAdded += 1
     }
   }
-  for (let i = 0; i < currentV5Array.result.length; i += 1) {
-    const v5Obj = currentV5Array.result[i]
-    // v4 memberId is a number
-    if (!_.find(currentV4Array, { memberId: _.toString(v5Obj.memberId), roleId: v5Obj.roleId })) {
-      logger.debug(`Sync :: -- Resource Found, removing ${JSON.stringify({ memberHandle: v5Obj.memberHandle, roleId: v5Obj.roleId })}`)
-      await resourceService.deleteResource(v5Obj.id)
-      resourcesRemoved += 1
-    }
-  }
+  logger.info('Removing Resources Disabled')
+  // for (let i = 0; i < currentV5Array.result.length; i += 1) {
+  //   const v5Obj = currentV5Array.result[i]
+  //   // v4 memberId is a number
+  //   if (!_.find(currentV4Array, { memberId: _.toString(v5Obj.memberId), roleId: v5Obj.roleId })) {
+  //     logger.debug(`Sync :: -- Resource Found, removing ${JSON.stringify({ memberHandle: v5Obj.memberHandle, roleId: v5Obj.roleId })}`)
+  //     await resourceService.deleteResource(v5Obj.id)
+  //     resourcesRemoved += 1
+  //   }
+  // }
 
   return { resourcesAdded, resourcesRemoved }
 }
