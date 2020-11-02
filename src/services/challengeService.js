@@ -34,6 +34,7 @@ const challengePropertiesToOmitFromDynamo = [
 ]
 
 async function save (challenge) {
+  // logger.debug(`Save - ${challenge.id} - ${challenge.legacyId} - ${JSON.stringify(challenge.prizeSets)}`)
   if (challenge.id) {
     // logger.debug(`Update Challenge ${challenge.id}`)
     // return
