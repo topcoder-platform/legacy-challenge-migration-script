@@ -16,6 +16,7 @@ const resourceInformixService = require('./resourceInformixService')
 const translationService = require('./translationService')
 const { V4_TRACKS } = require('../util/conversionMappings')
 const { getCopilotPaymentFromIfx } = require('./challengeInformixService')
+const constants = require('../constants')
 
 let allV5Terms
 
@@ -760,7 +761,11 @@ async function buildV5Challenge (legacyId, challengeListing, challengeDetails) {
   }
 
   // console.log(JSON.stringify(metadata))
-
+  const prizeSetsGroup = _.groupBy(prizeSets, 'type')
+  if (prizeSetsGroup[constants.prizeSetTypes.ChallengePrizes]) {
+    const totalPrizes = helper.sumOfPrizes(prizeSetsGroup[constants.prizeSetTypes.ChallengePrizes][0].prizes)
+    _.set(newChallenge, 'overview.totalPrizes', totalPrizes)
+  }
   return _.assign(newChallenge, { prizeSets, tags, groups, winners, phases, metadata, terms, events })
 }
 

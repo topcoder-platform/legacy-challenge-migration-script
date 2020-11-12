@@ -64,6 +64,16 @@ npm i
 - Inside the docker container, start the express server: `npm start`
 
 ## Migrations
+### For local migrations
+There are two parts need to be updated for local migrations,
+- `./src/models/challenge.js`
+`throughput: 'ON_DEMAND',` should be updated to `throughput:{ read: 4, write: 2 },`
+- `./config/default.js`
+Two aws config should be uncommented
+
+and env variable `IS_LOCAL_DB` should be set to true before you continue to the next steps.
+
+### Run a migration
 - To run a migration, the command should be:
 `MIGRATION=<name-of-migration-file> nf run npm run migrate`
 Example: 
