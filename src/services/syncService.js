@@ -80,9 +80,9 @@ async function processChallenge (legacyId, challengeListing, challengeDetails) {
     }
   }
 
-  const ommittedFields = ['id', 'type', 'track', 'typeId', 'trackId', 'prizeSets']
+  const ommittedFields = ['id', 'type', 'track', 'typeId', 'trackId', 'prizeSets', 'descriptionFormat']
 
-  if (v5ChallengeObjectFromV4.descriptionFormat !== 'HTML') {
+  if (v5ChallengeFromAPI.descriptionFormat !== 'HTML') {
     ommittedFields.push('description')
     ommittedFields.push('privateDescription')
   }
