@@ -140,7 +140,10 @@ async function processResources (legacyId, challengeId, force) {
     // logger.debug(`Find resource in V5 ${JSON.stringify(v4Obj)}`)
     if (!_.find(currentV5Array.result, { memberId: _.toString(v4Obj.memberId), roleId: v4Obj.roleId })) {
       logger.debug(`Sync :: ++ Resource Not Found, adding ${JSON.stringify({ memberHandle: v4Obj.memberHandle, roleId: v4Obj.roleId })}`)
-      await resourceService.saveResource(v4Obj)
+      // await resourceService.saveResource(v4Obj)
+      // Changing to use the v5 api so events are thrown and members get added to the forum
+      await resourceService.createResourceInV5(challengeId, v4Obj.memberHandle, v4Obj.roleId)
+
       resourcesAdded += 1
     }
   }
