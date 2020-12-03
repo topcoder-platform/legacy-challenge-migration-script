@@ -87,7 +87,7 @@ async function updateChallenge (challenge) {
       id: challenge.id,
       body: {
         doc: {
-          ...challenge,
+          ..._.omit(challenge, ['created', 'createdBy']),
           groups: _.filter(challenge.groups, g => _.toString(g).toLowerCase() !== 'null')
         }
       }

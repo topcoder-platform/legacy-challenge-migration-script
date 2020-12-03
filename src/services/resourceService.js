@@ -230,6 +230,24 @@ async function getResourcesFromV5API (challengeId, roleId) {
   return { result: [], total: 0 }
 }
 
+async function createResourceInV5 (challengeId, memberHandle, roleId) {
+  const token = await getM2MToken()
+  const url = `${config.RESOURCES_API_URL}`
+  const data = {
+    challengeId,
+    memberHandle,
+    roleId
+  }
+  let res = null
+  try {
+    logger.debug(`Creating Resource ${challengeId}, ${memberHandle}, ${roleId}`)
+    res = await axios.post(url, data, { headers: { Authorization: `Bearer ${token}` } })
+  } catch (e) {
+    logger.error(`get from v5 error ${JSON.stringify(e)}`)
+  }
+  return res
+}
+
 module.exports = {
   createMissingResourceRoles,
   migrateResourcesForChallenge,
@@ -239,5 +257,6 @@ module.exports = {
   saveResourceRoles,
   saveResource,
   getResourcesFromV5API,
-  deleteAllResourcesForChallenge
+  deleteAllResourcesForChallenge,
+  createResourceInV5
 }
