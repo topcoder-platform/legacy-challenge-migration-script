@@ -47,8 +47,6 @@ async function processChallenge (legacyId, challengeListing, challengeDetails) {
   const v5ChallengeObjectFromV4 = await challengeService.buildV5Challenge(legacyId, challengeListing, challengeDetails)
   const [v5ChallengeFromAPI] = await challengeService.getChallengeFromV5API(legacyId)
 
-  if (v5ChallengeFromAPI.typeId === constants)
-
   // logger.debug(`V5 Object Built from V4: ${JSON.stringify(v5ChallengeObjectFromV4)}`)
   // logger.debug(`V5 Object from API: ${JSON.stringify(v5ChallengeFromAPI)}`)
 
