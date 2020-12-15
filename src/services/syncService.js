@@ -74,7 +74,7 @@ async function processChallenge (legacyId, challengeListing, challengeDetails) {
 
   // logger.info(`After V5 Sub Sync: ${challengeObj.numOfSubmissions} ${v5ChallengeFromAPI.numOfSubmissions}`)
   if (v5ChallengeObjectFromV4.track.toUpperCase() === V4_TRACKS.DESIGN) {
-    ommittedFields = ['tags']
+    ommittedFields.push('tags')
     try {
       const submissions = await challengeService.getChallengeSubmissionsFromV5API(legacyId, config.CHECKPOINT_SUBMISSION_TYPE)
       additionalInformation.numOfCheckpointSubmissions = _.toNumber(submissions.total) || 0
