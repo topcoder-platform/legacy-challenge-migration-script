@@ -30,8 +30,13 @@ const migrationFunction = {
             if (prizeSetsGroup[constants.prizeSetTypes.ChallengePrizes]) {
               const totalPrizes = helper.sumOfPrizes(prizeSetsGroup[constants.prizeSetTypes.ChallengePrizes][0].prizes)
               _.set(challenge, 'overview.totalPrizes', totalPrizes)
+              // logger.debug(`Updating Challenge ${challenge.id} - ${JSON.stringify(challenge.overview)}`)
               await challengeService.save(challenge)
+            } else {
+              logger.debug(`No prizeSetGroup ${challenge.id}`)
             }
+          } else {
+            logger.debug(`No prizeSet ${challenge.id}`)
           }
         }
       } else {
