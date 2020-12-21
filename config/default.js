@@ -56,8 +56,8 @@ module.exports = {
 
   AMAZON: {
     // Uncomment for local deployment
-    // AWS_ACCESS_KEY_ID: process.env.AWS_FAKE_ID,
-    // AWS_SECRET_ACCESS_KEY: process.env.AWS_FAKE_KEY,
+    // AWS_ACCESS_KEY_ID: process.env.AWS_FAKE_ID || 'FAKE_ACCESS_KEY',
+    // AWS_SECRET_ACCESS_KEY: process.env.AWS_FAKE_KEY || 'FAKE_SECRET_ACCESS_KEY',
     AWS_REGION: process.env.AWS_REGION || 'ap-northeast-1', // aws region
     IS_LOCAL_DB: process.env.IS_LOCAL_DB ? process.env.IS_LOCAL_DB === 'true' : false, // true or uninitialize if we use local instance
     DYNAMODB_URL: process.env.DYNAMODB_URL || 'http://localhost:8000', // just for local development

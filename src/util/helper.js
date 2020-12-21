@@ -239,6 +239,23 @@ function setResHeaders (req, res, result) {
   }
 }
 
+/**
+ * Calculate the sum of prizes.
+ *
+ * @param {Array} prizes the list of prize
+ * @returns {Object} the result prize
+ */
+function sumOfPrizes (prizes) {
+  let sum = 0
+  if (!prizes.length) {
+    return sum
+  }
+  for (const prize of prizes) {
+    sum += prize.value
+  }
+  return sum
+}
+
 module.exports = {
   forceV4ESFeeder,
   wrapExpress,
@@ -249,5 +266,6 @@ module.exports = {
   scanDynamoModelByProperty,
   generateInformxDate,
   getM2MToken,
-  setResHeaders
+  setResHeaders,
+  sumOfPrizes
 }
