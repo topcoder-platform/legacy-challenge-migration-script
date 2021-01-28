@@ -8,6 +8,7 @@ const challengeMigrationStatusService = require('../services/challengeMigrationS
 const migrationService = require('../services/migrationService')
 const challengeIfxService = require('../services/challengeInformixService')
 const { V4_TRACKS } = require('../util/conversionMappings')
+const { challengeStatusOrders } = require('../constants')
 
 async function syncLegacyId (legacyId, force) {
   // const legacyId = queuedChallenges.items[i].legacyId
@@ -47,8 +48,15 @@ async function processChallenge (legacyId, challengeListing, challengeDetails) {
   const v5ChallengeObjectFromV4 = await challengeService.buildV5Challenge(legacyId, challengeListing, challengeDetails)
   const [v5ChallengeFromAPI] = await challengeService.getChallengeFromV5API(legacyId)
 
-  // logger.debug(`V5 Object Built from V4: ${JSON.stringify(v5ChallengeObjectFromV4)}`)
-  // logger.debug(`V5 Object from API: ${JSON.stringify(v5ChallengeFromAPI)}`)
+  const v4StatusNumber = challengeStatusOrders[_.toLower(v5ChallengeObjectFromV4.status)] || challengeStatusOrders.cancelled
+  const v5StatusNumber = challengeStatusOrders[_.toLower(v5ChallengeFromAPI.status)] || challengeStatusOrders.cancelled
+
+  logger.debug(`v4 Status Number: ${v4StatusNumber} - v5 Status Number: ${v5StatusNumber}`)
+
+  if (v4StatusNumber < v5StatusNumber) {
+    logger.warn(`Status in v4 is: ${_.toLower(v5ChallengeObjectFromV4.status)}  - Status in v5 is: ${_.toLower(v5ChallengeFromAPI.status)} NOT updating v5`)
+    v5ChallengeObjectFromV4.status = v5ChallengeFromAPI.status
+  }
 
   const additionalInformation = {}
 
