@@ -17,7 +17,10 @@ const challengeStatusOrders = {
   cancelled: 2
 }
 
+const cacheKeyTaskUuids = 'cacheKeyTaskUuids'
+
 module.exports = {
   prizeSetTypes,
-  challengeStatusOrders
+  challengeStatusOrders,
+  cacheKeyTaskUuids
 }

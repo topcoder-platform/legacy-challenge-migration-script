@@ -37,6 +37,7 @@ module.exports = {
   FORCE_ES_FEEDER: process.env.FORCE_ES_FEEDER ? process.env.FORCE_ES_FEEDER === 'true' : false,
   CREATED_DATE_BEGIN: process.env.CREATED_DATE_BEGIN,
   POPULATE_MIGRATION_TABLE_DATE_BEGIN: process.env.POPULATE_MIGRATION_TABLE_DATE_BEGIN || process.env.CREATED_DATE_BEGIN || new Date(),
+  V5_CHALLENGE_TYPE_API_URL: process.env.CHALLENGE_TYPE_API_URL,
 
   INFORMIX: {
     server: process.env.INFORMIX_SERVER || 'informixoltp_tcp', // informix server

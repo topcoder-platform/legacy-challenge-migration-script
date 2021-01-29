@@ -10,6 +10,7 @@ const moment = require('moment-timezone')
 const AWS = require('aws-sdk')
 const m2mAuth = require('tc-core-library-js').auth.m2m
 const m2m = m2mAuth(_.pick(config, ['AUTH0_URL', 'AUTH0_AUDIENCE', 'TOKEN_CACHE_TIME', 'AUTH0_PROXY_SERVER_URL']))
+const logger = require('./logger')
 
 // Elasticsearch client
 let esClient
@@ -256,6 +257,28 @@ function sumOfPrizes (prizes) {
   return sum
 }
 
+/**
+ * Get challenge types
+ *
+ * @param {Object} query parameter to filter api call
+ * @returns {Array} the list challenge type object
+ */
+async function getV5ChallengeTypes(query) {
+  const url = config.V5_CHALLENGE_TYPE_API_URL
+  try {
+    let res = await request.get(`${url}`).query(query)
+    logger.debug(`api (${url} ${query}) response status: ${res.status}`)
+    if (res.status !== 200) {
+      logger.debug(`api (${url}) response status: ${res.status}`)
+      return []
+    }
+    return res.body
+  } catch (error) {
+    logger.error(`Error occured while calling api ${url} : ${error}`)
+    return []
+  }
+}
+
 module.exports = {
   forceV4ESFeeder,
   wrapExpress,
@@ -267,5 +290,6 @@ module.exports = {
   generateInformxDate,
   getM2MToken,
   setResHeaders,
-  sumOfPrizes
+  sumOfPrizes,
+  getV5ChallengeTypes
 }

@@ -21,6 +21,7 @@ const constants = require('../constants')
 let allV5Terms
 
 const groupsUUIDCache = new HashMap()
+const cache = new HashMap()
 const challengePropertiesToOmitFromDynamo = [
   'numOfCheckpointSubmissions',
   'numOfSubmissions',
@@ -35,6 +36,23 @@ const challengePropertiesToOmitFromDynamo = [
 ]
 
 async function save (challenge) {
+  let taskUuids = [];
+  if (!cache.get(constants.cacheKeyTaskUuids)) {
+    const taskTypes = helper.getV5ChallengeTypes({ isTask: true })
+    _.map(taskTypes, o => taskUuids.push(o.id))
+    if (taskUuids.length) {
+      cache.set(constants.cacheKeyTaskUuids, taskUuids)
+    } else {
+      logger.error(`No uuid found for challenge type task.`)
+    }
+  } else {
+    taskUuids = cache.get(constants.cacheKeyTaskUuids)
+  }
+  if (_.indexOf(taskUuids, challenge.typeId) >= 0) {
+    // not need to forward sync for task
+    return
+  }
+
   // logger.debug(`Save - ${challenge.id} - ${challenge.legacyId} - ${JSON.stringify(challenge.prizeSets)}`)
   if (challenge.id) {
     // logger.debug(`Update Challenge ${challenge.id}`)
