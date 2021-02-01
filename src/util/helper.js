@@ -266,7 +266,7 @@ function sumOfPrizes (prizes) {
 async function getV5ChallengeTypes(query) {
   const url = config.V5_CHALLENGE_TYPE_API_URL
   try {
-    let res = await request.get(`${url}`).query(query)
+    const res = await request.get(url).query(query)
     logger.debug(`api (${url} ${query}) response status: ${res.status}`)
     if (res.status !== 200) {
       logger.debug(`api (${url}) response status: ${res.status}`)
