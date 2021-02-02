@@ -42,6 +42,7 @@ async function save (challenge) {
     _.map(taskTypes, o => taskUuids.push(o.id))
     if (taskUuids.length) {
       cache.set(constants.cacheKeyTaskUuids, taskUuids)
+      logger.debug(`set taskUuids [${taskUuids}] in cache.`)
     } else {
       logger.error(`No uuid found for challenge type task.`)
     }
@@ -50,7 +51,8 @@ async function save (challenge) {
   }
   if (_.indexOf(taskUuids, challenge.typeId) >= 0) {
     // not need to forward sync for task
-    return
+    logger.debug(`Stop forward syncing for task - challenge ${challenge.id} and tpye ${challenge.typeId}.`)
+    return challenge.id
   }
 
   // logger.debug(`Save - ${challenge.id} - ${challenge.legacyId} - ${JSON.stringify(challenge.prizeSets)}`)
