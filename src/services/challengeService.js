@@ -36,24 +36,28 @@ const challengePropertiesToOmitFromDynamo = [
 ]
 
 async function save (challenge) {
-  let taskUuids = [];
-  if (!cache.get(constants.cacheKeyTaskUuids)) {
-    const taskTypes = helper.getV5ChallengeTypes({ isTask: true })
-    logger.debug('TaskTypes object:' + taskTypes)
-    _.map(taskTypes, o => taskUuids.push(o.id))
-    if (taskUuids.length) {
-      cache.set(constants.cacheKeyTaskUuids, taskUuids)
-      logger.debug(`set taskUuids [${taskUuids}] in cache.`)
+  try {
+    let taskUuids = [];
+    if (!cache.get(constants.cacheKeyTaskUuids)) {
+      const taskTypes = await helper.getV5ChallengeTypes({ isTask: true })
+      logger.debug('TaskTypes object:' + taskTypes)
+      _.map(taskTypes, o => taskUuids.push(o.id))
+      if (taskUuids.length) {
+        cache.set(constants.cacheKeyTaskUuids, taskUuids)
+        logger.debug(`set taskUuids [${taskUuids}] in cache.`)
+      } else {
+        logger.error(`No uuid found for challenge type task.`)
+      }
     } else {
-      logger.error(`No uuid found for challenge type task.`)
+      taskUuids = cache.get(constants.cacheKeyTaskUuids)
     }
-  } else {
-    taskUuids = cache.get(constants.cacheKeyTaskUuids)
-  }
-  if (_.indexOf(taskUuids, challenge.typeId) >= 0) {
-    // not need to forward sync for task
-    logger.debug(`Stop forward syncing for task - challenge ${challenge.id} and tpye ${challenge.typeId}.`)
-    return challenge.id
+    if (_.indexOf(taskUuids, challenge.typeId) >= 0) {
+      // not need to forward sync for task
+      logger.debug(`Stop forward syncing for task - challenge ${challenge.id} and tpye ${challenge.typeId}.`)
+      return challenge.id
+    }
+  } catch (err) {
+    logger.error(`Error occurred while checking task challenge to stop fwd sync: ${err}`)
   }
 
   // logger.debug(`Save - ${challenge.id} - ${challenge.legacyId} - ${JSON.stringify(challenge.prizeSets)}`)
