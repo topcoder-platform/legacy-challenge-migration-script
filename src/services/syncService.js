@@ -112,7 +112,7 @@ async function processChallenge (legacyId, challengeListing, challengeDetails) {
       prizes: [
         {
           type: 'USD',
-          value: copilotPayment.value
+          value: copilotPayment.amount
         }
       ],
       type: config.COPILOT_PAYMENT_TYPE
