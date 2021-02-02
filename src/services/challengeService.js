@@ -54,7 +54,8 @@ async function save (challenge) {
     if (_.indexOf(taskUuids, challenge.typeId) >= 0) {
       // not need to forward sync for task
       logger.debug(`Stop forward syncing for task - challenge ${challenge.id} and tpye ${challenge.typeId}.`)
-      return challenge.id
+      
+      //return challenge.id
     }
   } catch (err) {
     logger.error(`Error occurred while checking task challenge to stop fwd sync: ${err}`)
