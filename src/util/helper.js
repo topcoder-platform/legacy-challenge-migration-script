@@ -267,11 +267,12 @@ async function getV5ChallengeTypes(query) {
   const url = config.V5_CHALLENGE_TYPE_API_URL
   try {
     const res = await request.get(url).query(query)
-    logger.debug(`api (${url} ${query}) response status: ${res.status}`)
+    logger.debug(`api (${url} ` + query + `) response status: ${res.status}`)
     if (res.status !== 200) {
       logger.debug(`api (${url}) response status: ${res.status}`)
       return []
     }
+    logger.debug('result: ' + res.body)
     return res.body
   } catch (error) {
     logger.error(`Error occured while calling api ${url} : ${error}`)

@@ -39,6 +39,7 @@ async function save (challenge) {
   let taskUuids = [];
   if (!cache.get(constants.cacheKeyTaskUuids)) {
     const taskTypes = helper.getV5ChallengeTypes({ isTask: true })
+    logger.debug('TaskTypes object:' + taskTypes)
     _.map(taskTypes, o => taskUuids.push(o.id))
     if (taskUuids.length) {
       cache.set(constants.cacheKeyTaskUuids, taskUuids)
