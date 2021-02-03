@@ -773,7 +773,12 @@ async function buildV5Challenge (legacyId, challengeListing, challengeDetails) {
 
   const metadataList = ['allowStockArt', 'drPoints', 'submissionViewable', 'submissionLimit', 'codeRepo', 'environment']
   const allMetadata = _.map(metadataList, item => {
-    if (challengeListing[item]) return { name: item, value: _.toString(challengeListing[item]) }
+    if (challengeListing[item]) {
+      if (item === 'submissionLimit') {
+        return { name: item, value: _.toString(_.get(challengeListing[item], 'count', 0)) }
+      }
+      return { name: item, value: _.toString(challengeListing[item]) }
+    }
   })
   metadata.push(..._.compact(allMetadata))
 
