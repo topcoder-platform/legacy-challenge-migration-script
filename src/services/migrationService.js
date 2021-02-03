@@ -6,8 +6,13 @@ const challengeMigrationStatusService = require('./challengeMigrationStatusServi
 const resourceService = require('./resourceService')
 
 async function processChallenge (legacyId) {
-  // const legacyChallengeDetailFromV4 = await challengeService.getChallengeListingFromV4ES(legacyId)
+  const legacyChallengeDetailFromV4 = await challengeService.getChallengeListingFromV4ES(legacyId)
   // const legacyChallengeLastModified = legacyChallengeDetailFromV4.data.updatedAt || null
+  const isTask = legacyChallengeDetailFromV4.data.isTask || null
+  if (isTask) {
+    logger.debug(`Legacy Challenge: ${legacyId} - Stop forward migration for task...`)
+    return
+  }
 
   let v5ChallengeId = null
   try {

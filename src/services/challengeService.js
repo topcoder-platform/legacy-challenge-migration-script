@@ -36,7 +36,7 @@ const challengePropertiesToOmitFromDynamo = [
 ]
 
 async function save (challenge) {
-  try {
+ /* try {
     let taskUuids = [];
     if (!cache.get(constants.cacheKeyTaskUuids)) {
       const taskTypes = await helper.getV5ChallengeTypes({ isTask: true })
@@ -59,7 +59,7 @@ async function save (challenge) {
     }
   } catch (err) {
     logger.error(`Error occurred while checking task challenge to stop fwd sync: ${err}`)
-  }
+  }*/
 
   // logger.debug(`Save - ${challenge.id} - ${challenge.legacyId} - ${JSON.stringify(challenge.prizeSets)}`)
   if (challenge.id) {

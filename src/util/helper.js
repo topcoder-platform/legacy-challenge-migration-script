@@ -272,7 +272,6 @@ async function getV5ChallengeTypes(query) {
       logger.debug(`api (${url}) response status: ${res.status}`)
       return []
     }
-    logger.debug(`result: ${JSON.stringify(res.body)} `)
     return res.body
   } catch (error) {
     logger.error(`Error occured while calling api ${url} : ${error}`)

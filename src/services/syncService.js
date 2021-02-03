@@ -29,6 +29,12 @@ async function syncLegacyId (legacyId, force) {
       await challengeSyncStatusService.endSync(legacyId, null, config.MIGRATION_PROGRESS_STATUSES.FAILED, e, force === true)
     }
   } else {
+    const legacyChallengeDetailFromV4 = await challengeService.getChallengeListingFromV4ES(legacyId)
+    const isTask = legacyChallengeDetailFromV4.data.isTask || null
+    if (isTask) {
+      logger.debug(`Legacy Challenge: ${legacyId} - Stop forward syncing for task ...`)
+      return
+    }
     const progress = await challengeMigrationStatusService.getMigrationProgress({ legacyId }, 1, 1)
     if (progress.total < 1) {
       logger.warn(`Sync :: Challenge ID ${legacyId} doesn't exist in v5, queueing for migration`)
