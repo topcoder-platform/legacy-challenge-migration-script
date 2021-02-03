@@ -11,6 +11,8 @@ async function processChallenge (legacyId) {
   const isTask = legacyChallengeDetailFromV4.data.isTask || null
   if (isTask) {
     logger.debug(`Legacy Challenge: ${legacyId} - Stop forward migration for task...`)
+    await challengeMigrationStatusService.endMigration(legacyId, null, config.MIGRATION_PROGRESS_STATUSES.SUCCESS)
+    logger.debug(`Legacy Challenge: ${legacyId} - set v5 challenge id null and changed success status at ES`)
     return
   }
 
