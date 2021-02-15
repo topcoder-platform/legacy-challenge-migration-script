@@ -756,6 +756,23 @@ async function buildV5Challenge (legacyId, challengeListing, challengeDetails) {
   })
   metadata.push(..._.compact(allMetadata))
 
+  const effortHoursMapping = {
+    effortHoursEstimate: 88,
+    effortHoursOffshore: 89,
+    effortHoursOnshore: 90
+  }
+
+  const legacyEffortHoursData = await challengeInformixService.getEffortHoursFromIfx(legacyId)
+  if (legacyEffortHoursData.length > 0) {
+    _.keys(effortHoursMapping, (key) => {
+      const legacyIndex = _.findIndex(legacyEffortHoursData, entry => entry.project_info_type_id === effortHoursMapping[key])
+      metadata.push({
+        name: key,
+        value: legacyEffortHoursData[legacyIndex].value
+      })
+    })
+  }
+
   const events = []
   if (challengeListing.events && challengeListing.events.length > 0) {
     for (const event of challengeListing.events) {

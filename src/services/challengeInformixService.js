@@ -5,6 +5,20 @@ const helper = require('../util/helper')
 const { executeQueryAsync } = require('../util/informixWrapper')
 
 /**
+ * Get effort hours for a legacyId
+ * @param {Number} legacyId the legacy ID
+ */
+async function getEffortHoursFromIfx (legacyId) {
+  const sql = `SELECT LIMIT 1
+    project_info_type_id,
+    value,
+    FROM project_info
+    WHERE project_id = ${legacyId} and project_info_type_id in (88, 89, 90)
+  `
+  return execQuery(sql)
+}
+
+/**
  * Gets the copilot payment for a legacyId
  * @param {Number} legacyId the legacy ID
  */
@@ -683,5 +697,6 @@ module.exports = {
   getCopilotPaymentFromIfx,
   createCopilotPaymentInIfx,
   updateCopilotPaymentInIfx,
-  deleteCopilotPaymentFromIfx
+  deleteCopilotPaymentFromIfx,
+  getEffortHoursFromIfx
 }
