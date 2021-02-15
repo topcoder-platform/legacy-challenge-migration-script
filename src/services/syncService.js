@@ -45,8 +45,20 @@ async function syncLegacyId (legacyId, force) {
  * @param {Number} legacyId
  */
 async function processChallenge (legacyId, challengeListing, challengeDetails) {
+  const timelineScheduleFields = ['phases', 'startDate', 'endDate', 'currentPhaseNames', 'registrationStartDate', 'registrationEndDate', 'submissionStartDate', 'submissionEndDate']
   const v5ChallengeObjectFromV4 = await challengeService.buildV5Challenge(legacyId, challengeListing, challengeDetails)
   const [v5ChallengeFromAPI] = await challengeService.getChallengeFromV5API(legacyId)
+
+  // Timeline fields are managed by the V5 Scheduler instead of the legacy autopilot
+  if (_.get(v5ChallengeFromAPI, 'legacy.useSchedulingAPI') === true) {
+    _.set(v5ChallengeObjectFromV4, 'legacy.useSchedulingAPI', true)
+    _.each(timelineScheduleFields, (prop) => {
+      _.unset(v5ChallengeObjectFromV4, prop)
+    })
+  }
+
+  // logger.debug(`V5 Object Built from V4: ${JSON.stringify(v5ChallengeObjectFromV4)}`)
+  // logger.debug(`V5 Object from API: ${JSON.stringify(v5ChallengeFromAPI)}`)
 
   const v4StatusNumber = challengeStatusOrders[_.toLower(v5ChallengeObjectFromV4.status)] || challengeStatusOrders.cancelled
   const v5StatusNumber = challengeStatusOrders[_.toLower(v5ChallengeFromAPI.status)] || challengeStatusOrders.cancelled
