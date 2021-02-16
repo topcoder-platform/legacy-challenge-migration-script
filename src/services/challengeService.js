@@ -714,13 +714,19 @@ async function buildV5Challenge (legacyId, challengeListing, challengeDetails) {
     } else {
       newPhase.isOpen = false
     }
+    logger.debug(`Challenge ${legacyId} Phase ${phase.type} id ${newPhase.phaseId} Duration ${v5duration} = ${(v5duration / 60 / 60)} hrs or ${(v5duration / 60 / 60 / 24)} days`)
     return newPhase
   })
   newChallenge.endDate = challengeEndDate
+  logger.debug(`Final Phase Array ${JSON.stringify(phases)}`)
 
   if (phases.length > 0) {
     const registrationPhase = _.find(phases, p => p.name === 'Registration')
     const submissionPhase = _.find(phases, p => p.name === 'Submission')
+
+    logger.debug(`Registration Phase ${JSON.stringify(registrationPhase)}`)
+    logger.debug(`Submission Phase ${JSON.stringify(submissionPhase)}`)
+
     newChallenge.currentPhaseNames = _.map(_.filter(phases, p => p.isOpen === true), 'name')
     if (registrationPhase) {
       newChallenge.registrationStartDate = registrationPhase.actualStartDate || registrationPhase.scheduledStartDate
@@ -741,9 +747,31 @@ async function buildV5Challenge (legacyId, challengeListing, challengeDetails) {
 
   const metadataList = ['allowStockArt', 'drPoints', 'submissionViewable', 'submissionLimit', 'codeRepo', 'environment']
   const allMetadata = _.map(metadataList, item => {
-    if (challengeListing[item]) return { name: item, value: _.toString(challengeListing[item]) }
+    if (challengeListing[item]) {
+      if (item === 'submissionLimit') {
+        return { name: item, value: _.toString(_.get(challengeListing[item], 'count', 0)) }
+      }
+      return { name: item, value: _.toString(challengeListing[item]) }
+    }
   })
   metadata.push(..._.compact(allMetadata))
+
+  const effortHoursMapping = {
+    effortHoursEstimate: 88,
+    effortHoursOffshore: 89,
+    effortHoursOnshore: 90
+  }
+
+  const legacyEffortHoursData = await challengeInformixService.getEffortHoursFromIfx(legacyId)
+  if (legacyEffortHoursData.length > 0) {
+    _.keys(effortHoursMapping, (key) => {
+      const legacyIndex = _.findIndex(legacyEffortHoursData, entry => entry.project_info_type_id === effortHoursMapping[key])
+      metadata.push({
+        name: key,
+        value: legacyEffortHoursData[legacyIndex].value
+      })
+    })
+  }
 
   const events = []
   if (challengeListing.events && challengeListing.events.length > 0) {

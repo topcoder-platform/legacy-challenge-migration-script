@@ -5,14 +5,29 @@ const helper = require('../util/helper')
 const { executeQueryAsync } = require('../util/informixWrapper')
 
 /**
+ * Get effort hours for a legacyId
+ * @param {Number} legacyId the legacy ID
+ */
+async function getEffortHoursFromIfx (legacyId) {
+  const sql = `SELECT LIMIT 1
+    project_info_type_id,
+    value,
+    FROM project_info
+    WHERE project_id = ${legacyId} and project_info_type_id in (88, 89, 90)
+  `
+  return execQuery(sql)
+}
+
+/**
  * Gets the copilot payment for a legacyId
  * @param {Number} legacyId the legacy ID
  */
 async function getCopilotPaymentFromIfx (legacyId) {
-  const sql = `SELECT limit 1 * FROM project_info WHERE project_id = ${_.toInteger(legacyId)} AND project_info_type_id = 49`
-  const result = await execQuery(sql)
-  if (result && result[0]) return result[0]
-  return false
+  const getCopilotResourceRes = await execQuery(`SELECT limit 1 resource_id as resourceid FROM resource WHERE project_id = ${_.toInteger(legacyId)} AND resource_role_id = 14`)
+  const copilotResourceId = _.get(getCopilotResourceRes, '[0].resourceid', null)
+  if (!copilotResourceId) return null
+  const result = await execQuery(`SELECT amount FROM project_payment where resource_id = ${_.toInteger(copilotResourceId)} AND project_payment_type_id = 4`)
+  return _.get(result, '[0]', null)
 }
 
 /**
@@ -682,5 +697,6 @@ module.exports = {
   getCopilotPaymentFromIfx,
   createCopilotPaymentInIfx,
   updateCopilotPaymentInIfx,
-  deleteCopilotPaymentFromIfx
+  deleteCopilotPaymentFromIfx,
+  getEffortHoursFromIfx
 }
