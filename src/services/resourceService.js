@@ -214,7 +214,7 @@ async function deleteAllResourcesForChallenge (challengeId) {
 
 async function getResourcesFromV5API (challengeId, roleId) {
   const token = await getM2MToken()
-  let url = `${config.RESOURCES_API_URL}?challengeId=${challengeId}`
+  let url = `${config.RESOURCES_API_URL}?challengeId=${challengeId}&perPage=1000`
   if (roleId) {
     url += `&roleId=${roleId}`
   }
