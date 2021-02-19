@@ -153,8 +153,8 @@ async function processResources (legacyId, challengeId, force) {
   const currentV4Array = await resourceService.getResourcesForChallenge(legacyId, challengeId)
   const currentV5Array = await resourceService.getResourcesFromV5API(challengeId)
 
-  // logger.debug(`Resources V4 Array ${JSON.stringify(currentV4Array)}`)
-  // logger.debug(`Resources V5 Array ${JSON.stringify(currentV5Array)}`)
+  logger.debug(`Resources V4 Array ${JSON.stringify(currentV4Array)}`)
+  logger.debug(`Resources V5 Array ${JSON.stringify(currentV5Array)}`)
 
   for (let i = 0; i < currentV4Array.length; i += 1) {
     const v4Obj = currentV4Array[i]
