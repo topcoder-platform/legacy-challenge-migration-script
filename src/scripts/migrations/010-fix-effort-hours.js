@@ -61,8 +61,8 @@ const migrationFunction = {
                 // logger.debug(`Key ${key} not found in legacy array`)
               }
             })
-            logger.debug(`Writing Challenge ${JSON.stringify(challenge)}`)
-            // await challengeService.save(challenge)
+            // logger.debug(`Writing Challenge ${JSON.stringify(challenge)}`)
+            await challengeService.save(challenge)
           }
         }
       } else {
