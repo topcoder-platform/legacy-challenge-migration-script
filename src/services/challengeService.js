@@ -762,14 +762,38 @@ async function buildV5Challenge (legacyId, challengeListing, challengeDetails) {
     effortHoursOnshore: 90
   }
 
+  // const legacyEffortHoursData = await challengeInformixService.getEffortHoursFromIfx(legacyId)
+  // if (legacyEffortHoursData.length > 0) {
+  //   _.keys(effortHoursMapping, (key) => {
+  //     const legacyIndex = _.findIndex(legacyEffortHoursData, entry => entry.project_info_type_id === effortHoursMapping[key])
+  //     metadata.push({
+  //       name: key,
+  //       value: legacyEffortHoursData[legacyIndex].value
+  //     })
+  //   })
+  // }
+
   const legacyEffortHoursData = await challengeInformixService.getEffortHoursFromIfx(legacyId)
   if (legacyEffortHoursData.length > 0) {
-    _.keys(effortHoursMapping, (key) => {
-      const legacyIndex = _.findIndex(legacyEffortHoursData, entry => entry.project_info_type_id === effortHoursMapping[key])
-      metadata.push({
-        name: key,
-        value: legacyEffortHoursData[legacyIndex].value
-      })
+    _.forEach(effortHoursMapping, (mappingValue, key) => {
+      // logger.debug(`${JSON.stringify(mappingValue)} -> ${key}`)
+      const v5Index = _.findIndex(metadata, meta => meta.name === key)
+      const legacyIndex = _.findIndex(legacyEffortHoursData, entry => entry.project_info_type_id === mappingValue)
+      if (legacyIndex > -1) {
+        if (v5Index === -1) {
+          const newData = {
+            name: key,
+            value: legacyEffortHoursData[legacyIndex].value
+          }
+          // logger.debug(`Not found in v5, adding ${JSON.stringify(newData)}`)
+          metadata.push(newData)
+        } else {
+          metadata[v5Index].value = legacyEffortHoursData[legacyIndex].value
+          // logger.debug(`Metadata found in v5, updating v5 index: ${v5Index} ${legacyIndex} V5 Metadata ${JSON.stringify(challenge.metadata[v5Index])} -- Legacy Data ${JSON.stringify(legacyData[legacyIndex])}`)
+        }
+      } else {
+        // logger.debug(`Key ${key} not found in legacy array`)
+      }
     })
   }
 
@@ -857,7 +881,7 @@ async function convertGroupIdsToV5UUIDs (oldIds) {
 async function getChallengeFromV5API (legacyId) {
   const token = await getM2MToken()
   const url = `${config.CHALLENGE_API_URL}?legacyId=${legacyId}&perPage=1&page=1`
-  // logger.debug(`Get Challenge from V5 URL ${url}`)
+  logger.debug(`Get Challenge from V5 URL ${url}`)
   let res = null
   try {
     res = await axios.get(url, { headers: { Authorization: `Bearer ${token}` } })

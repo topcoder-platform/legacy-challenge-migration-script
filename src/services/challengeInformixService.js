@@ -15,7 +15,7 @@ async function getEffortHoursFromIfx (legacyId) {
     FROM project_info
     WHERE project_id = ${legacyId} and project_info_type_id in (88, 89, 90)
   `
-  logger.info(`Effort Hours SQL: ${sql}`)
+  // logger.info(`Effort Hours SQL: ${sql}`)
   return execQuery(sql)
 }
 

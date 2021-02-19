@@ -11,7 +11,7 @@ const _ = require('lodash')
 const logger = require('../../util/logger')
 const challengeService = require('../../services/challengeService')
 const { getESClient } = require('../../util/helper')
-const { getEffortHoursFromIfx } = require('../../services/challengeInformixService')
+const { execQuery, getEffortHoursFromIfx } = require('../../services/challengeInformixService')
 
 const mapping = {
   effortHoursEstimate: 88,
@@ -28,26 +28,41 @@ const migrationFunction = {
 
     while (!finish) {
       logger.info(`Batch-${batch} - Loading challenges`)
-      const challenges = await getChallengesMissingData(page, perPage)
-      logger.info(`Found ${challenges.length} challenges`)
-      if (challenges.length > 0) {
-        for (const challenge of challenges) {
+      const legacyIdRows = await getEffortHoursChallengeIds(page, perPage)
+      logger.info(`Found ${legacyIdRows.length} legacy challenge ids`)
+      if (legacyIdRows.length > 0) {
+        for (const legacyIdRow of legacyIdRows) {
+          const [challenge] = await challengeService.getChallengeFromV5API(legacyIdRow.legacy_id)
+          if (!challenge) {
+            logger.error(`Challenge not found ${legacyIdRow.legacy_id}`)
+            continue
+          }
           challenge.legacy.migration = 10
-          const legacyData = await getEffortHoursFromIfx(challenge.legacyId)
+          const legacyData = await getEffortHoursFromIfx(legacyIdRow.legacy_id)
+          // logger.debug(`Legacy Data: ${JSON.stringify(legacyData)}`)
           if (legacyData.length > 0) {
-            _.keys(mapping, (key) => {
+            _.forEach(mapping, (mappingValue, key) => {
+              // logger.debug(`${JSON.stringify(mappingValue)} -> ${key}`)
               const v5Index = _.findIndex(challenge.metadata, meta => meta.name === key)
-              const legacyIndex = _.findIndex(legacyData, entry => entry.project_info_type_id === mapping[key])
-              if (v5Index === -1) {
-                challenge.metadata.push({
-                  name: key,
-                  value: legacyData[legacyIndex].value
-                })
+              const legacyIndex = _.findIndex(legacyData, entry => entry.project_info_type_id === mappingValue)
+              if (legacyIndex > -1) {
+                if (v5Index === -1) {
+                  const newData = {
+                    name: key,
+                    value: legacyData[legacyIndex].value
+                  }
+                  // logger.debug(`Not found in v5, adding ${JSON.stringify(newData)}`)
+                  challenge.metadata.push(newData)
+                } else {
+                  challenge.metadata[v5Index].value = legacyData[legacyIndex].value
+                  // logger.debug(`Metadata found in v5, updating v5 index: ${v5Index} ${legacyIndex} V5 Metadata ${JSON.stringify(challenge.metadata[v5Index])} -- Legacy Data ${JSON.stringify(legacyData[legacyIndex])}`)
+                }
               } else {
-                challenge.metadata[v5Index].value = legacyData[legacyIndex].value
+                // logger.debug(`Key ${key} not found in legacy array`)
               }
             })
-            await challengeService.save(challenge)
+            logger.debug(`Writing Challenge ${JSON.stringify(challenge)}`)
+            // await challengeService.save(challenge)
           }
         }
       } else {
@@ -59,38 +74,25 @@ const migrationFunction = {
   }
 }
 
-async function getChallengesMissingData (page = 0, perPage = 10) {
-  const esQuery = {
-    index: config.get('ES.CHALLENGE_ES_INDEX'),
-    type: config.get('ES.CHALLENGE_ES_TYPE'),
-    size: perPage,
-    from: page * perPage,
-    body: {
-      query: {
-        range: {
-          'legacy.migration': {
-            lt: 10
-          }
-        }
-      }
-    }
+/**
+ * Get effort hours for a legacyId
+ * @param {Number} legacyId the legacy ID
+ */
+async function getEffortHoursChallengeIds (page, perPage) {
+  let limitOffset = `first ${perPage}`
+  if (page > 0) {
+    limitOffset = `skip ${(page * perPage)} ${limitOffset}`
   }
-  // logger.debug(`ES Query ${JSON.stringify(esQuery)}`)
-  // Search with constructed query
-  let docs
-  try {
-    docs = await getESClient().search(esQuery)
-  } catch (e) {
-    // Catch error when the ES is fresh and has no data
-    docs = {
-      hits: {
-        total: 0,
-        hits: []
-      }
-    }
-  }
-  // Extract data from hits
-  return _.map(docs.hits.hits, item => (item._source))
+
+  logger.debug(`getEffortHoursChallengeIds ${page} ${perPage}`)
+  const sql = `SELECT 
+    ${limitOffset}
+    DISTINCT project_id as legacy_id
+    FROM project_info
+    WHERE project_info_type_id in (88, 89, 90)
+  `
+  logger.info(`Effort Hours SQL: ${sql}`)
+  return execQuery(sql)
 }
 
 module.exports = migrationFunction
