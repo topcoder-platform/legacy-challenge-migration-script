@@ -137,6 +137,7 @@ async function processChallenge (legacyId, challengeListing, challengeDetails) {
     ..._.omit(v5ChallengeFromAPI, ['prizeSets']),
     ..._.omit(v5ChallengeObjectFromV4, ommittedFields),
     prizeSets,
+    tags: _.filter(_.uniq(_.concat(_.get(v5ChallengeFromAPI, 'tags'), _.get(v5ChallengeObjectFromV4, 'tags'))), t => _.toLower(t) !== 'other'),
     ...additionalInformation
   }
   // logger.debug(`new V5 Object: ${JSON.stringify(updatedV5Object)}`)
