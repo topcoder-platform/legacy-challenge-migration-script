@@ -31,8 +31,7 @@ const challengePropertiesToOmitFromDynamo = [
   'submissionStartDate',
   'submissionEndDate',
   'type',
-  'track',
-  'tags'
+  'track'
 ]
 
 async function save (challenge) {
@@ -89,7 +88,7 @@ async function updateChallenge (challenge) {
       id: challenge.id,
       body: {
         doc: {
-          ..._.omit(challenge, ['created', 'createdBy', 'tags']),
+          ..._.omit(challenge, ['created', 'createdBy']),
           groups: _.filter(challenge.groups, g => _.toString(g).toLowerCase() !== 'null')
         }
       }
