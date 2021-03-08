@@ -140,7 +140,7 @@ async function processChallenge (legacyId, challengeListing, challengeDetails) {
     tags: _.filter(_.uniq(_.concat(_.get(v5ChallengeFromAPI, 'tags'), _.get(v5ChallengeObjectFromV4, 'tags'))), t => _.toLower(t) !== 'other'),
     ...additionalInformation
   }
-  // logger.debug(`new V5 Object: ${JSON.stringify(updatedV5Object)}`)
+  logger.debug(`new V5 Object: ${JSON.stringify(updatedV5Object)}`)
   return challengeService.save(updatedV5Object)
 }
 
