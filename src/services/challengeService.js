@@ -778,6 +778,8 @@ async function buildV5Challenge (legacyId, challengeListing, challengeDetails) {
   if (legacyEffortHoursData.length > 0) {
     _.forEach(effortHoursMapping, (mappingValue, key) => {
       logger.debug(`${JSON.stringify(mappingValue)} -> ${key}`)
+      logger.debug(`Metadata: ${JSON.stringify(metadata)}`)
+      logger.debug(`Legacy Metadata: ${JSON.stringify(legacyEffortHoursData)}`)
       const v5Index = _.findIndex(metadata, meta => meta.name === key)
       const legacyIndex = _.findIndex(legacyEffortHoursData, entry => entry.project_info_type_id === mappingValue)
       if (legacyIndex > -1) {
