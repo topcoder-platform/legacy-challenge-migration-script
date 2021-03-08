@@ -63,7 +63,7 @@ async function processChallenge (legacyId, challengeListing, challengeDetails) {
   const v4StatusNumber = challengeStatusOrders[_.toLower(v5ChallengeObjectFromV4.status)] || challengeStatusOrders.cancelled
   const v5StatusNumber = challengeStatusOrders[_.toLower(v5ChallengeFromAPI.status)] || challengeStatusOrders.cancelled
 
-  logger.debug(`v4 Status Number: ${v4StatusNumber} - v5 Status Number: ${v5StatusNumber}`)
+  // logger.debug(`v4 Status Number: ${v4StatusNumber} - v5 Status Number: ${v5StatusNumber}`)
 
   if (v4StatusNumber < v5StatusNumber) {
     logger.warn(`Status in v4 is: ${_.toLower(v5ChallengeObjectFromV4.status)}  - Status in v5 is: ${_.toLower(v5ChallengeFromAPI.status)} NOT updating v5`)
@@ -131,7 +131,7 @@ async function processChallenge (legacyId, challengeListing, challengeDetails) {
     })
   }
 
-  logger.debug(`Syncing Prize Sets for Challenge ${legacyId}, ${JSON.stringify(prizeSets)}`)
+  // logger.debug(`Syncing Prize Sets for Challenge ${legacyId}, ${JSON.stringify(prizeSets)}`)
 
   const updatedV5Object = {
     ..._.omit(v5ChallengeFromAPI, ['prizeSets']),
@@ -140,7 +140,7 @@ async function processChallenge (legacyId, challengeListing, challengeDetails) {
     tags: _.filter(_.uniq(_.concat(_.get(v5ChallengeFromAPI, 'tags'), _.get(v5ChallengeObjectFromV4, 'tags'))), t => _.toLower(t) !== 'other'),
     ...additionalInformation
   }
-  logger.debug(`new V5 Object: ${JSON.stringify(updatedV5Object)}`)
+  // logger.debug(`new V5 Object: ${JSON.stringify(updatedV5Object)}`)
   return challengeService.save(updatedV5Object)
 }
 
@@ -154,8 +154,8 @@ async function processResources (legacyId, challengeId, force) {
   const currentV4Array = await resourceService.getResourcesForChallenge(legacyId, challengeId)
   const currentV5Array = await resourceService.getResourcesFromV5API(challengeId)
 
-  logger.debug(`Resources V4 Array ${JSON.stringify(currentV4Array)}`)
-  logger.debug(`Resources V5 Array ${JSON.stringify(currentV5Array)}`)
+  // logger.debug(`Resources V4 Array ${JSON.stringify(currentV4Array)}`)
+  // logger.debug(`Resources V5 Array ${JSON.stringify(currentV5Array)}`)
 
   for (let i = 0; i < currentV4Array.length; i += 1) {
     const v4Obj = currentV4Array[i]
