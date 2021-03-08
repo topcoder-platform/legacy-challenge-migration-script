@@ -689,6 +689,7 @@ async function buildV5Challenge (legacyId, challengeListing, challengeDetails) {
     })
   }
 
+  logger.debug(`v4 Phases ${JSON.stringify(challengeListing.phases)}`)
   newChallenge.startDate = moment(challengeListing.registrationStartDate).utc().format()
   let challengeEndDate = newChallenge.startDate
   const phases = _.map(challengeListing.phases, phase => {
@@ -714,7 +715,7 @@ async function buildV5Challenge (legacyId, challengeListing, challengeDetails) {
     } else {
       newPhase.isOpen = false
     }
-    logger.debug(`Challenge ${legacyId} Phase ${phase.type} id ${newPhase.phaseId} Duration ${v5duration} = ${(v5duration / 60 / 60)} hrs or ${(v5duration / 60 / 60 / 24)} days`)
+    logger.debug(`Challenge ${legacyId} Phase ${phase.type} Status ${phase.status} - id ${newPhase.phaseId} Duration ${v5duration} = ${(v5duration / 60 / 60)} hrs or ${(v5duration / 60 / 60 / 24)} days`)
     return newPhase
   })
   newChallenge.endDate = challengeEndDate
