@@ -763,42 +763,43 @@ async function buildV5Challenge (legacyId, challengeListing, challengeDetails) {
     effortHoursOnshore: 90
   }
 
-  const legacyEffortHoursData = await challengeInformixService.getEffortHoursFromIfx(legacyId)
-  if (legacyEffortHoursData.length > 0) {
-    _.keys(effortHoursMapping, (key) => {
-      const legacyIndex = _.findIndex(legacyEffortHoursData, entry => entry.project_info_type_id === effortHoursMapping[key])
-      metadata.push({
-        name: key,
-        value: legacyEffortHoursData[legacyIndex].value
-      })
-    })
-  }
-
   // const legacyEffortHoursData = await challengeInformixService.getEffortHoursFromIfx(legacyId)
+  // logger.debug(`Legacy Effort Hours ${JSON.stringify(legacyEffortHoursData)}`)
   // if (legacyEffortHoursData.length > 0) {
-  //   _.forEach(effortHoursMapping, (mappingValue, key) => {
-  //     logger.debug(`${JSON.stringify(mappingValue)} -> ${key}`)
-  //     logger.debug(`Metadata: ${JSON.stringify(metadata)}`)
-  //     logger.debug(`Legacy Metadata: ${JSON.stringify(legacyEffortHoursData)}`)
-  //     const v5Index = _.findIndex(metadata, meta => meta.name === key)
-  //     const legacyIndex = _.findIndex(legacyEffortHoursData, entry => entry.project_info_type_id === mappingValue)
-  //     if (legacyIndex > -1) {
-  //       if (v5Index === -1) {
-  //         const newData = {
-  //           name: key,
-  //           value: legacyEffortHoursData[legacyIndex].value
-  //         }
-  //         logger.debug(`Not found in v5, adding ${JSON.stringify(newData)}`)
-  //         metadata.push(newData)
-  //       } else {
-  //         metadata[v5Index].value = legacyEffortHoursData[legacyIndex].value
-  //         logger.debug(`Metadata found in v5, updating v5 index: ${v5Index} ${legacyIndex} V5 Metadata ${JSON.stringify(challenge.metadata[v5Index])} -- Legacy Data ${JSON.stringify(legacyData[legacyIndex])}`)
-  //       }
-  //     } else {
-  //       logger.debug(`Key ${key} not found in legacy array`)
-  //     }
+  //   _.keys(effortHoursMapping, (key) => {
+  //     const legacyIndex = _.findIndex(legacyEffortHoursData, entry => entry.project_info_type_id === effortHoursMapping[key])
+  //     metadata.push({
+  //       name: key,
+  //       value: legacyEffortHoursData[legacyIndex].value
+  //     })
   //   })
   // }
+
+  const legacyEffortHoursData = await challengeInformixService.getEffortHoursFromIfx(legacyId)
+  logger.debug(`Legacy Effort Hours ${JSON.stringify(legacyEffortHoursData)}`)
+  logger.debug(`Metadata: ${JSON.stringify(metadata)}`)
+  if (legacyEffortHoursData.length > 0) {
+    _.forEach(effortHoursMapping, (mappingValue, key) => {
+      logger.debug(`${JSON.stringify(mappingValue)} -> ${key}`)
+      const v5Index = _.findIndex(metadata, meta => meta.name === key)
+      const legacyIndex = _.findIndex(legacyEffortHoursData, entry => entry.project_info_type_id === mappingValue)
+      if (legacyIndex > -1) {
+        if (v5Index === -1) {
+          const newData = {
+            name: key,
+            value: legacyEffortHoursData[legacyIndex].value
+          }
+          logger.debug(`Not found in v5, adding ${JSON.stringify(newData)}`)
+          metadata.push(newData)
+        } else {
+          metadata[v5Index].value = legacyEffortHoursData[legacyIndex].value
+          logger.debug(`Metadata found in v5, updating v5 index: ${v5Index} ${legacyIndex} V5 Metadata ${JSON.stringify(metadata[v5Index])} -- Legacy Data ${JSON.stringify(legacyData[legacyIndex])}`)
+        }
+      } else {
+        logger.debug(`Key ${key} not found in legacy array`)
+      }
+    })
+  }
   logger.debug(`Finished Metadata: ${JSON.stringify(metadata)}`)
 
   const events = []
