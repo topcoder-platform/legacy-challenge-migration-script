@@ -689,7 +689,7 @@ async function buildV5Challenge (legacyId, challengeListing, challengeDetails) {
     })
   }
 
-  logger.debug(`v4 Phases ${JSON.stringify(challengeListing.phases)}`)
+  // logger.debug(`v4 Phases ${JSON.stringify(challengeListing.phases)}`)
   newChallenge.startDate = moment(challengeListing.registrationStartDate).utc().format()
   let challengeEndDate = newChallenge.startDate
   const phases = _.map(challengeListing.phases, phase => {
@@ -719,7 +719,7 @@ async function buildV5Challenge (legacyId, challengeListing, challengeDetails) {
     return newPhase
   })
   newChallenge.endDate = challengeEndDate
-  logger.debug(`Final Phase Array ${JSON.stringify(phases)}`)
+  // logger.debug(`Final Phase Array ${JSON.stringify(phases)}`)
 
   if (phases.length > 0) {
     const registrationPhase = _.find(phases, p => p.name === 'Registration')
@@ -764,6 +764,7 @@ async function buildV5Challenge (legacyId, challengeListing, challengeDetails) {
   }
 
   // const legacyEffortHoursData = await challengeInformixService.getEffortHoursFromIfx(legacyId)
+  // logger.debug(`Legacy Effort Hours ${JSON.stringify(legacyEffortHoursData)}`)
   // if (legacyEffortHoursData.length > 0) {
   //   _.keys(effortHoursMapping, (key) => {
   //     const legacyIndex = _.findIndex(legacyEffortHoursData, entry => entry.project_info_type_id === effortHoursMapping[key])
@@ -775,9 +776,11 @@ async function buildV5Challenge (legacyId, challengeListing, challengeDetails) {
   // }
 
   const legacyEffortHoursData = await challengeInformixService.getEffortHoursFromIfx(legacyId)
+  logger.debug(`Legacy Effort Hours ${JSON.stringify(legacyEffortHoursData)}`)
+  logger.debug(`Metadata: ${JSON.stringify(metadata)}`)
   if (legacyEffortHoursData.length > 0) {
     _.forEach(effortHoursMapping, (mappingValue, key) => {
-      // logger.debug(`${JSON.stringify(mappingValue)} -> ${key}`)
+      logger.debug(`${JSON.stringify(mappingValue)} -> ${key}`)
       const v5Index = _.findIndex(metadata, meta => meta.name === key)
       const legacyIndex = _.findIndex(legacyEffortHoursData, entry => entry.project_info_type_id === mappingValue)
       if (legacyIndex > -1) {
@@ -786,17 +789,18 @@ async function buildV5Challenge (legacyId, challengeListing, challengeDetails) {
             name: key,
             value: legacyEffortHoursData[legacyIndex].value
           }
-          // logger.debug(`Not found in v5, adding ${JSON.stringify(newData)}`)
+          logger.debug(`Not found in v5, adding ${JSON.stringify(newData)}`)
           metadata.push(newData)
         } else {
           metadata[v5Index].value = legacyEffortHoursData[legacyIndex].value
-          // logger.debug(`Metadata found in v5, updating v5 index: ${v5Index} ${legacyIndex} V5 Metadata ${JSON.stringify(challenge.metadata[v5Index])} -- Legacy Data ${JSON.stringify(legacyData[legacyIndex])}`)
+          logger.debug(`Metadata found in v5, updating v5 index: ${v5Index} ${legacyIndex} V5 Metadata ${JSON.stringify(metadata[v5Index])} -- Legacy Data ${JSON.stringify(legacyData[legacyIndex])}`)
         }
       } else {
-        // logger.debug(`Key ${key} not found in legacy array`)
+        logger.debug(`Key ${key} not found in legacy array`)
       }
     })
   }
+  logger.debug(`Finished Metadata: ${JSON.stringify(metadata)}`)
 
   const events = []
   if (challengeListing.events && challengeListing.events.length > 0) {

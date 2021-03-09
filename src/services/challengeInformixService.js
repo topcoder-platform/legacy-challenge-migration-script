@@ -9,7 +9,7 @@ const { executeQueryAsync } = require('../util/informixWrapper')
  * @param {Number} legacyId the legacy ID
  */
 async function getEffortHoursFromIfx (legacyId) {
-  const sql = `SELECT LIMIT 1
+  const sql = `SELECT 
     project_info_type_id,
     value
     FROM project_info
