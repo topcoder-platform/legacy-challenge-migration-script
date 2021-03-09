@@ -90,7 +90,7 @@ async function processChallenge (legacyId, challengeListing, challengeDetails) {
     logger.logFullError(e)
   }
 
-  const ommittedFields = ['id', 'type', 'track', 'typeId', 'trackId', 'prizeSets', 'descriptionFormat']
+  const ommittedFields = ['id', 'type', 'track', 'typeId', 'trackId', 'prizeSets', 'descriptionFormat', 'metadata']
 
   // logger.info(`After V5 Sub Sync: ${challengeObj.numOfSubmissions} ${v5ChallengeFromAPI.numOfSubmissions}`)
   if (v5ChallengeObjectFromV4.track.toUpperCase() === V4_TRACKS.DESIGN) {
