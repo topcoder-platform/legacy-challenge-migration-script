@@ -1,8 +1,8 @@
 /**
  * Populate the following properties on the challenges:
  * - metadata.effortHoursEstimate
- * - metadata.effortHoursOffshore
- * - metadata.effortHoursOnshore
+ * - metadata.offshoreEfforts
+ * - metadata.onsiteEfforts
  */
 global.Promise = require('bluebird')
 
@@ -10,13 +10,12 @@ const config = require('config')
 const _ = require('lodash')
 const logger = require('../../util/logger')
 const challengeService = require('../../services/challengeService')
-const { getESClient } = require('../../util/helper')
 const { execQuery, getEffortHoursFromIfx } = require('../../services/challengeInformixService')
 
 const mapping = {
   effortHoursEstimate: 88,
-  effortHoursOffshore: 89,
-  effortHoursOnshore: 90
+  offshoreEfforts: 89,
+  onsiteEfforts: 90
 }
 
 const migrationFunction = {
