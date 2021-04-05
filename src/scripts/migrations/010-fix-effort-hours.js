@@ -56,6 +56,7 @@ const migrationFunction = {
                   challenge.metadata[v5Index].value = legacyData[legacyIndex].value
                   // logger.debug(`Metadata found in v5, updating v5 index: ${v5Index} ${legacyIndex} V5 Metadata ${JSON.stringify(challenge.metadata[v5Index])} -- Legacy Data ${JSON.stringify(legacyData[legacyIndex])}`)
                 }
+                challenge.metadata = _.filter(challenge.metadata, entry => entry.name !== 'effortHoursOffshore' && entry.name !== 'effortHoursOnshore')
               } else {
                 // logger.debug(`Key ${key} not found in legacy array`)
               }
