@@ -40,6 +40,9 @@ const migrationFunction = {
           const legacyData = await getEffortHoursFromIfx(legacyIdRow.legacy_id)
           // logger.debug(`Legacy Data: ${JSON.stringify(legacyData)}`)
           if (legacyData.length > 0) {
+            if (!challenge.metadata) {
+              challenge.metadata = []
+            }
             _.forEach(mapping, (mappingValue, key) => {
               // logger.debug(`${JSON.stringify(mappingValue)} -> ${key}`)
               const v5Index = _.findIndex(challenge.metadata, meta => meta.name === key)
@@ -61,7 +64,7 @@ const migrationFunction = {
                 // logger.debug(`Key ${key} not found in legacy array`)
               }
             })
-            // logger.debug(`Writing Challenge ${JSON.stringify(challenge)}`)
+            // logger.debug(`Writing Challenge ${challenge.id} - ${JSON.stringify(challenge.metadata)}`)
             await challengeService.save(challenge)
           }
         }
@@ -90,6 +93,7 @@ async function getEffortHoursChallengeIds (page, perPage) {
     DISTINCT project_id as legacy_id
     FROM project_info
     WHERE project_info_type_id in (88, 89, 90)
+    ORDER BY project_id ASC
   `
   logger.info(`Effort Hours SQL: ${sql}`)
   return execQuery(sql)
