@@ -759,8 +759,8 @@ async function buildV5Challenge (legacyId, challengeListing, challengeDetails) {
 
   const effortHoursMapping = {
     effortHoursEstimate: 88,
-    effortHoursOffshore: 89,
-    effortHoursOnshore: 90
+    offshoreEfforts: 89,
+    onsiteEfforts: 90
   }
 
   // const legacyEffortHoursData = await challengeInformixService.getEffortHoursFromIfx(legacyId)
@@ -793,7 +793,7 @@ async function buildV5Challenge (legacyId, challengeListing, challengeDetails) {
           metadata.push(newData)
         } else {
           metadata[v5Index].value = legacyEffortHoursData[legacyIndex].value
-          logger.debug(`Metadata found in v5, updating v5 index: ${v5Index} ${legacyIndex} V5 Metadata ${JSON.stringify(metadata[v5Index])} -- Legacy Data ${JSON.stringify(legacyData[legacyIndex])}`)
+          logger.debug(`Metadata found in v5, updating v5 index: ${v5Index} ${legacyIndex} V5 Metadata ${JSON.stringify(metadata[v5Index])}}`)
         }
       } else {
         logger.debug(`Key ${key} not found in legacy array`)
