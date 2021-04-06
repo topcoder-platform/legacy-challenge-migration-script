@@ -119,7 +119,7 @@ async function processChallenge (legacyId, challengeListing, challengeDetails) {
   // logger.debug(`intersection: ${JSON.stringify(prizeSets)}`)
 
   const copilotPayment = await challengeIfxService.getCopilotPaymentFromIfx(legacyId)
-  if (copilotPayment) {
+  if (copilotPayment && _.toNumber(copilotPayment.amount) > 0) {
     prizeSets.push({
       prizes: [
         {
