@@ -1,8 +1,8 @@
 /**
  * Populate the following properties on the challenges:
  * - metadata.effortHoursEstimate
- * - metadata.effortHoursOffshore
- * - metadata.effortHoursOnshore
+ * - metadata.offshoreEfforts
+ * - metadata.onsiteEfforts
  */
 global.Promise = require('bluebird')
 
@@ -15,8 +15,8 @@ const { execQuery, getEffortHoursFromIfx } = require('../../services/challengeIn
 
 const mapping = {
   effortHoursEstimate: 88,
-  effortHoursOffshore: 89,
-  effortHoursOnshore: 90
+  offshoreEfforts: 89,
+  onsiteEfforts: 90
 }
 
 const migrationFunction = {
@@ -57,6 +57,7 @@ const migrationFunction = {
                   challenge.metadata[v5Index].value = legacyData[legacyIndex].value
                   // logger.debug(`Metadata found in v5, updating v5 index: ${v5Index} ${legacyIndex} V5 Metadata ${JSON.stringify(challenge.metadata[v5Index])} -- Legacy Data ${JSON.stringify(legacyData[legacyIndex])}`)
                 }
+                challenge.metadata = _.filter(challenge.metadata, entry => entry.name !== 'effortHoursOffshore' && entry.name !== 'effortHoursOnshore')
               } else {
                 // logger.debug(`Key ${key} not found in legacy array`)
               }
