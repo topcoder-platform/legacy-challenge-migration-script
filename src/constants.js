@@ -2,6 +2,9 @@
  * App constants
  */
 
+const EVENT_ORIGINATOR = 'legacy-migration-script'
+const EVENT_MIME_TYPE = 'application/json'
+
 const prizeSetTypes = {
   ChallengePrizes: 'placement',
   CopilotPayment: 'copilot',
@@ -18,6 +21,8 @@ const challengeStatusOrders = {
 }
 
 module.exports = {
+  EVENT_ORIGINATOR,
+  EVENT_MIME_TYPE,
   prizeSetTypes,
   challengeStatusOrders
 }
