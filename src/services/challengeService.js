@@ -56,16 +56,18 @@ async function createChallenge (challenge) {
 
   try {
     await dynamoChallenge.save()
+    const fullChallenge = {
+      ...challenge,
+      groups: _.filter(challenge.groups, g => _.toString(g).toLowerCase() !== 'null')
+    }
     await getESClient().create({
       index: config.get('ES.CHALLENGE_ES_INDEX'),
       type: config.get('ES.CHALLENGE_ES_TYPE'),
       refresh: config.get('ES.ES_REFRESH'),
       id: challenge.id,
-      body: {
-        ...challenge,
-        groups: _.filter(challenge.groups, g => _.toString(g).toLowerCase() !== 'null')
-      }
+      body: fullChallenge
     })
+    await helper.postBusEvent(config.get('CREATE_CHALLENGE_TOPIC'), fullChallenge)
     return challenge.id
   } catch (e) {
     throw Error(`createChallenge Failed ${e}`)
@@ -92,6 +94,10 @@ async function updateChallenge (challenge) {
           groups: _.filter(challenge.groups, g => _.toString(g).toLowerCase() !== 'null')
         }
       }
+    })
+    await helper.postBusEvent(config.get('UPDATE_CHALLENGE_TOPIC'), {
+      ...challenge,
+      groups: _.filter(challenge.groups, g => _.toString(g).toLowerCase() !== 'null')
     })
     return challenge.id
   } catch (e) {
