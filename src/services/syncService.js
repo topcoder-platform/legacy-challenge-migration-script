@@ -12,7 +12,13 @@ const { challengeStatusOrders } = require('../constants')
 
 async function syncLegacyId (legacyId, force) {
   // const legacyId = queuedChallenges.items[i].legacyId
-  const [v5] = await challengeService.getChallengeFromV5API(legacyId)
+  let v5
+  try {
+    [v5] = await challengeService.getChallengeFromV5API(legacyId)
+  } catch (e) {
+    logger.error(`syncLegacyId Failed ${e}`)
+    return false
+  }
   // see if v5 exists
   if (v5) {
     const v4Listing = await challengeService.getChallengeListingFromV4ES(legacyId)

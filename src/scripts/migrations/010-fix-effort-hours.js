@@ -10,7 +10,8 @@ const config = require('config')
 const _ = require('lodash')
 const logger = require('../../util/logger')
 const challengeService = require('../../services/challengeService')
-const { getESClient } = require('../../util/helper')
+// const { getESClient } = require('../../util/helper')
+const moment = require('moment')
 const { execQuery, getEffortHoursFromIfx } = require('../../services/challengeInformixService')
 
 const mapping = {
@@ -41,6 +42,9 @@ const migrationFunction = {
           const legacyData = await getEffortHoursFromIfx(legacyIdRow.legacy_id)
           // logger.debug(`Legacy Data: ${JSON.stringify(legacyData)}`)
           if (legacyData.length > 0) {
+            if (!challenge.metadata) {
+              challenge.metadata = []
+            }
             _.forEach(mapping, (mappingValue, key) => {
               // logger.debug(`${JSON.stringify(mappingValue)} -> ${key}`)
               const v5Index = _.findIndex(challenge.metadata, meta => meta.name === key)
@@ -63,6 +67,8 @@ const migrationFunction = {
               }
             })
             // logger.debug(`Writing Challenge ${JSON.stringify(challenge)}`)
+            challenge.updated = moment().utc().format()
+            challenge.updatedBy = 'v5migration'
             await challengeService.save(challenge)
           }
         }
@@ -91,6 +97,7 @@ async function getEffortHoursChallengeIds (page, perPage) {
     DISTINCT project_id as legacy_id
     FROM project_info
     WHERE project_info_type_id in (88, 89, 90)
+    ORDER BY project_id ASC
   `
   logger.info(`Effort Hours SQL: ${sql}`)
   return execQuery(sql)
