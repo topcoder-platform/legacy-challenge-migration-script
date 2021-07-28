@@ -1,5 +1,6 @@
 const config = require('config')
 const logger = require('../util/logger')
+const _ = require('lodash')
 // const moment = require('moment')
 const { slice, union, toString, toNumber, remove } = require('lodash')
 const challengeSyncStatusService = require('../services/challengeSyncStatusService')
@@ -75,11 +76,11 @@ async function queueChallenges (filter) {
   let queuedCount = 0
 
   // get active challenges from v4
-  const { ids: v4IdArray } = await syncService.getV4ChallengeIds(filter)
+  const { ids: v4IdArray } = _.map((await syncService.getV4ChallengeIds(filter)), id => _.toNumber(id))
   // console.log('v4', v4IdArray)
   // logger.debug(`v4 Array ${v4IdArray}`)
   // get active challenges from v5
-  const { ids: v5IdArray } = await syncService.getV5LegacyChallengeIds(filter)
+  const { ids: v5IdArray } = _.map((await syncService.getV5LegacyChallengeIds(filter)), id => _.toNumber(id))
   // logger.debug(`v5 Array ${v5IdArray}`)
 
   // combine arrays, return unique
