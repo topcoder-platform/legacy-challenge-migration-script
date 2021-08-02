@@ -10,6 +10,8 @@ const config = require('config')
 const _ = require('lodash')
 const logger = require('../../util/logger')
 const challengeService = require('../../services/challengeService')
+// const { getESClient } = require('../../util/helper')
+const moment = require('moment')
 const { execQuery, getEffortHoursFromIfx } = require('../../services/challengeInformixService')
 
 const mapping = {
@@ -64,7 +66,9 @@ const migrationFunction = {
                 // logger.debug(`Key ${key} not found in legacy array`)
               }
             })
-            // logger.debug(`Writing Challenge ${challenge.id} - ${JSON.stringify(challenge.metadata)}`)
+            // logger.debug(`Writing Challenge ${JSON.stringify(challenge)}`)
+            challenge.updated = moment().utc().format()
+            challenge.updatedBy = 'v5migration'
             await challengeService.save(challenge)
           }
         }

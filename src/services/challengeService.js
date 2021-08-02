@@ -793,7 +793,7 @@ async function buildV5Challenge (legacyId, challengeListing, challengeDetails) {
           metadata.push(newData)
         } else {
           metadata[v5Index].value = legacyEffortHoursData[legacyIndex].value
-          logger.debug(`Metadata found in v5, updating v5 index: ${v5Index} ${legacyIndex} V5 Metadata ${JSON.stringify(metadata[v5Index])}}`)
+          logger.debug(`Metadata found in v5, updating v5 index: ${v5Index} ${legacyIndex} V5 Metadata ${JSON.stringify(metadata[v5Index])}`)
         }
       } else {
         logger.debug(`Key ${key} not found in legacy array`)
