@@ -89,6 +89,7 @@ async function retryFailed (req, res) {
  */
 async function queueSync (req, res) {
   const force = _.toString(_.get(req, 'query.force')) === 'true'
+  logger.debug(`Force Sync: ${force} - Legacy ID: ${req.query.legacyId}`)
   if (req.query.legacyId) {
     // Target a single challenge based on the provided legacyId if provided
     await syncController.queueChallenges({ legacyId: req.query.legacyId, force })
