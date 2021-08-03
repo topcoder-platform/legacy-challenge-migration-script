@@ -121,10 +121,13 @@ async function queueChallengeById (legacyId, withLogging = false, force = false)
     logger.info(`Sync :: Queue challenge with ID: ${legacyId}`)
   }
 
-  if (force === 'true') {
+  logger.debug(`queueChallengeById - Force Value: ${force} - Force Check: ${force === true}`)
+  if (force === true) {
     // forced, do it anyway
     logger.info(`Sync :: Sync of ${legacyId} is being forced`)
     return challengeSyncStatusService.queueForSync(legacyId, true)
+  } else {
+    logger.debug(`Sync :: Sync Not Forced ${legacyId}`)
   }
 
   // make sure it's not already queued
