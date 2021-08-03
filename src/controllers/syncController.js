@@ -75,13 +75,14 @@ async function queueChallenges (filter) {
   let running = true
   let queuedCount = 0
 
+  logger.debug(`Filter: ${JSON.stringify(filter)}`)
   // get active challenges from v4
   const { ids: v4IdArray } = _.map((await syncService.getV4ChallengeIds(filter)), id => _.toNumber(id))
   // console.log('v4', v4IdArray)
-  // logger.debug(`v4 Array ${v4IdArray}`)
+  logger.debug(`v4 Array ${v4IdArray}`)
   // get active challenges from v5
   const { ids: v5IdArray } = _.map((await syncService.getV5LegacyChallengeIds(filter)), id => _.toNumber(id))
-  // logger.debug(`v5 Array ${v5IdArray}`)
+  logger.debug(`v5 Array ${v5IdArray}`)
 
   // combine arrays, return unique
   const combinedArray = union(v4IdArray, v5IdArray)
@@ -89,8 +90,8 @@ async function queueChallenges (filter) {
   const totalChallengesCount = combinedArray.length
   // console.log('union length', combinedArray.length)
 
-  // logger.debug(`Sync :: Total to Sync ${totalChallengesCount}`)
-  // logger.debug(`Combined Array ${combinedArray}`)
+  logger.debug(`Sync :: Total to Sync ${totalChallengesCount}`)
+  logger.debug(`Combined Array ${JSON.stringify(combinedArray)}`)
 
   while (running) {
     if ((page * perPage) > combinedArray.length) {
