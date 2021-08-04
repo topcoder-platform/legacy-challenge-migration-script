@@ -79,13 +79,13 @@ async function queueChallenges (filter) {
   // get active challenges from v4
   const v4response = await syncService.getV4ChallengeIds(filter)
   logger.debug(`v4 Response: ${JSON.stringify(v4response)}`)
-  const { ids: v4IdArray } = _.map(v4response, id => _.toNumber(id))
+  const v4IdArray = _.map(_.get(v4response, 'ids', []), id => _.toNumber(id))
   // console.log('v4', v4IdArray)
   logger.debug(`v4 Array ${v4IdArray}`)
   // get active challenges from v5
   const v5response = await syncService.getV5LegacyChallengeIds(filter)
   logger.debug(`v5 Response: ${JSON.stringify(v5response)}`)
-  const { ids: v5IdArray } = _.map(v5response, id => _.toNumber(id))
+  const v5IdArray = _.map(_.get(v5response, 'ids', []), id => _.toNumber(id))
   logger.debug(`v5 Array ${v5IdArray}`)
 
   // combine arrays, return unique
