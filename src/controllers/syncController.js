@@ -81,16 +81,17 @@ async function queueChallenges (filter) {
   logger.debug(`v4 Response: ${JSON.stringify(v4response)}`)
   const v4IdArray = _.map(_.get(v4response, 'ids', []), id => _.toNumber(id))
   // console.log('v4', v4IdArray)
-  logger.debug(`v4 Array ${v4IdArray}`)
+  logger.debug(`v4 Array ${JSON.stringify(v4IdArray)}`)
   // get active challenges from v5
   const v5response = await syncService.getV5LegacyChallengeIds(filter)
   logger.debug(`v5 Response: ${JSON.stringify(v5response)}`)
   const v5IdArray = _.map(_.get(v5response, 'ids', []), id => _.toNumber(id))
-  logger.debug(`v5 Array ${v5IdArray}`)
+  logger.debug(`v5 Array ${JSON.stringify(v5IdArray)}`)
 
   // combine arrays, return unique
   const combinedArray = union(v4IdArray, v5IdArray)
   remove(combinedArray, n => toString(n) === 'NaN')
+  remove(combinedArray, n => toString(n) === 'null')
   const totalChallengesCount = combinedArray.length
   // console.log('union length', combinedArray.length)
 
