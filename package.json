@@ -10,7 +10,7 @@
     "cors": "^2.8.5",
     "csv-parser": "^2.3.3",
     "dynamoose": "^1.11.1",
-    "elasticsearch": "^16.1.1",
+    "elasticsearch": "^16.7.2",
     "express": "^4.17.1",
     "express-interceptor": "^1.2.0",
     "fs": "0.0.1-security",
