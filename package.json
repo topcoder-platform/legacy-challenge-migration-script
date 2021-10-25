@@ -19,7 +19,7 @@
     "informix-wrapper": "git+https://github.com/appirio-tech/informix-wrapper.git#less-logs",
     "lodash": "^4.17.19",
     "moment": "^2.26.0",
-    "moment-timezone": "^0.5.28",
+    "moment-timezone": "^0.5.33",
     "node-schedule": "^1.3.2",
     "segfault-handler": "^1.3.0",
     "superagent": "^5.2.1",
