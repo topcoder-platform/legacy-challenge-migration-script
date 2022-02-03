@@ -93,6 +93,7 @@ async function updateChallenge (challenge) {
         }
       }
     })
+    await triggerNotification(challenge.id)
     return challenge.id
   } catch (e) {
     throw Error(`updateChallenge Failed ${e}`)
@@ -881,6 +882,20 @@ async function convertGroupIdsToV5UUIDs (oldIds) {
     }
   }
   return groups
+}
+
+async function triggerNotification (v5Id) {
+  const token = await getM2MToken()
+  const url = `${config.CHALLENGE_API_URL}/${v5Id}/notifications`
+  // logger.debug(`Get Challenge from V5 URL ${url}`)
+  let res = null
+  try {
+    res = await axios.post(url, {}, { headers: { Authorization: `Bearer ${token}` } })
+  } catch (e) {
+    logger.error(`Axios Error: ${JSON.stringify(e)}`)
+  }
+  // console.log(res.data)
+  return res.data || null
 }
 
 async function getChallengeFromV5API (legacyId) {
