@@ -93,6 +93,7 @@ async function updateChallenge (challenge) {
         }
       }
     })
+    await triggerNotification(challenge.id)
     return challenge.id
   } catch (e) {
     throw Error(`updateChallenge Failed ${e}`)
@@ -715,7 +716,7 @@ async function buildV5Challenge (legacyId, challengeListing, challengeDetails) {
     } else {
       newPhase.isOpen = false
     }
-    logger.debug(`Challenge ${legacyId} Phase ${phase.type} Status ${phase.status} - id ${newPhase.phaseId} Duration ${v5duration} = ${(v5duration / 60 / 60)} hrs or ${(v5duration / 60 / 60 / 24)} days`)
+    // logger.debug(`Challenge ${legacyId} Phase ${phase.type} Status ${phase.status} - id ${newPhase.phaseId} Duration ${v5duration} = ${(v5duration / 60 / 60)} hrs or ${(v5duration / 60 / 60 / 24)} days`)
     return newPhase
   })
   newChallenge.endDate = challengeEndDate
@@ -725,8 +726,8 @@ async function buildV5Challenge (legacyId, challengeListing, challengeDetails) {
     const registrationPhase = _.find(phases, p => p.name === 'Registration')
     const submissionPhase = _.find(phases, p => p.name === 'Submission')
 
-    logger.debug(`Registration Phase ${JSON.stringify(registrationPhase)}`)
-    logger.debug(`Submission Phase ${JSON.stringify(submissionPhase)}`)
+    // logger.debug(`Registration Phase ${JSON.stringify(registrationPhase)}`)
+    // logger.debug(`Submission Phase ${JSON.stringify(submissionPhase)}`)
 
     newChallenge.currentPhaseNames = _.map(_.filter(phases, p => p.isOpen === true), 'name')
     if (registrationPhase) {
@@ -776,8 +777,8 @@ async function buildV5Challenge (legacyId, challengeListing, challengeDetails) {
   // }
 
   const legacyEffortHoursData = await challengeInformixService.getEffortHoursFromIfx(legacyId)
-  logger.debug(`Legacy Effort Hours ${JSON.stringify(legacyEffortHoursData)}`)
-  logger.debug(`Metadata: ${JSON.stringify(metadata)}`)
+  // logger.debug(`Legacy Effort Hours ${JSON.stringify(legacyEffortHoursData)}`)
+  // logger.debug(`Metadata: ${JSON.stringify(metadata)}`)
   if (legacyEffortHoursData.length > 0) {
     _.forEach(effortHoursMapping, (mappingValue, key) => {
       logger.debug(`${JSON.stringify(mappingValue)} -> ${key}`)
@@ -789,14 +790,14 @@ async function buildV5Challenge (legacyId, challengeListing, challengeDetails) {
             name: key,
             value: legacyEffortHoursData[legacyIndex].value
           }
-          logger.debug(`Not found in v5, adding ${JSON.stringify(newData)}`)
+          // logger.debug(`Not found in v5, adding ${JSON.stringify(newData)}`)
           metadata.push(newData)
         } else {
           metadata[v5Index].value = legacyEffortHoursData[legacyIndex].value
-          logger.debug(`Metadata found in v5, updating v5 index: ${v5Index} ${legacyIndex} V5 Metadata ${JSON.stringify(metadata[v5Index])}`)
+          // logger.debug(`Metadata found in v5, updating v5 index: ${v5Index} ${legacyIndex} V5 Metadata ${JSON.stringify(metadata[v5Index])}`)
         }
       } else {
-        logger.debug(`Key ${key} not found in legacy array`)
+        // logger.debug(`Key ${key} not found in legacy array`)
       }
     })
   }
@@ -883,10 +884,24 @@ async function convertGroupIdsToV5UUIDs (oldIds) {
   return groups
 }
 
+async function triggerNotification (v5Id) {
+  const token = await getM2MToken()
+  const url = `${config.CHALLENGE_API_URL}/${v5Id}/notifications`
+  // logger.debug(`Get Challenge from V5 URL ${url}`)
+  let res = null
+  try {
+    res = await axios.post(url, {}, { headers: { Authorization: `Bearer ${token}` } })
+  } catch (e) {
+    logger.error(`Axios Error: ${JSON.stringify(e)}`)
+  }
+  // console.log(res.data)
+  return res.data || null
+}
+
 async function getChallengeFromV5API (legacyId) {
   const token = await getM2MToken()
   const url = `${config.CHALLENGE_API_URL}?legacyId=${legacyId}&perPage=1&page=1`
-  logger.debug(`Get Challenge from V5 URL ${url}`)
+  // logger.debug(`Get Challenge from V5 URL ${url}`)
   let res = null
   try {
     res = await axios.get(url, { headers: { Authorization: `Bearer ${token}` } })

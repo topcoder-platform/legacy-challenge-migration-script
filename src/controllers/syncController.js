@@ -96,7 +96,7 @@ async function queueChallenges (filter) {
   // console.log('union length', combinedArray.length)
 
   logger.debug(`Sync :: Total to Sync ${totalChallengesCount}`)
-  logger.debug(`Combined Array ${JSON.stringify(combinedArray)}`)
+  // logger.debug(`Combined Array ${JSON.stringify(combinedArray)}`)
 
   while (running) {
     if ((page * perPage) > combinedArray.length) {

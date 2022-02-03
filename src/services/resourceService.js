@@ -240,7 +240,7 @@ async function createResourceInV5 (challengeId, memberHandle, roleId) {
   }
   let res = null
   try {
-    logger.debug(`Creating Resource ${challengeId}, ${memberHandle}, ${roleId}`)
+    // logger.debug(`Creating Resource ${challengeId}, ${memberHandle}, ${roleId}`)
     res = await axios.post(url, data, { headers: { Authorization: `Bearer ${token}` } })
   } catch (e) {
     logger.error(`get from v5 error ${JSON.stringify(e)}`)
