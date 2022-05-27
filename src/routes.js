@@ -62,5 +62,11 @@ module.exports = {
       auth: 'jwt',
       scopes: [CHALLENGES.WRITE, CHALLENGES.ALL]
     }
+  },
+  '/challenge-migration/getChallengeProjectId/:roundId': {
+    get: {
+      controller: 'apiController',
+      method: 'getChallengeProjectId'
+    }
   }
 }
