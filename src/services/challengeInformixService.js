@@ -5,6 +5,20 @@ const helper = require('../util/helper')
 const { executeQueryAsync } = require('../util/informixWrapper')
 
 /**
+ * Get projectId
+ * @param {Number} roundId the Round ID
+ */
+async function getProjectIdFromIfx (roundId) {
+  const sql = `SELECT limit 1
+    project_id
+    FROM project_info
+    WHERE value = ${roundId} and project_info_type_id = 56
+  `
+  // logger.info(`projectId SQL: ${sql}`)
+  return execQuery(sql)
+}
+
+/**
  * Get effort hours for a legacyId
  * @param {Number} legacyId the legacy ID
  */
@@ -680,6 +694,7 @@ async function execQuery (sql) {
 module.exports = {
   execQuery,
   getChallengeInfo,
+  getProjectIdFromIfx,
   getMetadataFromIfx,
   getChallengesFromIfx,
   getChallengeIdsFromIfx,

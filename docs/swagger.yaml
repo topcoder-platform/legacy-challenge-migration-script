@@ -122,7 +122,7 @@ paths:
       summary: Delete a challenge's migration record, sync record, challenge entry, and resources
       tags:
         - Migration
-      operationId: destroyChallenge
+      operationId: getChallenge
       security:
         - bearer: []
       responses:
@@ -134,6 +134,29 @@ paths:
           $ref: '#/definitions/Unauthorized'
         403:
           $ref: '#/definitions/Forbidden'
+        500:
+          $ref: '#/definitions/ServerError'
+          
+  '/challenge-migration/getChallengeProjectId/{roundId}':
+    get:
+      parameters:
+        - name: roundId
+          in: path
+          description: The roundId of record
+          required: true
+          type: string
+      summary: get the projectId by roundId
+      tags:
+        - Migration
+      operationId: Challenge
+      security:
+        - bearer: []
+      responses:
+        200:
+          schema: 
+            $ref: '#/definitions/ProjectIdObject'
+        400:
+          $ref: '#/definitions/BadRequest'
         500:
           $ref: '#/definitions/ServerError'
           
@@ -202,6 +225,14 @@ paths:
 
 
 definitions:
+  ProjectIdObject:
+    description: The project id of challenge
+    type: object
+    properties:
+      projectId:
+        type: number
+        description: The ProjectId
+        example: 23234
   MigrationStatusObject:
     description: The Migration Status Object.
     type: object
@@ -285,3 +316,4 @@ definitions:
         type: string
         description: The conflict error message.
         example: Creating a resource with a name already exists.
+
