@@ -1,4 +1,5 @@
 const _ = require('lodash')
+const config = require('config')
 const logger = require('../util/logger')
 const helper = require('../util/helper')
 // const getErrorService = require('./errorService')
@@ -12,7 +13,7 @@ async function getProjectIdFromIfx (roundId) {
   const sql = `SELECT limit 1
     project_id
     FROM project_info
-    WHERE value = ${roundId} and project_info_type_id = 56
+    WHERE value = ${roundId} and project_info_type_id = ${config.MARATHON_MATCH_PROJECT_INFO_TYPE_ID}
   `
   // logger.info(`projectId SQL: ${sql}`)
   return execQuery(sql)
