@@ -1,23 +1,8 @@
 const _ = require('lodash')
-const config = require('config')
 const logger = require('../util/logger')
 const helper = require('../util/helper')
 // const getErrorService = require('./errorService')
 const { executeQueryAsync } = require('../util/informixWrapper')
-
-/**
- * Get projectId
- * @param {Number} roundId the Round ID
- */
-async function getProjectIdFromIfx (roundId) {
-  const sql = `SELECT limit 1
-    project_id
-    FROM project_info
-    WHERE value = ${roundId} and project_info_type_id = ${config.MARATHON_MATCH_PROJECT_INFO_TYPE_ID}
-  `
-  // logger.info(`projectId SQL: ${sql}`)
-  return execQuery(sql)
-}
 
 /**
  * Get effort hours for a legacyId
@@ -695,7 +680,6 @@ async function execQuery (sql) {
 module.exports = {
   execQuery,
   getChallengeInfo,
-  getProjectIdFromIfx,
   getMetadataFromIfx,
   getChallengesFromIfx,
   getChallengeIdsFromIfx,

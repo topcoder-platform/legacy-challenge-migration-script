@@ -942,10 +942,6 @@ async function getChallengeSubmissionsFromV5API (challengeId, type) {
   return { results: [], total: 0 }
 }
 
-async function getChallengeProjectId (roundId) {
-  return challengeInformixService.getProjectIdFromIfx(roundId)
-}
-
 module.exports = {
   save,
   buildV5Challenge,
@@ -966,6 +962,5 @@ module.exports = {
   getMMatchFromV4API,
   getChallengeTypesFromDynamo,
   getChallengeSubmissionsFromV5API,
-  getChallengeProjectId,
   mapTimelineTemplateId
 }
