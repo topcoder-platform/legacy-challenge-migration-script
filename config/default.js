@@ -227,6 +227,5 @@ module.exports = {
     }
   },
 
-  COPILOT_PAYMENT_TYPE: process.env.COPILOT_PAYMENT_TYPE || 'copilot',
-  MARATHON_MATCH_PROJECT_INFO_TYPE_ID: 56
+  COPILOT_PAYMENT_TYPE: process.env.COPILOT_PAYMENT_TYPE || 'copilot'
 }
