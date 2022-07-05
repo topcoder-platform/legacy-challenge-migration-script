@@ -86,6 +86,7 @@ const V4_SUBTRACKS = {
 }
 
 const MARATHON_MATCH_TAG = 'Marathon Match'
+const DATA_SCIENCE_MATCH_TAG = "Data Science Match"
 const DATA_SCIENCE_TAG = 'Data Science'
 
 const FE_DESIGN_TAG = 'Front-End Design'
@@ -115,7 +116,7 @@ module.exports = {
   V5_TO_V4: {
     [V5_TRACK_IDS.DATA_SCIENCE]: {
       [V5_TYPE_IDS.CHALLENGE]: (tags) => {
-        if (_.includes(tags, MARATHON_MATCH_TAG)) {
+        if (_.includes(tags, MARATHON_MATCH_TAG) || _.includes(tags, DATA_SCIENCE_MATCH_TAG)) {
           return buildV4Data(V4_TRACKS.DATA_SCIENCE, V4_SUBTRACKS.MARATHON_MATCH, false)
         } else {
           return buildV4Data(V4_TRACKS.DEVELOP, V4_SUBTRACKS.CODE, false, [DATA_SCIENCE_TAG])
