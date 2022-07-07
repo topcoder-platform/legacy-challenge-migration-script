@@ -139,8 +139,9 @@ async function processChallenge (legacyId, challengeListing, challengeDetails) {
 
   // logger.debug(`Syncing Prize Sets for Challenge ${legacyId}, ${JSON.stringify(prizeSets)}`)
 
+  console.log(`Updated v5 challenge from api:${JSON.stringify(v5ChallengeFromAPI)}`);
   const updatedV5Object = {
-    ..._.omit(v5ChallengeFromAPI, ['prizeSets']),
+    ..._.omit(v5ChallengeFromAPI, ['prizeSets', 'id']),
     ..._.omit(v5ChallengeObjectFromV4, ommittedFields),
     prizeSets,
     tags: _.filter(_.uniq(_.concat(_.get(v5ChallengeFromAPI, 'tags'), _.get(v5ChallengeObjectFromV4, 'tags'))), t => _.toLower(t) !== 'other'),
