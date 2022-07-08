@@ -906,10 +906,15 @@ async function getChallengeFromV5API (legacyId) {
   try {
     res = await axios.get(url, { headers: { Authorization: `Bearer ${token}` } })
   } catch (e) {
-    logger.error(`Axios Error: ${JSON.stringify(e)}`)
+    // logger.error(`Axios Error happened when getting v5 challenge using legacyId ${legacyId} : ${JSON.stringify(e)}`)
+    throw new Error(`Axios Error happened when getting v5 challenge using legacyId ${legacyId} : ${JSON.stringify(e)}`)
+  }
+  if (!res || !res.data || !res.data.id) {
+    // v5 challenge must have a challenge.id already
+    throw new Error(`Could not get v5 challenge using legacyId ${legacyId}, Please try again`)
   }
   // console.log(res.data)
-  return res.data || null
+  return res.data
 }
 
 async function getMMatchFromV4API (legacyId) {
