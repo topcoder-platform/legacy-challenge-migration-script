@@ -909,7 +909,7 @@ async function getChallengeFromV5API (legacyId) {
     // logger.error(`Axios Error happened when getting v5 challenge using legacyId ${legacyId} : ${JSON.stringify(e)}`)
     throw new Error(`Axios Error happened when getting v5 challenge using legacyId ${legacyId} : ${JSON.stringify(e)}`)
   }
-  if (!res || !res.data || !res.data.length || !res.data[1].id) {
+  if (!res || !res.data || !res.data.length || !res.data[0].id) {
     // v5 challenge must have a challenge.id already
     throw new Error(`Could not get v5 challenge using legacyId ${legacyId}, Please try again`)
   }
