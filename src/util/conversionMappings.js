@@ -143,7 +143,8 @@ module.exports = {
   },
   V4_TO_V5: {
     [V4_TRACKS.DATA_SCIENCE]: {
-      [V4_SUBTRACKS.MARATHON_MATCH]: () => buildV5Data(V5_TRACK_IDS.DATA_SCIENCE, V5_TYPE_IDS.CHALLENGE, [MARATHON_MATCH_TAG])
+      // categorizes non competitive programming marathon matches as Data Science Match
+      [V4_SUBTRACKS.MARATHON_MATCH]: () => buildV5Data(V5_TRACK_IDS.DATA_SCIENCE, V5_TYPE_IDS.CHALLENGE, [DATA_SCIENCE_MATCH_TAG])
     },
     [V4_TRACKS.DESIGN]: {
       [V4_SUBTRACKS.DESIGN_FIRST_2_FINISH]: (isTask) => buildV5Data(V5_TRACK_IDS.DESIGN, isTask ? V5_TYPE_IDS.TASK : V5_TYPE_IDS.FIRST_2_FINISH),
