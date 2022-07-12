@@ -27,7 +27,7 @@ function convertV4TrackToV5 (v4Track, v4SubTrack, v4IsTask, v4Tags) {
   try {
     return convertionMappingHelper.V4_TO_V5[v4Track][v4SubTrack.toUpperCase()](v4IsTask, v4Tags)
   } catch (e) {
-    throw new Error(`Failed to get V4 data with track: ${v4Track}, subTrack: ${v4SubTrack} and isTask: ${v4IsTask}`)
+    throw new Error(`Failed to get V4 data with track: ${v4Track}, subTrack: ${v4SubTrack} and isTask: ${v4IsTask} and tags: ${JSON.stringify(v4Tags)}`)
   }
 }
 
