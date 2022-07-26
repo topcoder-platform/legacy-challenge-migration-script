@@ -6,7 +6,7 @@ module.exports = {
   SYNC_QUEUE_INTERVAL: process.env.SYNC_QUEUE_INTERVAL ? Number(process.env.SYNC_QUEUE_INTERVAL) : 1, // minutes
 
   MIGRATION_ENABLED: process.env.MIGRATION_ENABLED ? process.env.MIGRATION_ENABLED === 'true' : false,
-  AUTO_SYNC_ENABLED: process.env.AUTO_SYNC_ENABLED ? process.env.AUTO_SYNC_ENABLED === 'true' : false,
+  AUTO_SYNC_ENABLED: false, // process.env.AUTO_SYNC_ENABLED ? process.env.AUTO_SYNC_ENABLED === 'true' : false,
   SYNC_ENABLED: process.env.SYNC_ENABLED ? process.env.SYNC_ENABLED === 'true' : false,
 
   AUTH_SECRET: process.env.AUTH_SECRET || 'mysecret',
