@@ -184,6 +184,23 @@ async function convertV4TrackToV5 (req, res) {
   return res.json(translationService.convertV4TrackToV5(track, subTrack, isTask, tags))
 }
 
+async function getChallengeProjectId (req, res) {
+  const roundId = _.get(req, 'params.roundId')
+  if (!roundId) {
+    return res.status(400).json({ message: `Invalid roundId: ${roundId}` })
+  }
+  try {
+    const result = await challengeService.getChallengeProjectId(roundId)
+    if (result.length > 0) {
+      return res.json({ projectId: result[0].project_id})
+    }
+    return res.status(404).json({ message: 'projectId Not found' })
+  } catch (e) {
+    logger.debug(`Error in GetChallengeProjectId: ${e}`)
+    return res.status(400).json({ message: `Unable to GetChallengeProjectId: ${JSON.stringify(e)}` })
+  }
+}
+
 module.exports = {
   queueForMigration,
   getMigrationStatus,
@@ -192,5 +209,6 @@ module.exports = {
   getSyncStatus,
   destroyChallenge,
   convertV5TrackToV4,
-  convertV4TrackToV5
+  convertV4TrackToV5,
+  getChallengeProjectId
 }
