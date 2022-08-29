@@ -78,6 +78,9 @@ async function createChallenge (challenge) {
  */
 async function updateChallenge (challenge) {
   try {
+    if (challenge.task && (challenge.status === constants.challengeStatuses.Completed || _.get(challenge, 'winners.length') > 0)) {
+      _.unset(challenge, 'task')
+    }
     const updateChallenge = new Challenge(_.omit(challenge, ['created', 'createdBy', 'name']))
     // numOfSubmissions and numOfRegistrants are not stored in dynamo, they're calclated by the ES processor
     await Challenge.update({ id: challenge.id }, _.omit(updateChallenge, challengePropertiesToOmitFromDynamo))
