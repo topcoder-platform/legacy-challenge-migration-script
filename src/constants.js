@@ -17,7 +17,12 @@ const challengeStatusOrders = {
   cancelled: 2
 }
 
+const challengeStatuses = {
+  Completed: 'Completed',
+}
+
 module.exports = {
   prizeSetTypes,
-  challengeStatusOrders
+  challengeStatusOrders,
+  challengeStatuses
 }

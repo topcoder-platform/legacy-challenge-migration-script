@@ -78,7 +78,10 @@ async function createChallenge (challenge) {
  */
 async function updateChallenge (challenge) {
   try {
-    const updateChallenge = new Challenge(_.omit(challenge, ['created', 'createdBy']))
+    if (challenge.task && (challenge.status === constants.challengeStatuses.Completed || _.get(challenge, 'winners.length') > 0)) {
+      _.unset(challenge, 'task')
+    }
+    const updateChallenge = new Challenge(_.omit(challenge, ['created', 'createdBy', 'name']))
     // numOfSubmissions and numOfRegistrants are not stored in dynamo, they're calclated by the ES processor
     await Challenge.update({ id: challenge.id }, _.omit(updateChallenge, challengePropertiesToOmitFromDynamo))
     await getESClient().update({
@@ -88,7 +91,7 @@ async function updateChallenge (challenge) {
       id: challenge.id,
       body: {
         doc: {
-          ..._.omit(challenge, ['created', 'createdBy']),
+          ..._.omit(challenge, ['created', 'createdBy', 'name']),
           groups: _.filter(challenge.groups, g => _.toString(g).toLowerCase() !== 'null')
         }
       }
@@ -551,8 +554,8 @@ async function buildV5Challenge (legacyId, challengeListing, challengeDetails) {
       detailRequirement = challengeDetails.introduction + '<br />' + detailRequirement
     }
     if (_.get(challengeDetails, 'finalSubmissionGuidelines', '').trim() !== 'null' &&
-        _.get(challengeDetails, 'finalSubmissionGuidelines', '').trim() !== '' &&
-        _.get(challengeDetails, 'finalSubmissionGuidelines', '').trim() !== 'Please read above') {
+      _.get(challengeDetails, 'finalSubmissionGuidelines', '').trim() !== '' &&
+      _.get(challengeDetails, 'finalSubmissionGuidelines', '').trim() !== 'Please read above') {
       detailRequirement += '<br /><br /><h2>Final Submission Guidelines</h2>' + challengeDetails.finalSubmissionGuidelines
     }
   } else {
