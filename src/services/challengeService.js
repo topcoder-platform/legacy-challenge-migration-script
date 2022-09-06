@@ -78,7 +78,7 @@ async function createChallenge (challenge) {
  */
 async function updateChallenge (challenge) {
   try {
-    if (challenge.task && (challenge.status === constants.challengeStatuses.Completed || _.get(challenge, 'winners.length') > 0)) {
+    if (challenge.task && _.isUndefined(challenge.task.memberId) && (challenge.status === constants.challengeStatuses.Completed || _.get(challenge, 'winners.length') > 0)) {
       _.unset(challenge, 'task')
     }
     const updateChallenge = new Challenge(_.omit(challenge, ['created', 'createdBy', 'name']))
