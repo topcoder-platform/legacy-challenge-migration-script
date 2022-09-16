@@ -925,7 +925,7 @@ async function getChallengeFromV5API (legacyId) {
     }
   }
   // console.log(res.data)
-  return res.data
+  return res.data || null
 }
 
 async function getMMatchFromV4API (legacyId) {
