@@ -920,7 +920,7 @@ async function getChallengeFromV5API (legacyId) {
       logger.error(`Could not get v5 challenge using legacyId ${legacyId}, Please try again`)
       // throw new Error(`Could not get v5 challenge using legacyId ${legacyId}, Please try again`)
     } else {
-      logger.debug(`Found v5 challenge with Id ${JSON.stringify(res.data[0].id)}, Stop retrying strategy`)
+      logger.debug(`Found v5 challenge with Id ${res.data[0].id}, Stop retrying strategy`)
       break
     }
   }
