@@ -906,15 +906,23 @@ async function getChallengeFromV5API (legacyId) {
   const url = `${config.CHALLENGE_API_URL}?legacyId=${legacyId}&perPage=1&page=1`
   // logger.debug(`Get Challenge from V5 URL ${url}`)
   let res = null
-  try {
-    res = await axios.get(url, { headers: { Authorization: `Bearer ${token}` } })
-  } catch (e) {
-    // logger.error(`Axios Error happened when getting v5 challenge using legacyId ${legacyId} : ${JSON.stringify(e)}`)
-    throw new Error(`Axios Error happened when getting v5 challenge using legacyId ${legacyId} : ${JSON.stringify(e)}`)
-  }
-  if (!res || !res.data || !res.data.length || !res.data[0].id) {
-    // v5 challenge must have a challenge.id already
-    throw new Error(`Could not get v5 challenge using legacyId ${legacyId}, Please try again`)
+  let retry = 1
+  while (retry <= config.MAX_RETRY) {
+    retry += 1
+    try {
+      res = await axios.get(url, { headers: { Authorization: `Bearer ${token}` } })
+    } catch (e) {
+      logger.error(`Axios Error happened when getting v5 challenge using legacyId ${legacyId} : ${JSON.stringify(e)}`)
+      // throw new Error(`Axios Error happened when getting v5 challenge using legacyId ${legacyId} : ${JSON.stringify(e)}`)
+    }
+    if (!res || !res.data || !res.data.length || !res.data[0].id) {
+      // v5 challenge must have a challenge.id already
+      logger.error(`Could not get v5 challenge using legacyId ${legacyId}, Please try again`)
+      // throw new Error(`Could not get v5 challenge using legacyId ${legacyId}, Please try again`)
+    } else {
+      logger.debug(`Found v5 challenge with Id ${JSON.stringify(res.data[0].id)}, Stop retrying strategy`)
+      break
+    }
   }
   // console.log(res.data)
   return res.data

@@ -198,6 +198,7 @@ module.exports = {
   ],
   BATCH_SIZE: 10, // max challenges will be load from informix on 1 query
   MIGRATION_SCRIPT_BATCH_SIZE: 40, // max challenges will be load from informix on 1 query when running a migration script
+  MAX_RETRY: 5, // max retry to call v5 challenge api if failed
   // ERROR_LOG_FILENAME: './error.json', // filename of error log for challenge that fail to migrate
   // LOG_FILENAME: './app.log', // log file
 
