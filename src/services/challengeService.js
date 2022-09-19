@@ -323,7 +323,7 @@ async function getChallengeIDsFromV4 (filter, perPage, page = 1) {
     docs = await getV4ESClient().search(esQuery)
   } catch (e) {
     // Catch error when the ES is fresh and has no data
-    logger.error(e)
+    logger.error(`V4 Challenge IDs try/catch ${JSON.stringify(e)}`)
     docs = {
       hits: {
         total: 0,
