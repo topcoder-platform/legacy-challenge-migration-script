@@ -397,7 +397,7 @@ async function getChallengeIDsFromV5 (filter, perPage, page = 1) {
     docs = await getESClient().search(esQuery)
   } catch (e) {
     // Catch error when the ES is fresh and has no data
-    // logger.error(`V5 Challenge IDs try/catch ${JSON.stringify(e)}`)
+    logger.error(`V5 Challenge IDs try/catch ${JSON.stringify(e)}`)
     docs = {
       hits: {
         total: 0,
