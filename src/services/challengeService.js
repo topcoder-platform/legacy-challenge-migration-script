@@ -384,11 +384,9 @@ async function getChallengeIDsFromV5 (filter, perPage, lastDate) {
       } : {
         match_all: {}
       },
-      sort: [{
-        created: {
-          order: 'desc'
-        }
-      }]
+      sort: [
+        { updated: 'desc' }
+      ]
     }
   }
   if (lastDate) {
@@ -411,11 +409,11 @@ async function getChallengeIDsFromV5 (filter, perPage, lastDate) {
   }
   // logger.warn(JSON.stringify(docs))
   // Extract data from hits
-  if (docs.hits.total > 0) {
-    let newLastDate = null
-    const hits = docs.hits.hits
-    logger.info(`ES Search Result Length -> ${hits.length}`)
-    const endSortDate = docs.hits.hits[hits.length - 1].sort
+  let result = _.map(docs.hits.hits, item => item._source)
+  let newLastDate = null
+  if (result.length > 0) {
+    logger.info(`ES Search Result Length -> ${result.length}`)
+    const endSortDate = docs.hits.hits[result.length - 1].sort
     if (endSortDate && endSortDate.length) {
       logger.info(`LastSortDate: ${JSON.stringify(endSortDate)}`)
       newLastDate = endSortDate[0]
