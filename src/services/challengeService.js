@@ -410,6 +410,7 @@ async function getChallengeIDsFromV5 (filter, perPage, lastDate) {
   // logger.warn(JSON.stringify(docs))
   // Extract data from hits
   let result = _.map(docs.hits.hits, item => item._source)
+  logger.info(`ES Search Hits Total -> ${docs.hits.total}`)
   let newLastDate = null
   if (result.length > 0) {
     logger.info(`ES Search Result Length -> ${result.length}`)
@@ -426,7 +427,12 @@ async function getChallengeIDsFromV5 (filter, perPage, lastDate) {
       lastDate: newLastDate
     }
   }
-  return false
+  return {
+    total: docs.hits.total,
+    ids: [],
+    v5Ids: [],
+    lastDate: newLastDate
+  }
 }
 
 async function getChallengeListingFromV4ES (legacyId) {
