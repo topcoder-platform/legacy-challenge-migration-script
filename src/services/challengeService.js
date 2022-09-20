@@ -384,9 +384,11 @@ async function getChallengeIDsFromV5 (filter, perPage, lastDate) {
       } : {
         match_all: {}
       },
-      sort: [
-        { updated: 'desc' }
-      ]
+      sort: [{
+        created: {
+          order: 'desc'
+        }
+      }]
     }
   }
   if (lastDate) {
