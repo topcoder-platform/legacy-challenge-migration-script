@@ -343,7 +343,7 @@ async function getChallengeIDsFromV4 (filter, perPage, page = 1) {
  * @param {Number} page
  * @returns {Object} { total, ids }
  */
-async function getChallengeIDsFromV5 (filter, perPage, page = 1) {
+async function getChallengeIDsFromV5 (filter, perPage, lastDate) {
   // logger.warn(`getChallengeIDsFromV5 ${JSON.stringify(filter)} perPage ${perPage} page ${page}`)
   const boolQuery = []
   const mustQuery = []
@@ -373,7 +373,6 @@ async function getChallengeIDsFromV5 (filter, perPage, page = 1) {
     type: config.get('ES.CHALLENGE_ES_TYPE'),
     // refresh: config.get('ES.ES_REFRESH'),
     size: perPage,
-    from: perPage * (page - 1),
     body: {
       _source: ['legacyId', 'id'],
       version: 'true',
@@ -389,6 +388,9 @@ async function getChallengeIDsFromV5 (filter, perPage, page = 1) {
         { updated: 'desc' }
       ]
     }
+  }
+  if (lastDate) {
+    esQuery.body.search_after = [Number(lastDate)]
   }
   // Search with constructed query
   let docs
@@ -407,14 +409,30 @@ async function getChallengeIDsFromV5 (filter, perPage, page = 1) {
   }
   // logger.warn(JSON.stringify(docs))
   // Extract data from hits
-  if (docs.hits.total > 0) {
+  let result = _.map(docs.hits.hits, item => item._source)
+  logger.info(`ES Search Hits Total -> ${docs.hits.total}`)
+  let newLastDate = null
+  if (result.length > 0) {
+    logger.info(`ES Search Result Length -> ${result.length}`)
+    const endSortDate = docs.hits.hits[result.length - 1].sort
+    if (endSortDate && endSortDate.length) {
+      logger.info(`LastSortDate: ${JSON.stringify(endSortDate)}`)
+      newLastDate = endSortDate[0]
+    }
+    logger.info(`newLastDate Timestamp: ${newLastDate}`)
     return {
       total: docs.hits.total,
       ids: _.map(docs.hits.hits, hit => _.toNumber(hit._source.legacyId)),
-      v5Ids: _.map(docs.hits.hits, hit => hit._source.id)
+      v5Ids: _.map(docs.hits.hits, hit => hit._source.id),
+      lastDate: newLastDate
     }
   }
-  return false
+  return {
+    total: docs.hits.total,
+    ids: [],
+    v5Ids: [],
+    lastDate: newLastDate
+  }
 }
 
 async function getChallengeListingFromV4ES (legacyId) {

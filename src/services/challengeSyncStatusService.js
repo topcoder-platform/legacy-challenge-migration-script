@@ -73,6 +73,7 @@ async function getSyncProgress (filter, perPage = 100, page = 1) {
     docs = await getESClient().search(esQuery)
   } catch (e) {
     // Catch error when the ES is fresh and has no data
+    logger.error(`Sync Queue Challenge IDs try/catch ${JSON.stringify(e)}`)
     docs = {
       hits: {
         total: 0,
