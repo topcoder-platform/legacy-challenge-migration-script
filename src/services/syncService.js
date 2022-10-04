@@ -213,7 +213,7 @@ async function getV4ChallengeIds (filter) {
 }
 
 async function getV5LegacyChallengeIds (filter) {
-  let page = 1
+  let lastKey = null
   let running = true
   let v5Ids = []
   const perPage = 1000
@@ -221,12 +221,13 @@ async function getV5LegacyChallengeIds (filter) {
 
   while (running) {
     // logger.debug(`V5 Challenge IDs - Getting ${page}`)
-    const { total, ids } = await challengeService.getChallengeIDsFromV5(filter, perPage, page)
+    const { total, ids, lastDate } = await challengeService.getChallengeIDsFromV5(filter, perPage, lastKey)
+    // Record the last call's end timestamp
+    lastKey = lastDate;
     if (ids && ids.length > 0) {
       // logger.warn(`IDs ${JSON.stringify(ids)}`)
       combinedTotal = total
       v5Ids = _.concat(v5Ids, ids)
-      page += 1
     } else {
       running = false
     }
