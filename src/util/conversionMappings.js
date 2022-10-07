@@ -27,7 +27,7 @@ const V5_TRACK_IDS_TO_NAMES = {
 const V5_TYPE_IDS = {
   CHALLENGE: '927abff4-7af9-4145-8ba1-577c16e64e2e',
   TASK: 'ecd58c69-238f-43a4-a4bb-d172719b9f31',
-  FIRST_2_FINISH: 'dc876fa4-ef2d-4eee-b701-b555fcc6544c'
+  FIRST_2_FINISH: 'dc876fa4-ef2d-4eee-b701-b555fcc6544c',
   PC: '34602883-a58d-45a9-b370-749574b6890d',
   MM: '929bc408-9cf2-4b3e-ba71-adfbf693046c',
   RDM: '78b37a69-92d5-4ad7-bf85-c79b65420c79',
@@ -43,10 +43,10 @@ const V5_TYPE_NAMES_TO_IDS = {
 const V5_TYPE_IDS_TO_NAMES = {
   [V5_TYPE_IDS.CHALLENGE]: 'Challenge',
   [V5_TYPE_IDS.TASK]: 'Task',
-  [V5_TYPE_IDS.FIRST_2_FINISH]: 'First2Finish'
-  [V5_TYPE_IDS.PC]: 'Practice Challenge'
-  [V5_TYPE_IDS.MM]: 'Marathon Match'
-  [V5_TYPE_IDS.RDM]: 'Rapid Development Match'
+  [V5_TYPE_IDS.FIRST_2_FINISH]: 'First2Finish',
+  [V5_TYPE_IDS.PC]: 'Practice Challenge',
+  [V5_TYPE_IDS.MM]: 'Marathon Match',
+  [V5_TYPE_IDS.RDM]: 'Rapid Development Match',
   [V5_TYPE_IDS.SKL]: 'Skill Builder'
 }
 
