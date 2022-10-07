@@ -20,7 +20,7 @@ const V5_TRACK_IDS_TO_NAMES = {
   [V5_TRACK_IDS.DATA_SCIENCE]: 'Data Science',
   [V5_TRACK_IDS.DESIGN]: 'Design',
   [V5_TRACK_IDS.DEVELOPMENT]: 'Development',
-  [V5_TRACK_IDS.QA]: 'Quality Assurance'
+  [V5_TRACK_IDS.QA]: 'Quality Assurance',
   [V5_TRACK_IDS.CMP]: 'Competitive Programming'
 }
 
