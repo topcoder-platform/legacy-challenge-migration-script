@@ -35,6 +35,18 @@ const challengePropertiesToOmitFromDynamo = [
 ]
 
 async function save (challenge) {
+  // Check if challenge is already created
+  if (!challenge.id) {
+    try {
+      const challengesInES = await getChallengeFromES(challenge.legacyId)
+      if (challengesInES.length > 0) {
+        logger.debug(`PREVENT DUPLICATE CHALLENGE - ${challenge.legacyId} - V5 already exists ${challengesInES[0].challengeId}`)
+        challenge.id = challengesInES[0].challengeId
+      }
+    } catch (e) {
+      logger.error(`Error fetching V5 challenge ${JSON.stringify(e)}`)
+    }
+  }
   // logger.debug(`Save - ${challenge.id} - ${challenge.legacyId} - ${JSON.stringify(challenge.prizeSets)}`)
   if (challenge.id) {
     // logger.debug(`Update Challenge ${challenge.id}`)
