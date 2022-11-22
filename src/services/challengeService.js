@@ -39,9 +39,12 @@ async function save (challenge) {
   if (!challenge.id) {
     try {
       const challengesInES = await getChallengeFromES(challenge.legacyId)
-      if (challengesInES.length > 0) {
+      if (challengesInES.length === 1) {
         logger.debug(`PREVENT DUPLICATE CHALLENGE - ${challenge.legacyId} - V5 already exists ${challengesInES[0].challengeId}`)
         challenge.id = challengesInES[0].challengeId
+      } else if (challengesInES.length > 1) {
+        // There are more than 1 duplicate challenges
+        logger.warn(`Challenge ${challenge.legacyId} has ${challengesInES.length} duplicates - ${challengesInES.toString()}`)
       }
     } catch (e) {
       logger.error(`Error fetching V5 challenge ${JSON.stringify(e)}`)
