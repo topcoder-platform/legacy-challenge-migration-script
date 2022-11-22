@@ -44,7 +44,7 @@ async function save (challenge) {
         challenge.id = challengesInES[0].challengeId
       } else if (challengesInES.length > 1) {
         // There are more than 1 duplicate challenges
-        logger.warn(`Challenge ${challenge.legacyId} has ${challengesInES.length} duplicates - ${challengesInES.toString()}`)
+        logger.warn(`Duplicate challenge found for legacy ID ${challenge.legacyId} has ${challengesInES.length} duplicates - ${challengesInES.toString()}`)
       }
     } catch (e) {
       logger.error(`Error fetching V5 challenge ${JSON.stringify(e)}`)
