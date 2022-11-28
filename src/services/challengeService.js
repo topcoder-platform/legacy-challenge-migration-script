@@ -95,14 +95,7 @@ async function updateChallenge (challenge) {
     }
     const updateChallenge = new Challenge(_.omit(challenge, ['created', 'createdBy', 'name']))
     // numOfSubmissions and numOfRegistrants are not stored in dynamo, they're calclated by the ES processor
-    console.log(`Saving challenge ${challenge.id} in Dynamo`)
-    console.log(JSON.stringify(_.omit(_.omit(challenge, ['created', 'createdBy', 'name']), challengePropertiesToOmitFromDynamo)))
     await Challenge.update({ id: challenge.id }, _.omit(updateChallenge, challengePropertiesToOmitFromDynamo))
-    console.log(`Saving challenge ${challenge.id} in ElasticSearch`)
-    console.log(JSON.stringify({
-      ..._.omit(challenge, ['created', 'createdBy', 'name']),
-      groups: _.filter(challenge.groups, g => _.toString(g).toLowerCase() !== 'null')
-    }))
     await getESClient().update({
       index: config.get('ES.CHALLENGE_ES_INDEX'),
       type: config.get('ES.CHALLENGE_ES_TYPE'),
