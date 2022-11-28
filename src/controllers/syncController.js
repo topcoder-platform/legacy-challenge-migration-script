@@ -69,6 +69,7 @@ async function autoQueueChallenges () {
  * @param {Object} filter {startDate, endDate, legacyId, status}
  */
 async function queueChallenges (filter) {
+  logger.debug(`Inside queueChallenges with filter: ${JSON.stringify(filter)}`)
   // find challenges in es status
   let page = 1
   const perPage = 50
