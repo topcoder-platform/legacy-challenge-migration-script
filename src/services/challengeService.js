@@ -112,7 +112,7 @@ async function updateChallenge (challenge, previousState) {
 
     const updateDetails = {}
     let phasesHaveBeenModified = false
-    _.each(data, (value, key) => {
+    _.each(updateChallenge, (value, key) => {
       let op
       if (key === 'metadata') {
         if (_.isUndefined(previousState[key]) || previousState[key].length !== value.length ||
