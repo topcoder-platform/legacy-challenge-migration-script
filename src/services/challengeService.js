@@ -49,10 +49,10 @@ async function save (challenge) {
   let challengesInES
   if (!challenge.id) {
     try {
-      challengesInES = await getChallengeFromES(challenge.legacyId)
+      challengesInES = await getChallengeFromES(challenge.legacyId, true)
       if (challengesInES.length > 0) {
-        logger.debug(`PREVENT DUPLICATE CHALLENGE - ${challenge.legacyId} - V5 already exists ${challengesInES[0].challengeId}`)
-        challenge.id = challengesInES[0].challengeId
+        logger.debug(`PREVENT DUPLICATE CHALLENGE - ${challenge.legacyId} - V5 already exists ${challengesInES[0].id}`)
+        challenge.id = challengesInES[0].id
       }
     } catch (e) {
       logger.error(`Error fetching V5 challenge ${JSON.stringify(e)}`)
@@ -100,6 +100,10 @@ async function createChallenge (challenge) {
  * @param {Object} challenge challenge data
  */
 async function updateChallenge (challenge, previousState) {
+  if (!previousState) {
+    challengesInES = await getChallengeFromES(challenge.legacyId, true)
+    previousState = challengesInES[0]
+  }
   const auditLogs = []
 
   try {
@@ -304,7 +308,7 @@ async function getChallengesFromES (legacyIds) {
 /**
  * Get existing challenges from ES using legacyId
  */
-async function getChallengeFromES (legacyId) {
+async function getChallengeFromES (legacyId, full) {
   const esQuery = {
     index: config.get('ES.CHALLENGE_ES_INDEX'),
     type: config.get('ES.CHALLENGE_ES_TYPE'),
@@ -337,7 +341,7 @@ async function getChallengeFromES (legacyId) {
     }
   }
   // Extract data from hits
-  return _.map(docs.hits.hits, item => ({
+  return full ? docs.hits.hits : _.map(docs.hits.hits, item => ({
     legacyId: item._source.legacyId,
     legacy: {
       screeningScorecardId: _.get(item._source, 'legacy.screeningScorecardId'),
