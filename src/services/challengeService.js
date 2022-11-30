@@ -174,9 +174,9 @@ async function updateChallenge (challenge, previousState) {
           updateDetails[op] = {}
         }
         if (key === 'attachments') {
-          updateDetails[op].attachments = newAttachments
+          updateDetails[op].attachments = updateChallenge.attachments
         } else if (key === 'terms') {
-          updateDetails[op].terms = newTermsOfUse
+          updateDetails[op].terms = updateChallenge.terms
         } else {
           updateDetails[op][key] = value
         }
@@ -185,10 +185,10 @@ async function updateChallenge (challenge, previousState) {
           let newValue
           if (key === 'attachments') {
             oldValue = previousState.attachments ? JSON.stringify(previousState.attachments) : 'NULL'
-            newValue = JSON.stringify(newAttachments)
+            newValue = JSON.stringify(updateChallenge.attachments)
           } else if (key === 'terms') {
             oldValue = previousState.terms ? JSON.stringify(previousState.terms) : 'NULL'
-            newValue = JSON.stringify(newTermsOfUse)
+            newValue = JSON.stringify(updateChallenge.terms)
           } else {
             oldValue = previousState[key] ? JSON.stringify(previousState[key]) : 'NULL'
             newValue = JSON.stringify(value)
