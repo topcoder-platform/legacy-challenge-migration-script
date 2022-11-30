@@ -62,7 +62,7 @@ async function save (challenge) {
   if (challenge.id) {
     // logger.debug(`Update Challenge ${challenge.id}`)
     // return
-    return updateChallenge(challenge, challengesInES)
+    return updateChallenge(challenge, challengesInES[0])
   }
   // logger.debug(`Create Challenge ${challenge.id}`)
   // return
@@ -341,7 +341,7 @@ async function getChallengeFromES (legacyId, full) {
     }
   }
   // Extract data from hits
-  return full ? docs.hits.hits : _.map(docs.hits.hits, item => ({
+  return full ? _.map(docs.hits.hits, item => item._source) : _.map(docs.hits.hits, item => ({
     legacyId: item._source.legacyId,
     legacy: {
       screeningScorecardId: _.get(item._source, 'legacy.screeningScorecardId'),
