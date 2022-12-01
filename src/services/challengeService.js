@@ -62,7 +62,7 @@ async function save (challenge) {
   if (challenge.id) {
     // logger.debug(`Update Challenge ${challenge.id}`)
     // return
-    return updateChallenge(challenge, challengesInES[0])
+    return updateChallenge(challenge, challengesInES && challengesInES.length ? challengesInES[0] : null)
   }
   // logger.debug(`Create Challenge ${challenge.id}`)
   // return
