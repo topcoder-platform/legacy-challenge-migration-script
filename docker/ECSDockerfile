@@ -10,8 +10,8 @@ RUN sed -i '/jessie-updates/d' /etc/apt/sources.list
 RUN apt-get -qq update && apt-get -qq install -y \
   wget gcc g++ make xz-utils python2.7 git curl default-jdk
 
-RUN wget -q -O node8.tar.xz https://nodejs.org/dist/v12.22.12/node-v12.22.12-linux-x64.tar.xz \
-  && tar xfJ node8.tar.xz && rm -rf node8.tar.xz
+RUN wget -q -O node12.tar.xz https://nodejs.org/dist/v12.22.12/node-v12.22.12-linux-x64.tar.xz \
+  && tar xfJ node12.tar.xz && rm -rf node12.tar.xz
 
 RUN apt-get update && \
   DEBIAN_FRONTEND=noninteractive \
@@ -46,5 +46,6 @@ RUN echo "sqlexec 2021/tcp" >> /etc/services
 
 COPY . /app
 WORKDIR /app
+RUN npm install --global yarn
 RUN yarn
 ENTRYPOINT ["yarn", "start"]
