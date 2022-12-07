@@ -94,16 +94,18 @@ async function queueSync (req, res) {
     // Target a single challenge based on the provided legacyId if provided
     await syncController.queueChallenges({ legacyId: req.query.legacyId, force })
   } else {
-    const startDate = req.query.startDate
-    const endDate = req.query.endDate ? moment(req.query.endDate).utc() : moment().utc()
+    return res.status(400).json({ message: `Missing property 'legacyId'` })
 
-    if (startDate !== null && (!moment(startDate) || !moment(startDate).isValid())) {
-      return res.status(400).json({ message: `Invalid startDate: ${startDate}` })
-    }
-    if (endDate !== null && (!moment(endDate) || !moment(endDate).isValid())) {
-      return res.status(400).json({ message: `Invalid endDate: ${endDate}` })
-    }
-    await syncController.queueChallenges({ startDate, endDate, force })
+    // const startDate = req.query.startDate
+    // const endDate = req.query.endDate ? moment(req.query.endDate).utc() : moment().utc()
+
+    // if (startDate !== null && (!moment(startDate) || !moment(startDate).isValid())) {
+    //   return res.status(400).json({ message: `Invalid startDate: ${startDate}` })
+    // }
+    // if (endDate !== null && (!moment(endDate) || !moment(endDate).isValid())) {
+    //   return res.status(400).json({ message: `Invalid endDate: ${endDate}` })
+    // }
+    // await syncController.queueChallenges({ startDate, endDate, force })
   }
 
   return res.json({ success: true })
