@@ -79,7 +79,4 @@ workflows:
           context : org-global
           filters:
             branches:
-              only:
-                - master
-                - hotfix/inc-15
-                
+              only: master
