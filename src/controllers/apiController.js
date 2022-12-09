@@ -94,7 +94,7 @@ async function queueSync (req, res) {
     // Target a single challenge based on the provided legacyId if provided
     await syncController.queueChallenges({ legacyId: req.query.legacyId, force })
   } else {
-    return res.status(400).json({ message: 'The property legacyId is missing' })
+    return res.status(400).json({ message: `Missing property 'legacyId'` })
 
     // const startDate = req.query.startDate
     // const endDate = req.query.endDate ? moment(req.query.endDate).utc() : moment().utc()
