@@ -34,5 +34,6 @@ module.exports = {
   Challenge: dynamoose.model('Challenge', require('./challenge')),
   ChallengeType: dynamoose.model('ChallengeType', require('./challenge-type')),
   ChallengeTrack: dynamoose.model('ChallengeTrack', require('./challenge-track')),
-  ChallengeTimelineTemplate: dynamoose.model('ChallengeTimelineTemplate', require('./challenge-timeline-template'))
+  ChallengeTimelineTemplate: dynamoose.model('ChallengeTimelineTemplate', require('./challenge-timeline-template')),
+  AuditLog: dynamoose.model('AuditLog', require('./audit-log'))
 }
