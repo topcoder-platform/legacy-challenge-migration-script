@@ -53,12 +53,14 @@ const challengePropertiesToOmitFromDynamo = [
 async function getChallengesByLegacyId (legacyId) {
   let data = []
   try {
-    data = await Challenge.scan({ legacyId: { eq: legacyId } }).exec((err, result) => {
-      if (err) {
-        return reject(err)
-      } else {
-        return resolve(result.count === 0 ? [] : result)
-      }
+    data = await new Promise((resolve, reject) => {
+      Challenge.scan({ legacyId: { eq: legacyId } }).exec((err, result) => {
+        if (err) {
+          return reject(err)
+        } else {
+          return resolve(result.count === 0 ? [] : result)
+        }
+      })
     })
     if (_.get(data, 'length', 0) === 0) {
       // nothing in dynamo, check ES
