@@ -64,6 +64,7 @@ async function getChallengesByLegacyId (legacyId) {
       // nothing in dynamo, check ES
       data = await getChallengeFromES(legacyId, true)
     }
+    logger.debug(`Found ${data.length} challenges`)
     return data
   } catch (e) {
     logger.error(e.message)
