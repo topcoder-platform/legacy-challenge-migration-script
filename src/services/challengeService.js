@@ -241,7 +241,7 @@ async function updateChallenge (challenge, previousState) {
 
     if (auditLogs.length > 0) {
       // insert audit logs
-      logger.info(`Will insert ${auditLogs.length} audit logs`)
+      logger.debug(`Will insert ${auditLogs.length} audit logs`)
       await AuditLog.batchPut(auditLogs)
     }
     await getESClient().update({
