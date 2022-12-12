@@ -60,7 +60,7 @@ async function getChallengesByLegacyId (legacyId) {
         return resolve(result.count === 0 ? [] : result)
       }
     })
-    if (_.get(dynamoData, 'length', 0) === 0) {
+    if (_.get(data, 'length', 0) === 0) {
       // nothing in dynamo, check ES
       data = await getChallengeFromES(legacyId, true)
     }
