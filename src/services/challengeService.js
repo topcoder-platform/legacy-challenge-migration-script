@@ -44,15 +44,43 @@ const challengePropertiesToOmitFromDynamo = [
   return !_.isEqual(_.sortBy(prizeSets, 'type'), _.sortBy(otherPrizeSets, 'type'))
 }
 
+/**
+ * Get V5 challenges by legacy ID
+ * Search in Dynamo first then fallback to ES
+ * @param {Integer} legacyId the legacy challenge ID
+ * @returns 
+ */
+async function getChallengesByLegacyId (legacyId) {
+  let data = []
+  try {
+    data = await Challenge.scan({ legacyId }).exec((err, result) => {
+      if (err) {
+        return reject(err)
+      } else {
+        return resolve(result.count === 0 ? [] : result)
+      }
+    })
+    if (_.get(dynamoData, 'length', 0) === 0) {
+      // nothing in dynamo, check ES
+      data = await getChallengeFromES(legacyId, true)
+    }
+    return data
+  } catch (e) {
+    logger.error(e.message)
+    logger.error(JSON.stringify(e))
+    return data
+  }
+}
+
 async function save (challenge) {
   // Check if challenge is already created
-  let challengesInES
+  let v5Challenges
   if (!challenge.id) {
     try {
-      challengesInES = await getChallengeFromES(challenge.legacyId, true)
-      if (challengesInES.length > 0) {
-        logger.debug(`PREVENT DUPLICATE CHALLENGE - ${challenge.legacyId} - V5 already exists ${challengesInES[0].id}`)
-        challenge.id = challengesInES[0].id
+      v5Challenges = await getChallengesByLegacyId(challenge.legacyId)
+      if (v5Challenges.length > 0) {
+        logger.debug(`PREVENT DUPLICATE CHALLENGE - ${challenge.legacyId} - V5 already exists ${v5Challenges[0].id}`)
+        challenge.id = v5Challenges[0].id
       }
     } catch (e) {
       logger.error(`Error fetching V5 challenge ${JSON.stringify(e)}`)
@@ -62,7 +90,7 @@ async function save (challenge) {
   if (challenge.id) {
     // logger.debug(`Update Challenge ${challenge.id}`)
     // return
-    return updateChallenge(challenge, challengesInES && challengesInES.length ? challengesInES[0] : null)
+    return updateChallenge(challenge, v5Challenges && v5Challenges.length ? v5Challenges[0] : null)
   }
   // logger.debug(`Create Challenge ${challenge.id}`)
   // return
@@ -101,7 +129,7 @@ async function createChallenge (challenge) {
  */
 async function updateChallenge (challenge, previousState) {
   if (!previousState) {
-    challengesInES = await getChallengeFromES(challenge.legacyId, true)
+    challengesInES = await getChallengesByLegacyId(challenge.legacyId, true)
     previousState = challengesInES[0]
   }
   const auditLogs = []
