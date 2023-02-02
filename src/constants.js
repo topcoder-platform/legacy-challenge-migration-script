@@ -10,11 +10,11 @@ const prizeSetTypes = {
 }
 
 const challengeStatusOrders = {
-  draft: 0,
-  active: 1,
-  completed: 2,
-  deleted: 2,
-  cancelled: 2
+  draft: 1,
+  active: 2,
+  completed: 3,
+  deleted: 3,
+  cancelled: 3
 }
 
 const challengeStatuses = {

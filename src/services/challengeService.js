@@ -8,7 +8,7 @@ const _ = require('lodash')
 const HashMap = require('hashmap')
 const logger = require('../util/logger')
 const helper = require('../util/helper')
-const { Challenge, ChallengeType, ChallengeTimelineTemplate } = require('../models')
+const { Challenge, ChallengeType, ChallengeTimelineTemplate, AuditLog } = require('../models')
 const { getESClient, getV4ESClient, getM2MToken, forceV4ESFeeder } = require('../util/helper')
 const challengeInformixService = require('./challengeInformixService')
 const resourceService = require('./resourceService')
@@ -34,12 +34,66 @@ const challengePropertiesToOmitFromDynamo = [
   'track'
 ]
 
+/**
+ * Check whether given two PrizeSet Array are different.
+ * @param {Array} prizeSets the first PrizeSet Array
+ * @param {Array} otherPrizeSets the second PrizeSet Array
+ * @returns {Boolean} true if different, false otherwise
+ */
+ function isDifferentPrizeSets (prizeSets = [], otherPrizeSets = []) {
+  return !_.isEqual(_.sortBy(prizeSets, 'type'), _.sortBy(otherPrizeSets, 'type'))
+}
+
+/**
+ * Get V5 challenges by legacy ID
+ * Search in Dynamo first then fallback to ES
+ * @param {Integer} legacyId the legacy challenge ID
+ * @returns 
+ */
+async function getChallengesByLegacyId (legacyId) {
+  let data = []
+  try {
+    data = await new Promise((resolve, reject) => {
+      Challenge.scan({ legacyId: { eq: legacyId } }).exec((err, result) => {
+        if (err) {
+          return reject(err)
+        } else {
+          return resolve(result.count === 0 ? [] : result)
+        }
+      })
+    })
+    if (_.get(data, 'length', 0) === 0) {
+      // nothing in dynamo, check ES
+      data = await getChallengeFromES(legacyId, true)
+    }
+    logger.debug(`Found ${data.length} challenges`)
+    return data
+  } catch (e) {
+    logger.error(e.message)
+    logger.error(JSON.stringify(e))
+    return data
+  }
+}
+
 async function save (challenge) {
+  // Check if challenge is already created
+  let v5Challenges
+  if (!challenge.id) {
+    try {
+      v5Challenges = await getChallengesByLegacyId(challenge.legacyId)
+      if (v5Challenges.length > 0) {
+        logger.debug(`PREVENT DUPLICATE CHALLENGE - ${challenge.legacyId} - V5 already exists ${v5Challenges[0].id}`)
+        challenge.id = v5Challenges[0].id
+      }
+    } catch (e) {
+      logger.error(`Error fetching V5 challenge ${JSON.stringify(e)}`)
+    }
+  }
   // logger.debug(`Save - ${challenge.id} - ${challenge.legacyId} - ${JSON.stringify(challenge.prizeSets)}`)
   if (challenge.id) {
     // logger.debug(`Update Challenge ${challenge.id}`)
     // return
-    return updateChallenge(challenge)
+    return updateChallenge(challenge, v5Challenges && v5Challenges.length ? v5Challenges[0] : null)
   }
   // logger.debug(`Create Challenge ${challenge.id}`)
   // return
@@ -76,14 +130,120 @@ async function createChallenge (challenge) {
  * Update challenge data to new system
  * @param {Object} challenge challenge data
  */
-async function updateChallenge (challenge) {
+async function updateChallenge (challenge, previousState) {
+  if (!previousState) {
+    challengesInES = await getChallengesByLegacyId(challenge.legacyId, true)
+    previousState = challengesInES[0]
+  }
+  const auditLogs = []
+
   try {
-    if (challenge.task && (challenge.status === constants.challengeStatuses.Completed || _.get(challenge, 'winners.length') > 0)) {
+    if (challenge.task && _.isUndefined(challenge.task.memberId) && (challenge.status === constants.challengeStatuses.Completed || _.get(challenge, 'winners.length') > 0)) {
       _.unset(challenge, 'task')
     }
     const updateChallenge = new Challenge(_.omit(challenge, ['created', 'createdBy', 'name']))
     // numOfSubmissions and numOfRegistrants are not stored in dynamo, they're calclated by the ES processor
     await Challenge.update({ id: challenge.id }, _.omit(updateChallenge, challengePropertiesToOmitFromDynamo))
+
+    const updateDetails = {}
+    let phasesHaveBeenModified = false
+    _.each(updateChallenge, (value, key) => {
+      let op
+      if (key === 'metadata') {
+        if (_.isUndefined(previousState[key]) || previousState[key].length !== value.length ||
+          _.differenceWith(previousState[key], value, _.isEqual).length !== 0) {
+          op = '$PUT'
+        }
+      } else if (key === 'phases') {
+        // always consider a modification if the property exists
+        phasesHaveBeenModified = true
+        op = '$PUT'
+      } else if (key === 'prizeSets') {
+        if (isDifferentPrizeSets(previousState[key], value)) {
+          op = '$PUT'
+        }
+      } else if (key === 'tags') {
+        if (_.isUndefined(previousState[key]) || previousState[key].length !== value.length ||
+          _.intersection(previousState[key], value).length !== value.length) {
+          op = '$PUT'
+        }
+      } else if (key === 'attachments') {
+        const oldIds = _.map(previousState.attachments || [], (a) => a.id)
+        if (oldIds.length !== value.length ||
+          _.intersection(oldIds, _.map(value, a => a.id)).length !== value.length) {
+          op = '$PUT'
+        }
+      } else if (key === 'groups') {
+        if (_.isUndefined(previousState[key]) || previousState[key].length !== value.length ||
+          _.intersection(previousState[key], value).length !== value.length) {
+          op = '$PUT'
+        }
+      } else if (key === 'winners') {
+        if (_.isUndefined(previousState[key]) || previousState[key].length !== value.length ||
+        _.intersectionWith(previousState[key], value, _.isEqual).length !== value.length) {
+          op = '$PUT'
+        }
+      } else if (key === 'terms') {
+        const oldIds = _.map(previousState.terms || [], (t) => t.id)
+        const newIds = _.map(value || [], (t) => t.id)
+        if (oldIds.length !== newIds.length ||
+          _.intersection(oldIds, newIds).length !== value.length) {
+          op = '$PUT'
+        }
+      } else if (key === 'billing' || key === 'legacy') {
+        // make sure that's always being udpated
+        op = '$PUT'
+      } else if (_.isUndefined(previousState[key]) || previousState[key] !== value) {
+        op = '$PUT'
+      } else if (_.get(previousState, 'legacy.pureV5Task') && key === 'task') {
+        // always update task for pureV5 challenges
+        op = '$PUT'
+      }
+  
+      if (op) {
+        if (_.isUndefined(updateDetails[op])) {
+          updateDetails[op] = {}
+        }
+        if (key === 'attachments') {
+          updateDetails[op].attachments = updateChallenge.attachments
+        } else if (key === 'terms') {
+          updateDetails[op].terms = updateChallenge.terms
+        } else {
+          updateDetails[op][key] = value
+        }
+        if (key !== 'updated' && key !== 'updatedBy') {
+          let oldValue
+          let newValue
+          if (key === 'attachments') {
+            oldValue = previousState.attachments ? JSON.stringify(previousState.attachments) : 'NULL'
+            newValue = JSON.stringify(updateChallenge.attachments)
+          } else if (key === 'terms') {
+            oldValue = previousState.terms ? JSON.stringify(previousState.terms) : 'NULL'
+            newValue = JSON.stringify(updateChallenge.terms)
+          } else {
+            oldValue = previousState[key] ? JSON.stringify(previousState[key]) : 'NULL'
+            newValue = JSON.stringify(value)
+          }
+          // logger.debug(`Audit Log: Key ${key} OldValue: ${oldValue} NewValue: ${newValue}`)
+          auditLogs.push({
+            id: uuid(),
+            challengeId: challenge.id,
+            fieldName: key,
+            oldValue,
+            newValue,
+            created: moment().utc(),
+            createdBy: 'v5migration',
+            memberId: null
+          })
+        }
+      }
+    })
+
+    if (auditLogs.length > 0) {
+      // insert audit logs
+      logger.debug(`Will insert ${auditLogs.length} audit logs`)
+      await AuditLog.batchPut(auditLogs)
+    }
     await getESClient().update({
       index: config.get('ES.CHALLENGE_ES_INDEX'),
       type: config.get('ES.CHALLENGE_ES_TYPE'),
@@ -180,7 +340,7 @@ async function getChallengesFromES (legacyIds) {
 /**
  * Get existing challenges from ES using legacyId
  */
-async function getChallengeFromES (legacyId) {
+async function getChallengeFromES (legacyId, full) {
   const esQuery = {
     index: config.get('ES.CHALLENGE_ES_INDEX'),
     type: config.get('ES.CHALLENGE_ES_TYPE'),
@@ -213,7 +373,7 @@ async function getChallengeFromES (legacyId) {
     }
   }
   // Extract data from hits
-  return _.map(docs.hits.hits, item => ({
+  return full ? _.map(docs.hits.hits, item => item._source) : _.map(docs.hits.hits, item => ({
     legacyId: item._source.legacyId,
     legacy: {
       screeningScorecardId: _.get(item._source, 'legacy.screeningScorecardId'),
