@@ -292,7 +292,7 @@ async function checkResourceInV5ES(roleId, memberId, challengeId) {
 
   const result = getESClient().search(esQuery)
   if (result) {
-    logger.info(`Resource from ES for roleId:${roleId}, memberId:${memberId}, challengeId:${challengeId}: ` + JSON.stringify(result))
+    logger.debug(`Resource from ES for roleId:${roleId}, memberId:${memberId}, challengeId:${challengeId}: ` + JSON.stringify(result))
   }
   else {
     logger.debug(`Unable to fetch result`)
