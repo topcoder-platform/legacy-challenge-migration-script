@@ -20,7 +20,7 @@ const resourceRoleUUIDRoleNameCache = new HashMap()
  *
  * @param {Array} names Array of resource roles to fetch
  */
-async function createMissingResourceRoles (names) {
+async function createMissingResourceRoles(names) {
   const resourceRoles = await resourceInformixService.getResourceRolesFromIfx(names.map(name => `'${name}'`))
   const existingResourceRoleLegacyIds = await getExistingResourceRoleIds(names)
   const results = []
@@ -48,12 +48,12 @@ async function createMissingResourceRoles (names) {
 /**
  * Get existing resource roles that have been imported to Dynamo
  */
-async function getExistingResourceRoleIds (names) {
+async function getExistingResourceRoleIds(names) {
   const results = await ResourceRole.scan('name').limit(50).in(names).exec()
   return _.map(results, 'legacyId')
 }
 
-async function getRoleUUIDForResourceRoleId (resourceRoleId) {
+async function getRoleUUIDForResourceRoleId(resourceRoleId) {
   if (resourceRoleUUIDRoleIdCache.get(resourceRoleId)) return resourceRoleUUIDRoleIdCache.get(resourceRoleId)
   const result = await ResourceRole.scan('legacyId').limit(50).eq(resourceRoleId).exec()
   if (result && result[0]) {
@@ -66,7 +66,7 @@ async function getRoleUUIDForResourceRoleId (resourceRoleId) {
   }
 }
 
-async function getRoleUUIDForResourceRoleName (name) {
+async function getRoleUUIDForResourceRoleName(name) {
   if (resourceRoleUUIDRoleNameCache.get(name)) return resourceRoleUUIDRoleNameCache.get(name)
   const result = await ResourceRole.scan('name').limit(50).eq(name).exec()
   if (result && result[0]) {
@@ -99,12 +99,12 @@ async function getRoleUUIDForResourceRoleName (name) {
  * @param {Object} resourceRole new resource role data
  * @param {Boolean} retrying if user is retrying
  */
-async function saveResourceRole (resourceRole) {
+async function saveResourceRole(resourceRole) {
   const newResourceRole = new ResourceRole(resourceRole)
   return newResourceRole.save()
 }
 
-async function saveResourceRoles (resourceRoles) {
+async function saveResourceRoles(resourceRoles) {
   await Promise.all(resourceRoles.map(rr => saveResourceRole(rr)))
 }
 
@@ -113,7 +113,7 @@ async function saveResourceRoles (resourceRoles) {
  *
  * @param {Object} filter {id, ids}
  */
-async function getResourcesForChallenge (legacyChallengeId, v5ChallengeId) {
+async function getResourcesForChallenge(legacyChallengeId, v5ChallengeId) {
   if (!v5ChallengeId) {
     throw Error('No v5 Challenge ID Passed')
   }
@@ -153,7 +153,7 @@ async function getResourcesForChallenge (legacyChallengeId, v5ChallengeId) {
   return results
 }
 
-async function migrateResourcesForChallenge (legacyId, challengeId) {
+async function migrateResourcesForChallenge(legacyId, challengeId) {
   const resources = await getResourcesForChallenge(legacyId, challengeId)
   if (resources.length > 0) await Promise.all(resources.map(r => saveResource(r)))
   return resources.length
@@ -164,7 +164,10 @@ async function migrateResourcesForChallenge (legacyId, challengeId) {
  *
  * @param {Object} resource new resource data
  */
-async function saveResource (resource) {
+async function saveResource(resource) {
+
+  checkResourceInV5ES(resource.roleId, resource.memberId, resource.challengeId)
+
   resource.id = uuid()
   const newResource = new Resource(resource)
   try {
@@ -182,7 +185,7 @@ async function saveResource (resource) {
   }
 }
 
-async function deleteResource (resourceId) {
+async function deleteResource(resourceId) {
   // logger.error(`deleteResource ${resourceId}`)
   const esQuery = {
     index: config.get('ES.RESOURCE_ES_INDEX'),
@@ -198,7 +201,7 @@ async function deleteResource (resourceId) {
   }
 }
 
-async function deleteAllResourcesForChallenge (challengeId) {
+async function deleteAllResourcesForChallenge(challengeId) {
   const resources = await getResourcesFromV5API(challengeId)
   // logger.warn(`~~~ Resources ${JSON.stringify(resources.result)}`)
   try {
@@ -212,7 +215,7 @@ async function deleteAllResourcesForChallenge (challengeId) {
   }
 }
 
-async function getResourcesFromV5API (challengeId, roleId) {
+async function getResourcesFromV5API(challengeId, roleId) {
   const token = await getM2MToken()
   let url = `${config.RESOURCES_API_URL}?challengeId=${challengeId}&perPage=1000`
   if (roleId) {
@@ -230,7 +233,7 @@ async function getResourcesFromV5API (challengeId, roleId) {
   return { result: [], total: 0 }
 }
 
-async function createResourceInV5 (challengeId, memberHandle, roleId) {
+async function createResourceInV5(challengeId, memberHandle, roleId) {
   const token = await getM2MToken()
   const url = `${config.RESOURCES_API_URL}`
   const data = {
@@ -248,6 +251,54 @@ async function createResourceInV5 (challengeId, memberHandle, roleId) {
   return res
 }
 
+async function checkResourceInV5ES(roleId, memberId, challengeId) {
+  const esQuery = {
+    index: config.get('ES.RESOURCE_ES_INDEX'),
+    type: config.get('ES.RESOURCE_ES_TYPE'),
+    from: 0,
+    size: 1,
+    body: {
+      query: {
+        bool: {
+          must: []
+        }
+      }
+    }
+  }
+
+  if (roleId) {
+    esQuery.body.query.bool.must.push({
+      match_phrase: {
+        roleId
+      }
+    })
+  }
+
+  if (memberId) {
+    esQuery.body.query.bool.must.push({
+      match_phrase: {
+        memberId
+      }
+    })
+  }
+
+  if (challengeId) {
+    esQuery.body.query.bool.must.push({
+      match_phrase: {
+        challengeId
+      }
+    })
+  }
+
+  const result = getESClient().search(esQuery)
+  if (result) {
+    logger.info(`Resource from ES for roleId:${roleId}, memberId:${memberId}, challengeId:${challengeId}: ` + JSON.stringify(result))
+  }
+  else {
+    logger.debug(`Unable to fetch result`)
+  }
+}
+
 module.exports = {
   createMissingResourceRoles,
   migrateResourcesForChallenge,
@@ -258,5 +309,6 @@ module.exports = {
   saveResource,
   getResourcesFromV5API,
   deleteAllResourcesForChallenge,
-  createResourceInV5
+  createResourceInV5,
+  checkResourceInV5ES
 }
