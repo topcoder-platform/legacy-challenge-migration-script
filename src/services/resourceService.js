@@ -171,9 +171,7 @@ async function migrateResourcesForChallenge(legacyId, challengeId) {
  * @param {Object} resource new resource data
  */
 async function saveResource(resource) {
-
-  const resourceExists = await checkResourceInV5ES(resource.roleId, resource.memberId, resource.challengeId)
-
+  
   resource.id = uuid()
   const newResource = new Resource(resource)
   try {
