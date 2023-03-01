@@ -155,8 +155,14 @@ async function getResourcesForChallenge(legacyChallengeId, v5ChallengeId) {
 
 async function migrateResourcesForChallenge(legacyId, challengeId) {
   const resources = await getResourcesForChallenge(legacyId, challengeId)
-  if (resources.length > 0) await Promise.all(resources.map(r => saveResource(r)))
-  return resources.length
+  let resourcesEligibleForMigration = []
+  for (const resource of resources) {
+    if (!(await checkResourceInV5ES(resource.roleId, resource.memberId, resource.challengeId))) {
+      resourcesEligibleForMigration.push(resource)
+    }
+  }
+  if (resourcesEligibleForMigration.length > 0) await Promise.all(resourcesEligibleForMigration.map(r => saveResource(r)))
+  return resourcesEligibleForMigration.length
 }
 
 /**
@@ -166,7 +172,7 @@ async function migrateResourcesForChallenge(legacyId, challengeId) {
  */
 async function saveResource(resource) {
 
-  await checkResourceInV5ES(resource.roleId, resource.memberId, resource.challengeId)
+  const resourceExists = await checkResourceInV5ES(resource.roleId, resource.memberId, resource.challengeId)
 
   resource.id = uuid()
   const newResource = new Resource(resource)
@@ -256,7 +262,7 @@ async function checkResourceInV5ES(roleId, memberId, challengeId) {
     index: config.get('ES.RESOURCE_ES_INDEX'),
     type: config.get('ES.RESOURCE_ES_TYPE'),
     from: 0,
-    size: 1,
+    size: 10,
     body: {
       query: {
         bool: {
@@ -266,36 +272,41 @@ async function checkResourceInV5ES(roleId, memberId, challengeId) {
     }
   }
 
-  if (roleId) {
-    esQuery.body.query.bool.must.push({
-      match_phrase: {
-        roleId
-      }
-    })
-  }
+  const boolQuery = []
 
-  if (memberId) {
-    esQuery.body.query.bool.must.push({
-      match_phrase: {
-        memberId
-      }
-    })
-  }
+  boolQuery.push({
+    match_phrase: {
+      roleId
+    }
+  })
 
-  if (challengeId) {
-    esQuery.body.query.bool.must.push({
-      match_phrase: {
-        challengeId
-      }
-    })
-  }
+  boolQuery.push({
+    match_phrase: {
+      memberId
+    }
+  })
 
-  const result = getESClient().search(esQuery)
-  if (result) {
-    logger.debug(`Resource from ES for roleId:${roleId}, memberId:${memberId}, challengeId:${challengeId}: ` + JSON.stringify(result))
-  }
-  else {
-    logger.debug(`Unable to fetch result`)
+  boolQuery.push({
+    match_phrase: {
+      challengeId
+    }
+  })
+
+  esQuery.body.query.bool.must.push({
+    bool: {
+      filter: boolQuery
+    }
+  })
+
+  logger.debug(`checkResourceInV5ES query: ${JSON.stringify(esQuery)}`)
+  let docs
+  try {
+    docs = await getESClient().search(esQuery)
+    logger.debug(`checkResourceInV5ES query result: ${JSON.stringify(docs)}`)
+    return docs.hits.total > 0
+  } catch (e) {
+    logger.error(`checkResourceInV5ES data retrieval failure: ${JSON.stringify(e)}`)
+    return false
   }
 }
 
@@ -309,6 +320,5 @@ module.exports = {
   saveResource,
   getResourcesFromV5API,
   deleteAllResourcesForChallenge,
-  createResourceInV5,
-  checkResourceInV5ES
+  createResourceInV5
 }
