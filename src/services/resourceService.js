@@ -155,9 +155,11 @@ async function getResourcesForChallenge(legacyChallengeId, v5ChallengeId) {
 
 async function migrateResourcesForChallenge(legacyId, challengeId) {
   const resources = await getResourcesForChallenge(legacyId, challengeId)
+  const allResourcesFromV5ES = await getAllResourcesForChallengeFromV5ES(challengeId)
   let resourcesEligibleForMigration = []
   for (const resource of resources) {
-    if (!(await checkResourceInV5ES(resource.roleId, resource.memberId, resource.challengeId))) {
+    const foundInV5 = _.find(allResourcesFromV5ES, (value) => (_.toNumber(value.memberId) === _.toNumber(resource.memberId)) && (value.roleId === resource.roleId))
+    if (_.isUndefined(foundInV5)) {
       resourcesEligibleForMigration.push(resource)
     }
   }
@@ -171,7 +173,7 @@ async function migrateResourcesForChallenge(legacyId, challengeId) {
  * @param {Object} resource new resource data
  */
 async function saveResource(resource) {
-  
+
   resource.id = uuid()
   const newResource = new Resource(resource)
   try {
@@ -255,12 +257,10 @@ async function createResourceInV5(challengeId, memberHandle, roleId) {
   return res
 }
 
-async function checkResourceInV5ES(roleId, memberId, challengeId) {
+async function getAllResourcesForChallengeFromV5ES(challengeId) {
   const esQuery = {
     index: config.get('ES.RESOURCE_ES_INDEX'),
     type: config.get('ES.RESOURCE_ES_TYPE'),
-    from: 0,
-    size: 10,
     body: {
       query: {
         bool: {
@@ -274,18 +274,6 @@ async function checkResourceInV5ES(roleId, memberId, challengeId) {
 
   boolQuery.push({
     match_phrase: {
-      roleId
-    }
-  })
-
-  boolQuery.push({
-    match_phrase: {
-      memberId
-    }
-  })
-
-  boolQuery.push({
-    match_phrase: {
       challengeId
     }
   })
@@ -296,15 +284,16 @@ async function checkResourceInV5ES(roleId, memberId, challengeId) {
     }
   })
 
-  logger.debug(`checkResourceInV5ES query: ${JSON.stringify(esQuery)}`)
+  logger.debug(`getAllResourcesForChallengeFromV5ES query: ${JSON.stringify(esQuery)}`)
   let docs
   try {
     docs = await getESClient().search(esQuery)
-    logger.debug(`checkResourceInV5ES query result: ${JSON.stringify(docs)}`)
-    return docs.hits.total > 0
+    logger.debug(`getAllResourcesForChallengeFromV5ES query result: ${JSON.stringify(docs)}`)
+    const resourceData = _.map(docs.hits.hits, item => item._source)
+    return _.map(resourceData, item => ({ ...item, memberId: (_.toString(item.memberId)) }))
   } catch (e) {
-    logger.error(`checkResourceInV5ES data retrieval failure: ${JSON.stringify(e)}`)
-    return false
+    logger.error(`getAllResourcesForChallengeFromV5ES data retrieval failure: ${JSON.stringify(e)}`)
+    return []
   }
 }
 
