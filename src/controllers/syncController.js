@@ -143,7 +143,8 @@ async function queueChallengeById (legacyId, withLogging = false, force = false)
   if (existingQueuedList && existingQueuedList.total >= 1) {
     existingQueued = existingQueuedList.items[0]
     if (existingQueued.status === config.MIGRATION_PROGRESS_STATUSES.QUEUED) {
-      logger.info(`Sync :: Legacy ID ${legacyId} already queued ${JSON.stringify(existingQueued)}`)
+      //Disabling this because in dev it's filling up the logs
+      //logger.info(`Sync :: Legacy ID ${legacyId} already queued ${JSON.stringify(existingQueued)}`)
       return false
     }
   }
