@@ -182,11 +182,11 @@ async function queueChallengeById (legacyId, withLogging = false, force = false)
       }
     } else {
       // v5 doesn't exist, migrate it
-      // logger.warn(`Challenge ID ${legacyId} doesn't exist in v5, queueing for migration`)
+      logger.debug(`Challenge ID ${legacyId} doesn't exist in v5, queueing for migration`)
       try {
         await migrationService.queueForMigration(legacyId)
       } catch (e) {
-        // logger.debug(`Challenge ID ${legacyId} already queued for migration. Wait for migration service to complete.`)
+        logger.debug(`Challenge ID ${legacyId} already queued for migration. Wait for migration service to complete.`)
       }
       return false // false because this isn't synced, it needs to be migrated
     }
